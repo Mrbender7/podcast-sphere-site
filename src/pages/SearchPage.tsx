@@ -8,17 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Search, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const FALLBACK_COUNTRIES = [
   { label: "France 🇫🇷", value: "France" },
-  { label: "Belgique 🇧🇪", value: "Belgium" },
-  { label: "Suisse 🇨🇭", value: "Switzerland" },
+  { label: "Belgium 🇧🇪", value: "Belgium" },
+  { label: "Switzerland 🇨🇭", value: "Switzerland" },
   { label: "Canada 🇨🇦", value: "Canada" },
-  { label: "Allemagne 🇩🇪", value: "Germany" },
+  { label: "Germany 🇩🇪", value: "Germany" },
   { label: "USA 🇺🇸", value: "The United States Of America" },
-  { label: "Espagne 🇪🇸", value: "Spain" },
-  { label: "Italie 🇮🇹", value: "Italy" },
-  { label: "Royaume-Uni 🇬🇧", value: "The United Kingdom Of Great Britain And Northern Ireland" },
+  { label: "Spain 🇪🇸", value: "Spain" },
+  { label: "Italy 🇮🇹", value: "Italy" },
+  { label: "UK 🇬🇧", value: "The United Kingdom Of Great Britain And Northern Ireland" },
 ];
 
 function countryCodeToFlag(iso: string): string {
@@ -41,6 +42,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   const [country, setCountry] = useState("");
   const [genre, setGenre] = useState("");
   const [language, setLanguage] = useState("");
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (initialGenre) setGenre(initialGenre);
@@ -79,15 +81,14 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-32">
-      <h1 className="text-2xl font-bold mt-6 mb-4">Recherche</h1>
+      <h1 className="text-2xl font-bold mt-6 mb-4">{t("search.title")}</h1>
 
-      {/* Search bar with X button */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Rechercher une station..."
+          placeholder={t("search.placeholder")}
           className="pl-10 pr-9 bg-accent border-0 text-foreground placeholder:text-muted-foreground"
         />
         {query && (
@@ -97,12 +98,11 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         )}
       </div>
 
-      {/* Country Select */}
       <div className="mb-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pays</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("search.country")}</p>
         <Select value={country} onValueChange={v => setCountry(v === country ? "" : v)}>
           <SelectTrigger className="bg-accent border-0 text-foreground">
-            <SelectValue placeholder="Choisir un pays" />
+            <SelectValue placeholder={t("search.selectCountry")} />
           </SelectTrigger>
           <SelectContent className="z-50 bg-popover border border-border shadow-xl max-h-[300px]">
             {countryList.map((c: { label: string; value: string }) => (
@@ -112,29 +112,27 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         </Select>
         {country && (
           <button onClick={() => setCountry("")} className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <X className="w-3 h-3" /> Effacer le pays
+            <X className="w-3 h-3" /> {t("search.clearCountry")}
           </button>
         )}
       </div>
 
-      {/* Genre & Language chips */}
-      <FilterSection label="Genre" items={GENRES} selected={genre} onSelect={v => setGenre(v === genre ? "" : v)} />
-      <FilterSection label="Langue" items={LANGUAGES} selected={language} onSelect={v => setLanguage(v === language ? "" : v)} />
+      <FilterSection label={t("search.genre")} items={GENRES} selected={genre} onSelect={v => setGenre(v === genre ? "" : v)} />
+      <FilterSection label={t("search.language")} items={LANGUAGES} selected={language} onSelect={v => setLanguage(v === language ? "" : v)} />
 
       {hasFilters && (
         <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-muted-foreground mb-4 hover:text-foreground">
-          <X className="w-3 h-3" /> Réinitialiser les filtres
+          <X className="w-3 h-3" /> {t("search.resetFilters")}
         </button>
       )}
 
-      {/* Results */}
       {isLoading && (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       )}
       {results && (
         <div className="space-y-1">
           {results.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">Aucun résultat trouvé</p>
+            <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
           ) : (
             results.map(s => (
               <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
@@ -144,9 +142,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       )}
 
       {!hasFilters && (
-        <p className="text-sm text-muted-foreground text-center py-12">
-          Utilisez la recherche ou les filtres pour trouver des stations
-        </p>
+        <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
       )}
     </div>
   );

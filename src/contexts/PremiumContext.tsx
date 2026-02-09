@@ -9,13 +9,13 @@ const PremiumContext = createContext<PremiumContextType | undefined>(undefined);
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(() => {
-    try { return localStorage.getItem("radioflow_premium") === "true"; } catch { return false; }
+    try { return localStorage.getItem("radiosphere_premium") === "true"; } catch { return false; }
   });
 
   const togglePremium = useCallback(() => {
     setIsPremium(prev => {
       const next = !prev;
-      try { localStorage.setItem("radioflow_premium", String(next)); } catch {}
+      try { localStorage.setItem("radiosphere_premium", String(next)); } catch {}
       return next;
     });
   }, []);
