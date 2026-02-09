@@ -1,11 +1,13 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, ChevronDown, Radio, Volume2, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
 export function FullScreenPlayer() {
   const { currentStation, isPlaying, togglePlay, volume, setVolume, isFullScreen, closeFullScreen } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
+  const { t } = useTranslation();
 
   if (!isFullScreen || !currentStation) return null;
 
@@ -18,7 +20,7 @@ export function FullScreenPlayer() {
         <button onClick={closeFullScreen} className="p-2 -ml-2">
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">En cours de lecture</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
         <div className="w-10" />
       </div>
 

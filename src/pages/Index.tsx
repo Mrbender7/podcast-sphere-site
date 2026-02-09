@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
 import { FavoritesProvider, useFavoritesContext } from "@/contexts/FavoritesContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { FullScreenPlayer } from "@/components/FullScreenPlayer";
@@ -9,6 +10,7 @@ import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { PremiumPage } from "@/pages/PremiumPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
@@ -25,15 +27,18 @@ function AppContent() {
     setActiveTab(tab);
   }, []);
 
+  const handleSettingsClick = useCallback(() => setActiveTab("settings"), []);
+
   return (
     <PlayerProvider onStationPlay={addRecent}>
       <PremiumProvider>
         <div className="flex flex-col h-full bg-background">
           <div className="flex-1 flex flex-col overflow-hidden">
-            {activeTab === "home" && <HomePage recent={recent} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
+            {activeTab === "home" && <HomePage recent={recent} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} onSettingsClick={handleSettingsClick} />}
             {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
             {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
             {activeTab === "premium" && <PremiumPage />}
+            {activeTab === "settings" && <SettingsPage />}
           </div>
           <MiniPlayer />
           <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
@@ -45,9 +50,11 @@ function AppContent() {
 }
 
 const Index = () => (
-  <FavoritesProvider>
-    <AppContent />
-  </FavoritesProvider>
+  <LanguageProvider>
+    <FavoritesProvider>
+      <AppContent />
+    </FavoritesProvider>
+  </LanguageProvider>
 );
 
 export default Index;

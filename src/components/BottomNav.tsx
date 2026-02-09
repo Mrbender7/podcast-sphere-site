@@ -1,19 +1,23 @@
-import { Home, Search, Heart, Crown } from "lucide-react";
+import { Home, Search, Heart, Crown, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/LanguageContext";
 
-const tabs = [
-  { id: "home", label: "Accueil", icon: Home },
-  { id: "search", label: "Recherche", icon: Search },
-  { id: "library", label: "Favoris", icon: Heart },
-  { id: "premium", label: "Premium", icon: Crown },
+const tabConfig = [
+  { id: "home", labelKey: "nav.home", icon: Home },
+  { id: "search", labelKey: "nav.search", icon: Search },
+  { id: "library", labelKey: "nav.favorites", icon: Heart },
+  { id: "premium", labelKey: "nav.premium", icon: Crown },
+  { id: "settings", labelKey: "nav.settings", icon: Settings },
 ] as const;
 
-export type TabId = (typeof tabs)[number]["id"];
+export type TabId = (typeof tabConfig)[number]["id"];
 
 export function BottomNav({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (tab: TabId) => void }) {
+  const { t } = useTranslation();
+
   return (
     <nav className="flex items-center justify-around bg-secondary/60 backdrop-blur-lg border-t border-border px-2 py-1 pb-[env(safe-area-inset-bottom)]">
-      {tabs.map(({ id, label, icon: Icon }) => (
+      {tabConfig.map(({ id, labelKey, icon: Icon }) => (
         <button
           key={id}
           onClick={() => onTabChange(id)}
@@ -23,7 +27,7 @@ export function BottomNav({ activeTab, onTabChange }: { activeTab: TabId; onTabC
           )}
         >
           <Icon className="w-5 h-5" />
-          <span className="text-[10px] font-medium">{label}</span>
+          <span className="text-[10px] font-medium">{t(labelKey)}</span>
         </button>
       ))}
     </nav>
