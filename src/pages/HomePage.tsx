@@ -7,7 +7,7 @@ import { Loader2, Settings } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import radioSphereLogo from "@/assets/radio-sphere-logo.png";
 
-const GENRES = ["pop", "rock", "jazz", "classical", "electronic", "hiphop", "news", "ambient"];
+const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
 
 const LANG_MAP: Record<string, string> = {
   fr: "french", es: "spanish", de: "german", pt: "portuguese",
@@ -93,14 +93,20 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
 }
 
 const GENRE_COLORS: Record<string, string> = {
-  pop: "from-pink-600 to-rose-400",
-  rock: "from-red-700 to-orange-500",
-  jazz: "from-amber-700 to-yellow-500",
+  "70s": "from-amber-800 to-orange-500",
+  "80s": "from-fuchsia-700 to-pink-400",
+  "90s": "from-cyan-700 to-teal-400",
+  ambient: "from-indigo-800 to-blue-400",
+  chillout: "from-sky-700 to-cyan-400",
   classical: "from-blue-800 to-cyan-500",
   electronic: "from-violet-700 to-purple-400",
   hiphop: "from-emerald-700 to-teal-400",
+  jazz: "from-amber-700 to-yellow-500",
   news: "from-slate-700 to-gray-400",
-  ambient: "from-indigo-800 to-blue-400",
+  pop: "from-pink-600 to-rose-400",
+  "r&b": "from-rose-700 to-pink-500",
+  rock: "from-red-700 to-orange-500",
+  soul: "from-orange-700 to-amber-400",
 };
 
 function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
