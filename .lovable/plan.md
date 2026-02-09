@@ -1,56 +1,61 @@
 
+# Safe Area Header + Audio Background Persistence
 
-# Harmonisation visuelle du Logo et Typographie
+## 1. Safe Area padding (Android/iOS status bar)
 
-## 1. Correction du fond noir du logo
+Ajouter un `padding-top` sur le conteneur principal de chaque page pour respecter la barre d'etat systeme.
 
-Le logo PNG a un fond noir (#000) qui tranche avec le fond gris fonce de l'app (~hsl(0,0%,7%)). On va appliquer `mix-blend-mode: screen` sur l'image pour faire disparaitre le noir et ne garder que les elements lumineux (la sphere et le texte).
+**`src/index.css`** : Ajouter une variable CSS et un style global sur `#root` ou le body :
+```css
+body {
+  padding-top: env(safe-area-inset-top, 24px);
+}
+```
 
-On ajoutera aussi un effet de lueur (glow) autour du logo avec un `drop-shadow` de la couleur primaire verte.
+Alternativement, appliquer le padding directement sur les headers des pages. Approche choisie : **ajouter le padding sur le conteneur principal dans `Index.tsx`** (le div `flex flex-col h-full`) pour que toutes les pages en beneficient automatiquement.
 
-### Fichiers modifies
+**Fichier modifie : `src/pages/Index.tsx`**
+- Ajouter `pt-[env(safe-area-inset-top,24px)]` ou un style inline `paddingTop: 'env(safe-area-inset-top, 24px)'` sur le div racine.
 
-**`src/pages/HomePage.tsx`** (ligne 49) :
-- Remplacer `className="w-8 h-8 rounded-full"` par `className="w-8 h-8 mix-blend-screen drop-shadow-[0_0_6px_hsl(141,73%,42%)]"`
-- Supprimer `rounded-full` (plus necessaire sans fond visible)
+**Fichier modifie : `src/index.css`**
+- Ajouter `viewport-fit=cover` dans le meta viewport de `index.html` pour activer les safe areas.
 
-**`src/pages/SettingsPage.tsx`** (ligne 11) :
-- Meme traitement : `className="w-10 h-10 mix-blend-screen drop-shadow-[0_0_8px_hsl(141,73%,42%)]"`
+**Fichier modifie : `index.html`**
+- Mettre a jour la balise meta viewport : `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">`
 
-## 2. Typographie : Poppins pour les titres, Inter pour le texte
+## 2. Audio en arriere-plan (Web Policy)
 
-**`src/index.css`** :
-- Ajouter l'import Google Fonts pour Poppins (poids 600, 700) a cote de l'import Inter existant
-- Garder Inter comme police par defaut du body (deja en place)
+Le navigateur peut mettre en pause l'audio quand l'onglet perd le focus. On va :
 
-**`tailwind.config.ts`** :
-- Ajouter dans `theme.extend.fontFamily` :
-  - `sans: ['Inter', 'sans-serif']`
-  - `heading: ['Poppins', 'sans-serif']`
+**Fichier modifie : `src/contexts/PlayerContext.tsx`**
 
-Puis appliquer `font-heading` sur les titres principaux dans :
-- **`HomePage.tsx`** : h1 "Radio Sphere", h2 sections
-- **`SettingsPage.tsx`** : h1, h2
-- **`SearchPage.tsx`** : h1 titre
-- **`LibraryPage.tsx`** : h1 titre
-- **`PremiumPage.tsx`** : h1, h2
-- **`FullScreenPlayer.tsx`** : nom de la station
-- **`GenreCard`** dans HomePage : le label du genre
+### 2a. Empecher la pause au blur
+- Ecouter `visibilitychange` sur le document. Si l'audio etait en lecture et que la page perd le focus, ne rien faire (ne pas interrompre). Si le navigateur a mis en pause automatiquement, relancer `audio.play()`.
 
-## 3. Uniformisation des couleurs de fond
+### 2b. WakeLock API
+- Lors du `play()`, demander un WakeLock via `navigator.wakeLock.request('screen')` si disponible.
+- Relacher le WakeLock lors du `pause` ou du cleanup.
+- Re-acquerir le WakeLock sur `visibilitychange` quand la page redevient visible et que l'audio joue.
 
-Le fond est deja uniforme via la variable CSS `--background`. On verifiera que le header n'a pas de background different. Actuellement le header dans HomePage est un simple `div` sans background propre, donc il herite bien du fond de page. Pas de changement necessaire ici.
+### 2c. Console log AudioContext
+- Ajouter un `console.log("[RadioSphere] Audio ready")` apres la premiere interaction utilisateur (dans la fonction `play`).
+
+### Code prevu dans PlayerContext.tsx :
+
+```text
+Ajouts :
+- useRef pour wakeLockRef (WakeLockSentinel | null)
+- useEffect pour visibilitychange listener :
+  - si document.visibilityState === 'visible' et isPlaying : audio.play(), re-acquerir wakeLock
+- Dans play() : requestWakeLock(), console.log
+- Dans togglePlay() pause : releaseWakeLock()
+- Dans cleanup : releaseWakeLock(), remove visibilitychange listener
+```
 
 ## Resume des fichiers
 
 | Fichier | Changement |
 |---------|-----------|
-| `src/index.css` | Ajout import Poppins |
-| `tailwind.config.ts` | Ajout fontFamily heading + sans |
-| `src/pages/HomePage.tsx` | mix-blend-screen sur logo, font-heading sur titres |
-| `src/pages/SettingsPage.tsx` | mix-blend-screen sur logo, font-heading sur titres |
-| `src/pages/SearchPage.tsx` | font-heading sur h1 |
-| `src/pages/LibraryPage.tsx` | font-heading sur h1 |
-| `src/pages/PremiumPage.tsx` | font-heading sur titres |
-| `src/components/FullScreenPlayer.tsx` | font-heading sur nom station |
-
+| `index.html` | viewport-fit=cover |
+| `src/pages/Index.tsx` | padding-top safe-area sur le conteneur racine |
+| `src/contexts/PlayerContext.tsx` | visibilitychange handler, WakeLock, console.log audio |
