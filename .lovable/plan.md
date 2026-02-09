@@ -1,91 +1,56 @@
 
-# Internationalisation (i18n) et Branding "Radio Sphere"
 
-## Vue d'ensemble
-Mise en place d'un systeme de traduction FR/EN complet, renommage en "Radio Sphere", ajout d'une page Parametres avec bascule de langue, et creation d'un logo placeholder.
+# Harmonisation visuelle du Logo et Typographie
 
----
+## 1. Correction du fond noir du logo
 
-## 1. Systeme de traduction (i18n)
+Le logo PNG a un fond noir (#000) qui tranche avec le fond gris fonce de l'app (~hsl(0,0%,7%)). On va appliquer `mix-blend-mode: screen` sur l'image pour faire disparaitre le noir et ne garder que les elements lumineux (la sphere et le texte).
 
-### Nouveau fichier : `src/i18n/translations.ts`
-Dictionnaire de traductions FR/EN couvrant toute l'interface :
+On ajoutera aussi un effet de lueur (glow) autour du logo avec un `drop-shadow` de la couleur primaire verte.
 
-```text
-Cles principales :
-- nav.home, nav.search, nav.favorites, nav.premium, nav.settings
-- home.greeting, home.recentlyPlayed, home.popularStations, home.localPopular, home.exploreByGenre
-- search.title, search.placeholder, search.selectCountry, search.clearCountry, search.resetFilters, search.noResults, search.useFilters
-- search.genre, search.language
-- favorites.title, favorites.empty, favorites.emptyDesc
-- premium.title, premium.subtitle, premium.active, premium.noAds, premium.noAdsDesc, premium.hd, premium.hdDesc
-- premium.exclusive, premium.exclusiveDesc, premium.monthly, premium.yearly, premium.cancel, premium.disclaimer
-- player.nowPlaying, player.streamError, player.streamUnavailable
-- settings.title, settings.language, settings.languageDesc
-```
+### Fichiers modifies
 
-### Nouveau fichier : `src/contexts/LanguageContext.tsx`
-- Contexte React avec `language` ("fr" | "en"), `setLanguage`, et fonction `t(key)` pour recuperer une traduction
-- Persistance dans `localStorage` (cle `radiospher_language`)
-- Detection initiale via `navigator.language` (si "fr" -> francais par defaut, sinon anglais)
+**`src/pages/HomePage.tsx`** (ligne 49) :
+- Remplacer `className="w-8 h-8 rounded-full"` par `className="w-8 h-8 mix-blend-screen drop-shadow-[0_0_6px_hsl(141,73%,42%)]"`
+- Supprimer `rounded-full` (plus necessaire sans fond visible)
 
-## 2. Renommage en "Radio Sphere"
+**`src/pages/SettingsPage.tsx`** (ligne 11) :
+- Meme traitement : `className="w-10 h-10 mix-blend-screen drop-shadow-[0_0_8px_hsl(141,73%,42%)]"`
 
-- **`index.html`** : Mettre a jour le `<title>`, les meta `og:title`, `description` avec "Radio Sphere"
-- **`PremiumContext.tsx`** : Changer les cles localStorage de `radioflow_*` a `radiosphere_*`
-- Toutes les references textuelles "RadioFlow" remplacees par "Radio Sphere"
+## 2. Typographie : Poppins pour les titres, Inter pour le texte
 
-## 3. Logo Placeholder
+**`src/index.css`** :
+- Ajouter l'import Google Fonts pour Poppins (poids 600, 700) a cote de l'import Inter existant
+- Garder Inter comme police par defaut du body (deja en place)
 
-### Nouveau fichier : `src/components/RadioSphereLogo.tsx`
-- Composant SVG minimaliste : une sphere (cercle) avec des arcs representant des ondes radio
-- Utilise le gradient primaire de l'app (du vert/emeraude vers le bleu ou selon le theme actuel)
-- Props : `size` (default 32) pour adapter la taille
-- Utilise dans le header de la page d'accueil et la page parametres
+**`tailwind.config.ts`** :
+- Ajouter dans `theme.extend.fontFamily` :
+  - `sans: ['Inter', 'sans-serif']`
+  - `heading: ['Poppins', 'sans-serif']`
 
-## 4. Page Parametres
+Puis appliquer `font-heading` sur les titres principaux dans :
+- **`HomePage.tsx`** : h1 "Radio Sphere", h2 sections
+- **`SettingsPage.tsx`** : h1, h2
+- **`SearchPage.tsx`** : h1 titre
+- **`LibraryPage.tsx`** : h1 titre
+- **`PremiumPage.tsx`** : h1, h2
+- **`FullScreenPlayer.tsx`** : nom de la station
+- **`GenreCard`** dans HomePage : le label du genre
 
-### Nouveau fichier : `src/pages/SettingsPage.tsx`
-- Titre "Parametres" / "Settings"
-- Section "Langue" avec un toggle/select FR/EN
-- Affichage du logo Radio Sphere en haut
-- Design coherent avec le dark theme existant
+## 3. Uniformisation des couleurs de fond
 
-### Modification de la navigation
-- **`BottomNav.tsx`** : Ajouter un 5e onglet "Parametres" avec icone `Settings` (engrenage)
-- **`Index.tsx`** : Ajouter le rendu conditionnel pour `activeTab === "settings"`
-- Le type `TabId` inclura `"settings"`
+Le fond est deja uniforme via la variable CSS `--background`. On verifiera que le header n'a pas de background different. Actuellement le header dans HomePage est un simple `div` sans background propre, donc il herite bien du fond de page. Pas de changement necessaire ici.
 
-## 5. Engrenage sur la page d'accueil
-- **`HomePage.tsx`** : Ajouter une icone engrenage en haut a droite du header, qui switch vers l'onglet settings au clic
-- Passer un callback `onSettingsClick` depuis `Index.tsx`
+## Resume des fichiers
 
-## 6. Integration des traductions dans tous les composants
+| Fichier | Changement |
+|---------|-----------|
+| `src/index.css` | Ajout import Poppins |
+| `tailwind.config.ts` | Ajout fontFamily heading + sans |
+| `src/pages/HomePage.tsx` | mix-blend-screen sur logo, font-heading sur titres |
+| `src/pages/SettingsPage.tsx` | mix-blend-screen sur logo, font-heading sur titres |
+| `src/pages/SearchPage.tsx` | font-heading sur h1 |
+| `src/pages/LibraryPage.tsx` | font-heading sur h1 |
+| `src/pages/PremiumPage.tsx` | font-heading sur titres |
+| `src/components/FullScreenPlayer.tsx` | font-heading sur nom station |
 
-### Fichiers modifies avec `t()` :
-1. **`HomePage.tsx`** : "Bonjour", "Ecoutees recemment", "Stations populaires", "Explorer par genre"
-2. **`SearchPage.tsx`** : "Recherche", "Rechercher une station...", "Choisir un pays", "Reinitialiser les filtres", "Aucun resultat", labels Genre/Langue
-3. **`LibraryPage.tsx`** : "Favoris", texte vide
-4. **`PremiumPage.tsx`** : Tous les textes (titre, features, boutons prix, disclaimer)
-5. **`BottomNav.tsx`** : Labels des onglets
-6. **`FullScreenPlayer.tsx`** : "En cours de lecture"
-7. **`PlayerContext.tsx`** : Messages toast d'erreur (via `t()` ou passage du contexte)
-8. **`MiniPlayer.tsx`** : Pas de texte statique visible a traduire (sauf alt text)
-9. **`StationCard.tsx`** : Pas de texte statique
-
-## 7. Details techniques
-
-### Ordre d'implementation
-1. Creer `src/i18n/translations.ts` (dictionnaire)
-2. Creer `src/contexts/LanguageContext.tsx` (contexte + hook `useTranslation`)
-3. Creer `src/components/RadioSphereLogo.tsx` (SVG logo)
-4. Creer `src/pages/SettingsPage.tsx`
-5. Modifier `index.html` (branding)
-6. Modifier `src/components/BottomNav.tsx` (ajout onglet settings + traductions)
-7. Modifier `src/pages/Index.tsx` (LanguageProvider, onglet settings, callback)
-8. Modifier tous les composants pour utiliser `t()`
-9. Modifier `src/contexts/PremiumContext.tsx` (cles localStorage)
-10. Modifier `src/contexts/PlayerContext.tsx` (messages d'erreur traduits)
-
-### Architecture du contexte
-Le `LanguageProvider` sera place au plus haut niveau dans `Index.tsx`, englobant tous les autres providers, pour que `t()` soit disponible partout y compris dans `PlayerContext`.
