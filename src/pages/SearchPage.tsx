@@ -28,8 +28,8 @@ function countryCodeToFlag(iso: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-const GENRES = ["pop", "rock", "jazz", "classical", "electronic", "news", "ambient", "hiphop"];
-const LANGUAGES = ["french", "english", "spanish", "german", "portuguese", "arabic", "japanese"];
+const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
+const LANGUAGES = ["arabic", "english", "french", "german", "japanese", "portuguese", "spanish"];
 
 interface SearchPageProps {
   isFavorite: (id: string) => boolean;
@@ -125,6 +125,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
           items={GENRES}
           selected={genres}
           onToggle={toggleGenre}
+          searchable
         />
         <MultiSelectDropdown
           label={t("search.language")}
@@ -177,17 +178,35 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   );
 }
 
-function MultiSelectDropdown({ label, items, selected, onToggle }: { label: string; items: string[]; selected: string[]; onToggle: (v: string) => void }) {
+function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: { label: string; items: string[]; selected: string[]; onToggle: (v: string) => void; searchable?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (open && searchable) inputRef.current?.focus();
+  }, [open, searchable]);
+
+  const filtered = search
+    ? items.filter(i => i.toLowerCase().includes(search.toLowerCase()))
+    : items;
+
+  const handleCustomTag = () => {
+    const tag = search.trim().toLowerCase();
+    if (tag && !selected.includes(tag)) {
+      onToggle(tag);
+    }
+    setSearch("");
+  };
 
   return (
     <div className="relative flex-1" ref={ref}>
@@ -201,8 +220,20 @@ function MultiSelectDropdown({ label, items, selected, onToggle }: { label: stri
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[240px] overflow-y-auto">
-          {items.map(item => (
+        <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[280px] overflow-y-auto">
+          {searchable && (
+            <div className="px-2 pb-1 pt-1 sticky top-0 bg-popover">
+              <Input
+                ref={inputRef}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && filtered.length === 0 && search.trim()) handleCustomTag(); }}
+                placeholder="Rechercher..."
+                className="h-8 text-xs bg-accent border-0"
+              />
+            </div>
+          )}
+          {filtered.map(item => (
             <button
               key={item}
               onClick={() => onToggle(item)}
@@ -217,6 +248,14 @@ function MultiSelectDropdown({ label, items, selected, onToggle }: { label: stri
               {item}
             </button>
           ))}
+          {searchable && filtered.length === 0 && search.trim() && (
+            <button
+              onClick={handleCustomTag}
+              className="w-full px-3 py-2 text-sm text-primary hover:bg-accent transition-colors text-left"
+            >
+              + Ajouter « {search.trim()} »
+            </button>
+          )}
         </div>
       )}
     </div>
