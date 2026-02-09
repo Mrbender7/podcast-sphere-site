@@ -1,110 +1,91 @@
 
+# Internationalisation (i18n) et Branding "Radio Sphere"
 
-# Refinement UX et corrections de layout
-
-## 1. Renommer "Bibliotheque" en "Favoris"
-
-**Fichiers concernes** : `BottomNav.tsx`, `LibraryPage.tsx`
-
-- Dans `BottomNav.tsx` : changer le label `"Bibliothèque"` en `"Favoris"` et l'icone `Library` en `Heart`
-- Dans `LibraryPage.tsx` : changer le titre `h1` de `"Bibliothèque"` en `"Favoris"`
-
-## 2. Bouton favori sur le MiniPlayer et FullScreenPlayer
-
-**Fichiers concernes** : `MiniPlayer.tsx`, `FullScreenPlayer.tsx`, `Index.tsx`
-
-- Les deux players ont besoin d'acceder a `isFavorite` et `toggleFavorite`. Ces fonctions seront passees via le `PlayerProvider` ou directement en props.
-- Approche : ajouter `isFavorite` et `onToggleFavorite` en props au `MiniPlayer` et `FullScreenPlayer` depuis `Index.tsx` (ou les importer du hook `useFavorites` directement dans ces composants -- mais comme le hook est deja utilise dans Index, on passera les props pour coherence).
-- **Alternative plus propre** : Creer un contexte `FavoritesContext` qui wrappera l'app, ainsi les players pourront acceder aux favoris directement sans props drilling. On va utiliser cette approche.
-- `MiniPlayer.tsx` : ajouter un bouton coeur a cote du bouton play/pause
-- `FullScreenPlayer.tsx` : ajouter un bouton coeur sous les infos de la station
-
-## 3. Correction du z-index du dropdown pays
-
-**Fichier concerne** : `SearchPage.tsx`
-
-- Ajouter `z-50` au `SelectContent` du pays pour qu'il s'affiche au-dessus de la barre de navigation
-- Ajouter `shadow-xl` pour la lisibilite
-- Ajouter du padding en bas de la page de recherche (`pb-32`) pour que le contenu ne soit pas cache par le mini player et la nav
-
-## 4. Liste des pays dynamique depuis l'API Radio Browser
-
-**Fichiers concernes** : `RadioService.ts`, `SearchPage.tsx`
-
-- Ajouter une methode `getCountries()` dans le service radio qui appelle `/json/countries` de l'API Radio Browser
-- Trier par ordre alphabetique
-- Generer les drapeaux emoji a partir du code pays ISO (algorithme standard : convertir les 2 lettres du code pays en Regional Indicator Symbols)
-- Dans `SearchPage.tsx` : charger la liste via `useQuery` et alimenter le `Select` dynamiquement
-- Garder la liste statique comme fallback en cas d'echec API
-
-## 5. Intelligence locale sur la page d'accueil
-
-**Fichier concerne** : `HomePage.tsx`
-
-- Detecter `navigator.language` (ex: `"fr-FR"`, `"fr"`, `"en-US"`)
-- Si la langue contient `"fr"` : passer `language: "french"` au filtre des stations populaires
-- Si `"es"` : `"spanish"`, si `"de"` : `"german"`, etc.
-- Sinon : garder le top mondial (comportement actuel)
-- Modifier le `useQuery` pour `topStations` en utilisant `searchStations` avec filtre langue plutot que `getTopStations`
-
-## 6. Verification des genre cards (deja fonctionnel)
-
-- Les genre cards appellent deja `onGenreClick` qui set le genre et switch l'onglet. On verifiera que c'est bien connecte.
-
-## 7. Aspect 3D des boutons
-
-**Fichiers concernes** : `HomePage.tsx` (genre cards), `MiniPlayer.tsx`, `FullScreenPlayer.tsx`, `index.css`
-
-- Genre cards : ajouter des classes Tailwind pour un effet 3D (`shadow-lg`, `border-t border-white/10`, un leger `ring` interne, et un `hover:shadow-xl hover:-translate-y-0.5` pour l'effet de profondeur)
-- Boutons play/pause du MiniPlayer et FullScreenPlayer : ajouter un gradient plus prononce, `shadow-lg shadow-primary/40`, `border-t border-white/20` pour simuler une lumiere venant du haut, et un `active:shadow-sm active:translate-y-0.5` pour l'effet d'enfoncement
+## Vue d'ensemble
+Mise en place d'un systeme de traduction FR/EN complet, renommage en "Radio Sphere", ajout d'une page Parametres avec bascule de langue, et creation d'un logo placeholder.
 
 ---
 
-## Details techniques
+## 1. Systeme de traduction (i18n)
 
-### Nouveau fichier : `src/contexts/FavoritesContext.tsx`
-- Exporte `FavoritesProvider` et `useFavoritesContext`
-- Encapsule le hook `useFavorites` et `useRecentStations` existants
-- Place dans `Index.tsx` au niveau le plus haut
+### Nouveau fichier : `src/i18n/translations.ts`
+Dictionnaire de traductions FR/EN couvrant toute l'interface :
 
-### Modifications fichier par fichier
+```text
+Cles principales :
+- nav.home, nav.search, nav.favorites, nav.premium, nav.settings
+- home.greeting, home.recentlyPlayed, home.popularStations, home.localPopular, home.exploreByGenre
+- search.title, search.placeholder, search.selectCountry, search.clearCountry, search.resetFilters, search.noResults, search.useFilters
+- search.genre, search.language
+- favorites.title, favorites.empty, favorites.emptyDesc
+- premium.title, premium.subtitle, premium.active, premium.noAds, premium.noAdsDesc, premium.hd, premium.hdDesc
+- premium.exclusive, premium.exclusiveDesc, premium.monthly, premium.yearly, premium.cancel, premium.disclaimer
+- player.nowPlaying, player.streamError, player.streamUnavailable
+- settings.title, settings.language, settings.languageDesc
+```
 
-1. **`src/contexts/FavoritesContext.tsx`** (nouveau)
-   - Contexte React avec `favorites`, `toggleFavorite`, `isFavorite`, `recent`, `addRecent`
+### Nouveau fichier : `src/contexts/LanguageContext.tsx`
+- Contexte React avec `language` ("fr" | "en"), `setLanguage`, et fonction `t(key)` pour recuperer une traduction
+- Persistance dans `localStorage` (cle `radiospher_language`)
+- Detection initiale via `navigator.language` (si "fr" -> francais par defaut, sinon anglais)
 
-2. **`src/pages/Index.tsx`**
-   - Wrapper avec `FavoritesProvider`
-   - Retirer les appels directs a `useFavorites`/`useRecentStations`
-   - Utiliser le contexte a la place
+## 2. Renommage en "Radio Sphere"
 
-3. **`src/components/BottomNav.tsx`**
-   - Changer label et icone de l'onglet library : `Heart` + `"Favoris"`
+- **`index.html`** : Mettre a jour le `<title>`, les meta `og:title`, `description` avec "Radio Sphere"
+- **`PremiumContext.tsx`** : Changer les cles localStorage de `radioflow_*` a `radiosphere_*`
+- Toutes les references textuelles "RadioFlow" remplacees par "Radio Sphere"
 
-4. **`src/pages/LibraryPage.tsx`**
-   - Titre `h1` : `"Favoris"`
+## 3. Logo Placeholder
 
-5. **`src/components/MiniPlayer.tsx`**
-   - Importer `useFavoritesContext`
-   - Ajouter bouton coeur avec style 3D sur le bouton play
+### Nouveau fichier : `src/components/RadioSphereLogo.tsx`
+- Composant SVG minimaliste : une sphere (cercle) avec des arcs representant des ondes radio
+- Utilise le gradient primaire de l'app (du vert/emeraude vers le bleu ou selon le theme actuel)
+- Props : `size` (default 32) pour adapter la taille
+- Utilise dans le header de la page d'accueil et la page parametres
 
-6. **`src/components/FullScreenPlayer.tsx`**
-   - Importer `useFavoritesContext`
-   - Ajouter bouton coeur a cote du nom de la station
-   - Style 3D sur le bouton play
+## 4. Page Parametres
 
-7. **`src/services/RadioService.ts`**
-   - Ajouter methode `getCountries()` qui appelle `/json/countries`
-   - Retourne `{ name: string, stationcount: number, iso_3166_1: string }[]`
-   - Ajouter dans l'interface `RadioProvider`
+### Nouveau fichier : `src/pages/SettingsPage.tsx`
+- Titre "Parametres" / "Settings"
+- Section "Langue" avec un toggle/select FR/EN
+- Affichage du logo Radio Sphere en haut
+- Design coherent avec le dark theme existant
 
-8. **`src/pages/SearchPage.tsx`**
-   - Charger les pays via `useQuery` + `getCountries()`
-   - Fonction utilitaire `countryCodeToFlag(iso: string)` pour convertir code ISO en emoji drapeau
-   - `SelectContent` avec `className="z-50 shadow-xl"`
-   - Padding bas augmente
+### Modification de la navigation
+- **`BottomNav.tsx`** : Ajouter un 5e onglet "Parametres" avec icone `Settings` (engrenage)
+- **`Index.tsx`** : Ajouter le rendu conditionnel pour `activeTab === "settings"`
+- Le type `TabId` inclura `"settings"`
 
-9. **`src/pages/HomePage.tsx`**
-   - Detecter `navigator.language` et mapper vers une langue Radio Browser
-   - Modifier la query `topStations` pour filtrer par langue si detectee
-   - Genre cards : ajouter classes 3D (shadow, border highlight, transform on hover)
+## 5. Engrenage sur la page d'accueil
+- **`HomePage.tsx`** : Ajouter une icone engrenage en haut a droite du header, qui switch vers l'onglet settings au clic
+- Passer un callback `onSettingsClick` depuis `Index.tsx`
 
+## 6. Integration des traductions dans tous les composants
+
+### Fichiers modifies avec `t()` :
+1. **`HomePage.tsx`** : "Bonjour", "Ecoutees recemment", "Stations populaires", "Explorer par genre"
+2. **`SearchPage.tsx`** : "Recherche", "Rechercher une station...", "Choisir un pays", "Reinitialiser les filtres", "Aucun resultat", labels Genre/Langue
+3. **`LibraryPage.tsx`** : "Favoris", texte vide
+4. **`PremiumPage.tsx`** : Tous les textes (titre, features, boutons prix, disclaimer)
+5. **`BottomNav.tsx`** : Labels des onglets
+6. **`FullScreenPlayer.tsx`** : "En cours de lecture"
+7. **`PlayerContext.tsx`** : Messages toast d'erreur (via `t()` ou passage du contexte)
+8. **`MiniPlayer.tsx`** : Pas de texte statique visible a traduire (sauf alt text)
+9. **`StationCard.tsx`** : Pas de texte statique
+
+## 7. Details techniques
+
+### Ordre d'implementation
+1. Creer `src/i18n/translations.ts` (dictionnaire)
+2. Creer `src/contexts/LanguageContext.tsx` (contexte + hook `useTranslation`)
+3. Creer `src/components/RadioSphereLogo.tsx` (SVG logo)
+4. Creer `src/pages/SettingsPage.tsx`
+5. Modifier `index.html` (branding)
+6. Modifier `src/components/BottomNav.tsx` (ajout onglet settings + traductions)
+7. Modifier `src/pages/Index.tsx` (LanguageProvider, onglet settings, callback)
+8. Modifier tous les composants pour utiliser `t()`
+9. Modifier `src/contexts/PremiumContext.tsx` (cles localStorage)
+10. Modifier `src/contexts/PlayerContext.tsx` (messages d'erreur traduits)
+
+### Architecture du contexte
+Le `LanguageProvider` sera place au plus haut niveau dans `Index.tsx`, englobant tous les autres providers, pour que `t()` soit disponible partout y compris dans `PlayerContext`.
