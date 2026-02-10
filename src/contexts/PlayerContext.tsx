@@ -3,20 +3,40 @@ import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
 
 // --- Android Foreground Service helpers (Capacitor only) ---
-async function startNativeForegroundService(station: RadioStation) {
+async function startNativeForegroundService(station: RadioStation, isPaused = false) {
   try {
     const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
     await ForegroundService.startForegroundService({
       id: 1,
       title: station.name,
       body: station.country || 'Radio Sphere',
-      smallIcon: 'ic_stat_radio',
-      // serviceType mediaPlayback = 2
+      smallIcon: 'ic_notification',
       serviceType: 2,
+      buttons: [
+        { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
+      ],
     } as any);
     console.log("[RadioSphere] Foreground service started");
   } catch (e) {
     console.log("[RadioSphere] Foreground service not available", e);
+  }
+}
+
+async function updateNativeForegroundService(station: RadioStation, isPaused: boolean) {
+  try {
+    const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
+    await (ForegroundService as any).updateForegroundService({
+      id: 1,
+      title: station.name,
+      body: station.country || 'Radio Sphere',
+      smallIcon: 'ic_notification',
+      buttons: [
+        { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
+      ],
+    });
+    console.log("[RadioSphere] Foreground service updated");
+  } catch (e) {
+    console.log("[RadioSphere] Foreground service update failed", e);
   }
 }
 
@@ -148,7 +168,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
   }, []);
 
-  // Register Media Session action handlers (including no-op seek handlers)
+  // Register Media Session action handlers + Foreground Service button listener
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
 
@@ -158,7 +178,9 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       audio.play().catch(() => {});
       startSilentLoop();
       setState(s => {
-        if (s.currentStation) startNativeForegroundService(s.currentStation);
+        if (s.currentStation) {
+          startNativeForegroundService(s.currentStation, false);
+        }
         return { ...s, isPlaying: true };
       });
       requestWakeLock();
@@ -170,10 +192,14 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       if (!audio) return;
       audio.pause();
       stopSilentLoop();
-      setState(s => ({ ...s, isPlaying: false }));
+      setState(s => {
+        if (s.currentStation) {
+          updateNativeForegroundService(s.currentStation, true);
+        }
+        return { ...s, isPlaying: false };
+      });
       releaseWakeLock();
       stopHeartbeat();
-      stopNativeForegroundService();
     };
 
     const noop = () => {};
@@ -184,12 +210,33 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     navigator.mediaSession.setActionHandler('seekbackward', noop);
     navigator.mediaSession.setActionHandler('seekforward', noop);
 
+    // Listen for foreground service notification button clicks
+    let buttonListener: any = null;
+    (async () => {
+      try {
+        const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
+        buttonListener = await (ForegroundService as any).addListener('buttonClicked', (event: any) => {
+          console.log("[RadioSphere] Notification button clicked:", event);
+          if (event.buttonId === 1) {
+            if (isPlayingRef.current) {
+              handlePause();
+            } else {
+              handlePlay();
+            }
+          }
+        });
+      } catch (e) {
+        console.log("[RadioSphere] Button listener not available", e);
+      }
+    })();
+
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('stop', null);
       navigator.mediaSession.setActionHandler('seekbackward', null);
       navigator.mediaSession.setActionHandler('seekforward', null);
+      if (buttonListener) buttonListener.remove();
     };
   }, [requestWakeLock, releaseWakeLock, startHeartbeat, stopHeartbeat]);
 
@@ -260,7 +307,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
           setState(s => ({ ...s, isPlaying: true }));
           startSilentLoop();
           startHeartbeat();
-          startNativeForegroundService(station);
+          startNativeForegroundService(station, false);
         })
         .catch((e) => {
           console.error("Lecture différée échouée", e);
@@ -282,7 +329,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       stopSilentLoop();
       stopHeartbeat();
       releaseWakeLock();
-      stopNativeForegroundService();
+      updateNativeForegroundService(state.currentStation, true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
       audio.play().then(() => {
@@ -291,7 +338,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       startSilentLoop();
       startHeartbeat();
       requestWakeLock();
-      startNativeForegroundService(state.currentStation);
+      startNativeForegroundService(state.currentStation, false);
     }
     const newPlaying = !state.isPlaying;
     setState(s => ({ ...s, isPlaying: newPlaying }));
