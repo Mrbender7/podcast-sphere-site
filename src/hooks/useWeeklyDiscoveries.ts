@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RadioStation } from "@/types/radio";
 import { radioBrowserProvider } from "@/services/RadioService";
@@ -59,14 +59,14 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
   const weekKey = useMemo(getMondayKey, []);
   const cached = useMemo(loadCached, []);
   const profile = useMemo(() => analyzeFavorites(favorites), [favorites]);
+  const [forceRefresh, setForceRefresh] = useState(0);
 
-  const needsFetch = !cached || cached.weekKey !== weekKey;
+  const needsFetch = !cached || cached.weekKey !== weekKey || forceRefresh > 0;
 
-  const { data } = useQuery({
-    queryKey: ["weeklyDiscoveries", weekKey, profile.tags.join(","), profile.countries.join(",")],
+  const { data, isFetching } = useQuery({
+    queryKey: ["weeklyDiscoveries", weekKey, profile.tags.join(","), profile.countries.join(","), forceRefresh],
     queryFn: async (): Promise<RadioStation[]> => {
       if (favorites.length === 0) {
-        // Fallback: random popular stations
         const stations = await radioBrowserProvider.getTopStations(20);
         return pickThree(stations, []);
       }
@@ -75,7 +75,6 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
       const favoriteIds = new Set(favorites.map(f => f.id));
       const exclude = new Set([...history, ...favoriteIds]);
 
-      // Search by top tags and countries
       const searches: Promise<RadioStation[]>[] = [];
       for (const tag of profile.tags.slice(0, 3)) {
         searches.push(radioBrowserProvider.searchStations({ tag, limit: 15 }));
@@ -87,7 +86,6 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
       const results = await Promise.all(searches);
       const all = results.flat();
 
-      // Dedupe and exclude favorites + history
       const seen = new Set<string>();
       const candidates = all.filter(s => {
         if (!s.id || seen.has(s.id) || exclude.has(s.id)) return false;
@@ -98,7 +96,7 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
       return pickThree(candidates, Array.from(exclude));
     },
     enabled: needsFetch && favorites.length > 0,
-    staleTime: Infinity,
+    staleTime: forceRefresh > 0 ? 0 : Infinity,
   });
 
   const [discoveries, setDiscoveries] = useState<RadioStation[]>(cached?.weekKey === weekKey ? cached.stations : []);
@@ -107,14 +105,18 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
     if (data && data.length > 0) {
       setDiscoveries(data);
       localStorage.setItem(DISCOVERIES_KEY, JSON.stringify({ weekKey, stations: data }));
-      // Update history
       const history = loadHistory();
       const newIds = data.map(s => s.id);
       saveHistory([...newIds, ...history]);
     }
   }, [data, weekKey]);
 
-  return discoveries;
+  const refresh = useCallback(() => {
+    localStorage.removeItem(DISCOVERIES_KEY);
+    setForceRefresh(n => n + 1);
+  }, []);
+
+  return { discoveries, refresh, isRefreshing: isFetching };
 }
 
 function pickThree(candidates: RadioStation[], _exclude: string[]): RadioStation[] {
