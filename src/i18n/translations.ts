@@ -30,6 +30,8 @@ const translations: Record<Language, Record<string, string>> = {
     "search.useFilters": "Utilisez la recherche ou les filtres pour trouver des stations",
     "search.genre": "Genre",
     "search.language": "Langue",
+    "search.loadMore": "Plus de stations",
+    "search.loadingMore": "Chargement...",
 
     // Favorites
     "favorites.title": "Favoris",
@@ -109,6 +111,8 @@ const translations: Record<Language, Record<string, string>> = {
     "search.useFilters": "Use the search bar or filters to find stations",
     "search.genre": "Genre",
     "search.language": "Language",
+    "search.loadMore": "More stations",
+    "search.loadingMore": "Loading...",
 
     // Favorites
     "favorites.title": "Favorites",
