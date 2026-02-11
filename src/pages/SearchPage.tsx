@@ -266,9 +266,9 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[280px] overflow-y-auto">
+        <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl max-h-[280px] flex flex-col overflow-hidden">
           {searchable && (
-            <div className="px-2 pb-1 pt-1 sticky top-0 bg-popover z-10 border-b border-border">
+            <div className="px-2 pb-1 pt-1 bg-popover z-10 border-b border-border shrink-0">
               <Input
                 ref={inputRef}
                 value={search}
@@ -279,29 +279,31 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
               />
             </div>
           )}
-          {filtered.map(item => (
-            <button
-              key={item}
-              onClick={() => onToggle(item)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm capitalize hover:bg-accent transition-colors text-foreground"
-            >
-              <div className={cn(
-                "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                selected.includes(item) ? "bg-primary border-primary" : "border-muted-foreground/40"
-              )}>
-                {selected.includes(item) && <Check className="w-3 h-3 text-primary-foreground" />}
-              </div>
-              {item}
-            </button>
-          ))}
-          {searchable && filtered.length === 0 && search.trim() && (
-            <button
-              onClick={handleCustomTag}
-              className="w-full px-3 py-2 text-sm text-primary hover:bg-accent transition-colors text-left"
-            >
-              + Ajouter « {search.trim()} »
-            </button>
-          )}
+          <div className="overflow-y-auto py-1 flex-1 min-h-0">
+            {filtered.map(item => (
+              <button
+                key={item}
+                onClick={() => onToggle(item)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm capitalize hover:bg-accent transition-colors text-foreground"
+              >
+                <div className={cn(
+                  "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                  selected.includes(item) ? "bg-primary border-primary" : "border-muted-foreground/40"
+                )}>
+                  {selected.includes(item) && <Check className="w-3 h-3 text-primary-foreground" />}
+                </div>
+                {item}
+              </button>
+            ))}
+            {searchable && filtered.length === 0 && search.trim() && (
+              <button
+                onClick={handleCustomTag}
+                className="w-full px-3 py-2 text-sm text-primary hover:bg-accent transition-colors text-left"
+              >
+                + Ajouter « {search.trim()} »
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
