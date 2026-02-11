@@ -2,7 +2,7 @@ import { RadioStation } from "@/types/radio";
 import { StationCard } from "@/components/StationCard";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
-import { Heart, Sparkles } from "lucide-react";
+import { Heart, Sparkles, RefreshCw } from "lucide-react";
 import radioSphereLogo from "@/assets/radio-sphere-logo.png";
 
 const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
@@ -17,7 +17,7 @@ interface HomePageProps {
 
 export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGenreClick }: HomePageProps) {
   const { t } = useTranslation();
-  const discoveries = useWeeklyDiscoveries(favorites);
+  const { discoveries, refresh, isRefreshing } = useWeeklyDiscoveries(favorites);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -61,10 +61,20 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
       {/* Weekly discoveries */}
       {discoveries.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(280,80%,60%)] to-[hsl(340,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            {t("home.weeklyDiscoveries")}
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(280,80%,60%)] to-[hsl(340,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              {t("home.weeklyDiscoveries")}
+            </h2>
+            <button
+              onClick={refresh}
+              disabled={isRefreshing}
+              className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+              aria-label="Rafraîchir"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {discoveries.map(s => (
               <StationCard key={s.id} station={s} isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
