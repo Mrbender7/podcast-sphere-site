@@ -41,7 +41,12 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   const [country, setCountry] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
+  const [allResults, setAllResults] = useState<RadioStation[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { t } = useTranslation();
+  const PAGE_SIZE = 40;
 
   useEffect(() => {
     if (initialGenre) setGenres([initialGenre]);
@@ -63,18 +68,57 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   const hasFilters = !!(query || country || genres.length || languages.length);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setAllResults([]);
+    setOffset(0);
+    setHasMore(false);
+  }, [query, country, genres, languages]);
+
   const { data: results, isLoading } = useQuery({
     queryKey: ["search", query, country, genres, languages],
-    queryFn: () => radioBrowserProvider.searchStations({
-      name: query || undefined,
-      country: country || undefined,
-      tag: genres.length ? genres.join(",") : undefined,
-      language: languages.length ? languages.join(",") : undefined,
-      limit: 40,
-    }),
+    queryFn: async () => {
+      const data = await radioBrowserProvider.searchStations({
+        name: query || undefined,
+        country: country || undefined,
+        tag: genres.length ? genres.join(",") : undefined,
+        language: languages.length ? languages.join(",") : undefined,
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
+      setAllResults(data);
+      setOffset(data.length);
+      setHasMore(data.length >= PAGE_SIZE);
+      return data;
+    },
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
   });
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const data = await radioBrowserProvider.searchStations({
+        name: query || undefined,
+        country: country || undefined,
+        tag: genres.length ? genres.join(",") : undefined,
+        language: languages.length ? languages.join(",") : undefined,
+        limit: PAGE_SIZE,
+        offset,
+      });
+      // Deduplicate by station id
+      setAllResults(prev => {
+        const ids = new Set(prev.map(s => s.id));
+        return [...prev, ...data.filter(s => !ids.has(s.id))];
+      });
+      setOffset(o => o + data.length);
+      setHasMore(data.length >= PAGE_SIZE);
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const clearFilters = () => { setQuery(""); setCountry(""); setGenres([]); setLanguages([]); };
 
@@ -154,16 +198,25 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       {isLoading && (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       )}
-      {results && (
+      {allResults.length > 0 && (
         <div className="space-y-1">
-          {results.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
-          ) : (
-            results.map(s => (
-              <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
-            ))
+          {allResults.map(s => (
+            <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
+          ))}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full py-3 mt-2 rounded-lg bg-accent text-sm text-foreground font-medium hover:bg-accent/80 transition-colors flex items-center justify-center gap-2"
+            >
+              {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {loadingMore ? t("search.loadingMore") || "Chargement..." : t("search.loadMore") || "Plus de stations"}
+            </button>
           )}
         </div>
+      )}
+      {results && allResults.length === 0 && !isLoading && (
+        <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
       )}
 
       {!hasFilters && (
