@@ -13,11 +13,12 @@ async function startNativeForegroundService(station: RadioStation, isPaused = fa
       body: station.country || 'Radio Sphere',
       smallIcon: 'ic_notification',
       serviceType: 2,
+      silent: true,
       buttons: [
         { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
       ],
     } as any);
-    console.log("[RadioSphere] Foreground service started");
+    console.log("[RadioSphere] Foreground service started (silent)");
   } catch (e) {
     console.log("[RadioSphere] Foreground service not available", e);
   }
