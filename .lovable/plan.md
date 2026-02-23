@@ -1,46 +1,46 @@
 
 
-# Suppression du badge de notification sur l'icone de l'app
+# Ajout du tri des resultats de recherche
 
-## Probleme
+## Situation actuelle
 
-Le foreground service cree une notification qui genere un badge (compteur) sur l'icone de l'app Android, donnant l'impression qu'il y a des messages non lus.
+Les resultats sont toujours tries par popularite (votes, decroissant). L'API Radio Browser supporte le parametre `order` avec plusieurs valeurs possibles : `name`, `votes`, `clickcount`, `bitrate`, `country`, `language`.
 
-## Diagnostic
+## Solution proposee
 
-Le plugin capawesome `createNotificationChannel` ne supporte pas l'option `showBadge`. Il faut donc creer le canal de notification **nativement** dans `MainActivity.java` avec `setShowBadge(false)` **avant** que le plugin JS ne le cree. Android ne recree pas un canal qui existe deja, donc le canal natif (sans badge) sera utilise.
+Ajouter un selecteur de tri compact sur la page de recherche, juste au-dessus des resultats, permettant de choisir entre :
 
-## Solution en 2 parties
+- **Popularite** (votes, par defaut -- comportement actuel)
+- **A-Z** (name, ordre alphabetique croissant)
+- **Clicks** (clickcount, les plus ecoutes recemment)
 
-### 1. Patch natif dans le script PowerShell (`radiosphere_v2_2_4.ps1`)
+## Modifications
 
-Ajouter dans le patch `MainActivity.java` une methode `onCreate` qui cree le canal `radio_playback_v2` nativement avec `setShowBadge(false)` :
+### 1. `src/services/RadioService.ts`
 
-```text
-onCreate() {
-  super.onCreate(savedInstanceState);
-  // Creer le canal avec showBadge = false
-  NotificationChannel channel = new NotificationChannel(
-    "radio_playback_v2",
-    "Radio Playback",
-    NotificationManager.IMPORTANCE_LOW
-  );
-  channel.setShowBadge(false);
-  channel.setDescription("Notification silencieuse pour la lecture radio");
-  notificationManager.createNotificationChannel(channel);
-}
-```
+Rendre les parametres `order` et `reverse` dynamiques dans `searchStations` en les acceptant via `SearchParams`.
 
-### 2. Nouveau canal ID (`src/contexts/PlayerContext.tsx`)
+### 2. `src/types/radio.ts`
 
-Changer le `NOTIFICATION_CHANNEL_ID` de `radio_playback_v2` a `radio_playback_v3` pour forcer Android a creer un nouveau canal avec les bons parametres (puisque l'ancien `v2` est deja en cache sans `showBadge(false)`).
+Ajouter `order` et `reverse` optionnels a l'interface `SearchParams`.
 
-## Fichiers modifies
+### 3. `src/pages/SearchPage.tsx`
 
-- `radiosphere_v2_2_4.ps1` : ajout du patch `onCreate` dans `MainActivity.java` pour creer le canal nativement sans badge
-- `src/contexts/PlayerContext.tsx` : changement de l'ID du canal en `radio_playback_v3`
+- Ajouter un etat `sortBy` (valeur par defaut : `"votes"`).
+- Afficher un petit groupe de boutons/badges cliquables (Popularite | A-Z | Clicks) au-dessus de la liste de resultats.
+- Passer `order` et `reverse` dans les appels de recherche (query initiale et load more).
+- Inclure `sortBy` dans la queryKey de react-query pour declencher une nouvelle requete quand le tri change.
+- Reinitialiser les extra results quand le tri change.
 
-## Note importante
+### 4. `src/i18n/translations.ts`
 
-Apres le build, il faudra desinstaller l'ancienne APK pour que l'ancien canal `v2` soit supprime.
+Ajouter les traductions pour les labels de tri (FR/EN).
+
+## Details techniques
+
+Le tri se fait cote API (pas cote client) pour garantir la coherence avec la pagination "load more". Quand l'utilisateur change le tri, la requete repart a offset 0 avec le nouvel ordre.
+
+Pour le tri alphabetique : `order: "name"`, `reverse: "false"`.
+Pour la popularite : `order: "votes"`, `reverse: "true"`.
+Pour les clicks : `order: "clickcount"`, `reverse: "true"`.
 
