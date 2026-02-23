@@ -107,14 +107,23 @@ export function FullScreenPlayer() {
            </div>
          )}
 
-        {/* Play button */}
-        <div className="flex justify-center">
+        {/* Play button + www */}
+        <div className="flex items-center justify-center gap-6">
+          {currentStation.homepage ? (
+            <button
+              onClick={handleOpenWebsite}
+              className="w-11 h-11 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-bold text-foreground hover:bg-accent/80 transition-colors"
+            >
+              www
+            </button>
+          ) : <div className="w-11" />}
           <button
             onClick={togglePlay}
             className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
           >
             {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
           </button>
+          <div className="w-11" />
         </div>
 
         {/* Volume */}
@@ -151,16 +160,6 @@ export function FullScreenPlayer() {
            )}
           </div>
 
-          {/* Website link */}
-          {currentStation.homepage && (
-            <button
-             onClick={handleOpenWebsite}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent/50 text-sm font-medium text-foreground hover:bg-accent transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {t("player.visitWebsite")}
-            </button>
-          )}
         </div>
       </div>
     );
