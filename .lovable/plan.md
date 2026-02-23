@@ -1,66 +1,29 @@
 
-# Fix bouton Quitter + Visualizer audio anime
 
-## 3 modifications
+# Fix du son de notification persistant
 
-### 1. Fix du bouton "Quitter" dans le dialogue de sortie
+## Diagnostic
 
-Le code actuel utilise `window.close()` ou `window.history.back()`, ce qui ne fonctionne pas dans une WebView Capacitor. Il faut utiliser le plugin `@capacitor/app` et sa methode `App.exitApp()` pour fermer nativement l'application Android.
+Le canal de notification `radio_silent` a ete cree avec `importance: 3` (DEFAULT). Sur Android, ce niveau peut produire un son selon les parametres du telephone. De plus, **Android met en cache les canaux** : meme si on modifie l'importance dans le code, l'ancien canal reste actif tant que l'app n'est pas desinstallee.
 
-**Fichier** : `src/components/ExitConfirmDialog.tsx`
+## Solution
 
-```typescript
-const handleExit = async () => {
-  try {
-    const { App } = await import('@capacitor/app');
-    await App.exitApp();
-  } catch {
-    // Fallback web
-    window.close();
-  }
-};
-```
+Deux modifications dans `src/contexts/PlayerContext.tsx` :
 
-### 2. Visualizer anime sur la vignette du StationCard (quand en lecture)
+### 1. Changer l'ID du canal
 
-Remplacer l'overlay actuel (3 barres pulsantes basiques) par un petit visualizer style "barres d'equalizer" plus dynamique et visuellement interessant, inspire de Winamp. Ce sera un composant `AudioVisualizer` reutilisable avec 5-7 barres animees a des vitesses et hauteurs differentes, avec un degrade bleu-violet.
+Renommer `radio_silent` en `radio_playback_v2` pour forcer Android a creer un nouveau canal avec les bons parametres (l'ancien sera ignore).
 
-**Fichier** : `src/components/AudioVisualizer.tsx` (nouveau)
+### 2. Baisser l'importance a LOW (valeur 2)
 
-Un composant SVG leger avec des barres animees via CSS keyframes. Chaque barre a une animation independante (durees et delais differents) pour creer un mouvement organique et non repetitif. Pas de dependance audio reelle, juste une animation decorative.
+Le niveau LOW (2) garantit qu'aucun son ni vibration ne sera emis, tout en gardant la notification visible dans la barre et sur l'ecran de verrouillage.
 
-**Fichier** : `src/components/StationCard.tsx`
+## Detail technique
 
-Remplacer le bloc des 3 barres `animate-pulse` (lignes 48-52 et 74-78) par le composant `AudioVisualizer`.
+Fichier : `src/contexts/PlayerContext.tsx`
 
-### 3. Visualizer sous l'image dans le FullScreenPlayer
+- Ligne 7 : changer `NOTIFICATION_CHANNEL_ID` de `'radio_silent'` a `'radio_playback_v2'`
+- Ligne 17 : changer `importance: 3` a `importance: 2`
+- Ligne 16 : ajouter `description: 'Notification silencieuse pour la lecture radio'`
 
-Ajouter le meme composant `AudioVisualizer` en version plus grande sous l'artwork dans le player plein ecran, visible uniquement quand `isPlaying` est `true`. Ce sera une bande horizontale de barres animees entre l'image et le nom de la station, donnant un feedback visuel elegant que la lecture est en cours.
-
-**Fichier** : `src/components/FullScreenPlayer.tsx`
-
-Ajouter le visualizer juste apres le bloc artwork (apres ligne 37), dans un conteneur centre avec une largeur adaptee.
-
----
-
-## Detail technique du composant AudioVisualizer
-
-Le composant acceptera des props `size` (small/medium/large) pour s'adapter aux differents contextes :
-- **small** : 4 barres, hauteur 16px -- pour les StationCards et le compact mode
-- **medium** : 5 barres, hauteur 24px -- pour le MiniPlayer (optionnel)
-- **large** : 7-9 barres, hauteur 40px, largeur elargie -- pour le FullScreenPlayer
-
-Chaque barre utilise une animation CSS `@keyframes equalizer-bar` avec :
-- Des hauteurs oscillantes entre 20% et 100%
-- Des durees entre 0.4s et 0.8s
-- Des delais decales pour chaque barre
-- Un degrade bleu-vers-violet (coherent avec l'identite visuelle)
-
-Les animations seront ajoutees dans le fichier `tailwind.config.lov.json` via les keyframes existants, ou directement en inline style pour eviter de surcharger la config.
-
-## Fichiers modifies
-
-1. `src/components/ExitConfirmDialog.tsx` -- App.exitApp()
-2. `src/components/AudioVisualizer.tsx` -- nouveau composant
-3. `src/components/StationCard.tsx` -- utiliser AudioVisualizer
-4. `src/components/FullScreenPlayer.tsx` -- ajouter visualizer sous l'image
+Aucun autre fichier n'est impacte. Apres le build, il faudra idealement desinstaller l'ancienne APK avant d'installer la nouvelle pour que l'ancien canal soit supprime, mais le nouveau canal fonctionnera correctement meme sans desinstallation.
