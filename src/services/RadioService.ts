@@ -35,6 +35,7 @@ function normalizeStation(raw: any): RadioStation {
     codec: raw.codec || "",
     bitrate: raw.bitrate || 0,
     votes: raw.votes || 0,
+    homepage: raw.homepage || "",
   };
 }
 
