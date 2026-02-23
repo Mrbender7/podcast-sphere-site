@@ -1,7 +1,7 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2 } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink } from "lucide-react";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { Slider } from "@/components/ui/slider";
 import stationPlaceholder from "@/assets/station-placeholder.png";
@@ -112,8 +112,19 @@ export function FullScreenPlayer() {
                <p className="text-sm font-semibold text-foreground">{currentStation.language}</p>
              </div>
            )}
-         </div>
-       </div>
-     </div>
-   );
- }
+          </div>
+
+          {/* Website link */}
+          {currentStation.homepage && (
+            <button
+              onClick={() => window.open(currentStation.homepage, '_blank')}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent/50 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {t("player.visitWebsite")}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }

@@ -63,6 +63,7 @@ const translations: Record<Language, Record<string, string>> = {
     "player.streamErrorDesc": "Impossible de lire ce flux. Essayez une autre station.",
      "player.error": "Error",
     "player.streamUnavailable": "Stream unavailable",
+    "player.visitWebsite": "Visiter le site",
 
     // Exit
     "exit.title": "Fermer l'application ?",
@@ -147,6 +148,7 @@ const translations: Record<Language, Record<string, string>> = {
     "player.streamErrorDesc": "Unable to play this stream. Try another station.",
     "player.error": "Error",
     "player.streamUnavailable": "Stream unavailable",
+    "player.visitWebsite": "Visit website",
 
     // Exit
     "exit.title": "Close app?",
