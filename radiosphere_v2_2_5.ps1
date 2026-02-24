@@ -65,6 +65,37 @@ if (Test-Path $FallbackSrc) {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# 3b. Copie automotive_app_desc.xml AVANT l'injection manifest
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Copie automotive_app_desc.xml..." -ForegroundColor Yellow
+$XmlDir = "android/app/src/main/res/xml"
+if (!(Test-Path $XmlDir)) { New-Item -ItemType Directory -Path $XmlDir -Force | Out-Null }
+
+$AutoDescSrc = "android-auto/res/xml/automotive_app_desc.xml"
+if (Test-Path $AutoDescSrc) {
+    Copy-Item $AutoDescSrc "$XmlDir/automotive_app_desc.xml" -Force
+    Write-Host "    automotive_app_desc.xml copie avec succes" -ForegroundColor Green
+} else {
+    Write-Host "    ERREUR CRITIQUE: $AutoDescSrc introuvable ! Le build echouera." -ForegroundColor Red
+    Write-Host "    Verifiez que le fichier android-auto/res/xml/automotive_app_desc.xml existe dans le repo." -ForegroundColor Red
+}
+
+# Verification post-copie
+$AutoDescDest = "$XmlDir/automotive_app_desc.xml"
+if (!(Test-Path $AutoDescDest)) {
+    Write-Host "    ERREUR: automotive_app_desc.xml absent de $XmlDir apres copie !" -ForegroundColor Red
+    Write-Host "    Creation d'un fichier par defaut..." -ForegroundColor Yellow
+    $DefaultAutoDesc = @"
+<?xml version="1.0" encoding="utf-8"?>
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>
+"@
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $AutoDescDest), $DefaultAutoDesc, $UTF8NoBOM)
+    Write-Host "    Fichier par defaut cree." -ForegroundColor Green
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # 4. MANIFEST — Permissions + Services + Android Auto
 # ═══════════════════════════════════════════════════════════════════
 $ManifestPath = "android/app/src/main/AndroidManifest.xml"
@@ -72,16 +103,27 @@ if (Test-Path $ManifestPath) {
     Write-Host ">>> Manifest: Injection complete (Permissions, Services, Android Auto)..." -ForegroundColor Yellow
     $ManifestContent = Get-Content $ManifestPath -Raw
     
-    # Permissions
-    $Perms = @"
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-"@
-    $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$Perms"
+    # Permissions — only add if not already present
+    $PermsList = @(
+        "android.permission.INTERNET",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.POST_NOTIFICATIONS"
+    )
+    $PermsToAdd = ""
+    foreach ($perm in $PermsList) {
+        if ($ManifestContent -notmatch [regex]::Escape($perm)) {
+            $PermsToAdd += "    <uses-permission android:name=`"$perm`" />`n"
+            Write-Host "    + Permission: $perm" -ForegroundColor DarkGray
+        } else {
+            Write-Host "    = Permission deja presente: $perm" -ForegroundColor DarkGray
+        }
+    }
+    if ($PermsToAdd.Length -gt 0) {
+        $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$PermsToAdd"
+    }
     
     if ($ManifestContent -notmatch 'usesCleartextTraffic') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
@@ -134,16 +176,13 @@ dependencies {
 }
 
 # ═══════════════════════════════════════════════════════════════════
-# 6. Copy Android Auto native files
+# 6. Copy Android Auto native files (Kotlin sources)
 # ═══════════════════════════════════════════════════════════════════
 Write-Host ">>> Copie des fichiers natifs Android Auto..." -ForegroundColor Yellow
 
-# Determine the Java/Kotlin source directory
 $JavaSrcBase = "android/app/src/main/java"
-# Find the actual package directory (could be different from expected)
 $PackageDir = "$JavaSrcBase/com/radiosphere/app"
 if (!(Test-Path $PackageDir)) {
-    # Try to find MainActivity to determine the package path
     $MainActFile = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
     if ($MainActFile) {
         $PackageDir = $MainActFile.DirectoryName
@@ -154,7 +193,6 @@ if (!(Test-Path $PackageDir)) {
     }
 }
 
-# Read the package name from existing MainActivity
 $ActualPackage = "com.radiosphere.app"
 $MainActSearch = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
 if ($MainActSearch) {
@@ -168,7 +206,6 @@ if ($MainActSearch) {
 # --- RadioBrowserService.kt ---
 Write-Host "    Copie RadioBrowserService.kt..." -ForegroundColor DarkGray
 $BrowserServiceSrc = Get-Content "android-auto/RadioBrowserService.kt" -Raw
-# Replace package name to match actual project
 $BrowserServiceSrc = $BrowserServiceSrc -replace 'package app\.lovable\.radiosphere', "package $ActualPackage"
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioBrowserService.kt"), $BrowserServiceSrc, $UTF8NoBOM)
 
@@ -177,12 +214,6 @@ Write-Host "    Copie RadioAutoPlugin.kt..." -ForegroundColor DarkGray
 $AutoPluginSrc = Get-Content "android-auto/RadioAutoPlugin.kt" -Raw
 $AutoPluginSrc = $AutoPluginSrc -replace 'package app\.lovable\.radiosphere', "package $ActualPackage"
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioAutoPlugin.kt"), $AutoPluginSrc, $UTF8NoBOM)
-
-# --- automotive_app_desc.xml ---
-Write-Host "    Copie automotive_app_desc.xml..." -ForegroundColor DarkGray
-$XmlDir = "android/app/src/main/res/xml"
-if (!(Test-Path $XmlDir)) { New-Item -ItemType Directory -Path $XmlDir -Force | Out-Null }
-Copy-Item "android-auto/res/xml/automotive_app_desc.xml" "$XmlDir/automotive_app_desc.xml" -Force
 
 Write-Host "    Fichiers Android Auto copies avec succes!" -ForegroundColor Green
 
@@ -197,7 +228,6 @@ if ($MainAct) {
         Write-Host ">>> Patch Kotlin MainActivity (WebView + NotifChannel + RadioAutoPlugin)..." -ForegroundColor Yellow
         $Kotlin = Get-Content $MainAct.FullName -Raw
         
-        # Add import for RadioAutoPlugin if not present
         if ($Kotlin -notmatch 'RadioAutoPlugin') {
             $Kotlin = $Kotlin -replace '(import .+BridgeActivity)', "`$1`nimport $ActualPackage.RadioAutoPlugin"
         }
@@ -223,9 +253,7 @@ if ($MainAct) {
         }
     }
 "@
-        # Remove existing onCreate if present
         $Kotlin = $Kotlin -replace '(?s)\s*override fun onCreate\(savedInstanceState[^}]*\{[^}]*(\{[^}]*\}[^}]*)*\}', ''
-        # Insert patch
         $Kotlin = $Kotlin -replace '(class MainActivity\s*:\s*BridgeActivity\(\)\s*\{)', "`$1`n$KotlinPatch"
         [System.IO.File]::WriteAllText($MainAct.FullName, $Kotlin, $UTF8NoBOM)
         
@@ -233,7 +261,6 @@ if ($MainAct) {
         Write-Host ">>> Patch Java MainActivity (WebView + NotifChannel + RadioAutoPlugin)..." -ForegroundColor Yellow
         $Java = Get-Content $MainAct.FullName -Raw
 
-        # Add import for RadioAutoPlugin
         if ($Java -notmatch 'RadioAutoPlugin') {
             $Java = $Java -replace '(import .+BridgeActivity;)', "`$1`nimport $ActualPackage.RadioAutoPlugin;"
         }
@@ -291,6 +318,8 @@ Write-Host "  - Browse tree: Favoris, Recents, 24 Genres" -ForegroundColor White
 Write-Host "  - Recherche vocale (API radio-browser.info native)" -ForegroundColor White
 Write-Host "  - Artwork plein ecran + Next/Previous dans favoris" -ForegroundColor White
 Write-Host "  - Canal radio_playback_v3 avec setShowBadge(false)" -ForegroundColor White
+Write-Host "  - Permissions non dupliquees (verification avant injection)" -ForegroundColor White
+Write-Host "  - automotive_app_desc.xml copie AVANT injection manifest" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
@@ -299,10 +328,5 @@ Write-Host "  1. npx cap open android" -ForegroundColor White
 Write-Host "  2. Build APK dans Android Studio" -ForegroundColor White
 Write-Host "  3. Tester Android Auto avec le DHU (Desktop Head Unit)" -ForegroundColor White
 Write-Host "     ou directement sur un vehicule compatible" -ForegroundColor White
-Write-Host ""
-Write-Host "TEST ANDROID AUTO :" -ForegroundColor Cyan
-Write-Host "  - Installer 'Android Auto - Desktop Head Unit' depuis SDK Manager" -ForegroundColor White
-Write-Host "  - Activer mode dev dans l'app Android Auto du telephone" -ForegroundColor White
-Write-Host "  - Lancer le DHU pour simuler un ecran de voiture" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
