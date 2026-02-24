@@ -27,7 +27,7 @@ function countryCodeToFlag(iso: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
+const GENRES = ["60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical", "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal", "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"];
 const LANGUAGES = ["arabic", "english", "french", "german", "japanese", "portuguese", "spanish"];
 
 interface SearchPageProps {
