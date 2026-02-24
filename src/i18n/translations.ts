@@ -56,6 +56,7 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.yearlySave": "-17%",
     "premium.cancel": "Annuler l'abonnement",
     "premium.disclaimer": "Annulez à tout moment. Les prix peuvent varier selon votre région.",
+    "premium.comingSoon": "Arrive bientôt",
 
     // Player
     "player.nowPlaying": "En cours de lecture",
@@ -141,6 +142,7 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.yearlySave": "-17%",
     "premium.cancel": "Cancel subscription",
     "premium.disclaimer": "Cancel anytime. Prices may vary by region.",
+    "premium.comingSoon": "Coming soon",
 
     // Player
     "player.nowPlaying": "Now playing",

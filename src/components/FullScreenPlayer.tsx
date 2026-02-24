@@ -51,7 +51,7 @@ export function FullScreenPlayer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pb-2" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 1.5rem)" }}>
         <button onClick={closeFullScreen} className="p-2 -ml-2">
@@ -89,7 +89,7 @@ export function FullScreenPlayer() {
       )}
 
        {/* Info & Controls */}
-       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+2rem)] space-y-4">
+       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+4rem)] space-y-4">
          <div className="flex items-start justify-between gap-3">
            <div className="min-w-0">
              <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>

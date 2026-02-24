@@ -108,35 +108,44 @@ export function SettingsPage() {
           )
         }
       >
-        <p className="text-xs text-muted-foreground mb-3">{t("premium.subtitle")}</p>
+        <div className="relative">
+          <div className="pointer-events-none opacity-50">
+            <p className="text-xs text-muted-foreground mb-3">{t("premium.subtitle")}</p>
 
-        <div className="space-y-2 mb-3">
-          {premiumFeatures.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-start gap-3 p-2.5 rounded-lg bg-secondary/50">
-              <Icon className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-foreground">{title}</p>
-                <p className="text-[10px] text-muted-foreground">{desc}</p>
-              </div>
+            <div className="space-y-2 mb-3">
+              {premiumFeatures.map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex items-start gap-3 p-2.5 rounded-lg bg-secondary/50">
+                  <Icon className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">{title}</p>
+                    <p className="text-[10px] text-muted-foreground">{desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {isPremium ? (
-          <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
-            {t("premium.cancel")}
-          </Button>
-        ) : (
-          <div className="space-y-2">
-            <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30">
-              {t("premium.monthly")}
-            </Button>
-            <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
-              {t("premium.yearly")} <span className="ml-1.5 text-[10px] text-primary">{t("premium.yearlySave")}</span>
-            </Button>
+            {isPremium ? (
+              <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
+                {t("premium.cancel")}
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30">
+                  {t("premium.monthly")}
+                </Button>
+                <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
+                  {t("premium.yearly")} <span className="ml-1.5 text-[10px] text-primary">{t("premium.yearlySave")}</span>
+                </Button>
+              </div>
+            )}
+            <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
           </div>
-        )}
-        <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
+              {t("premium.comingSoon")}
+            </span>
+          </div>
+        </div>
       </CollapsibleSection>
 
       {/* Collapsible disclaimers */}
