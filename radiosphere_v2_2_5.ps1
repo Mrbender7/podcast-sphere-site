@@ -1,7 +1,7 @@
 # radiosphere_v2_2_5.ps1
 # Android Auto Integration — Full automated setup (100% autonome)
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
-$ProjectFolder = "radiosphere"
+$ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
 Write-Host ">>> Lancement du Master Fix v2.2.5 - Android Auto Integration" -ForegroundColor Cyan
