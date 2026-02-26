@@ -1,75 +1,44 @@
 
 
-# Audit complet Radio Sphere — Corrections pre-Google Play
+# Plan v2.2.8b — Fix bouton Play/Pause notification + layout
 
-## Bugs identifies
+## Probleme 1 : Le bouton Play/Pause de la notification ne fonctionne pas
 
-### 1. Messages d'erreur du player en francais uniquement (BLOQUANT UX)
-**Fichier** : `src/contexts/PlayerContext.tsx`
+**Diagnostic** : Dans `PlayerContext.tsx` (ligne 216), l'enregistrement du listener `buttonClicked` du plugin Foreground Service est a l'interieur d'un `useEffect` qui commence par :
 
-Tous les `toast()` dans le PlayerContext sont codes en dur en francais : "Erreur de lecture", "Flux indisponible", "Delai depasse", etc. Quand l'utilisateur est en anglais, il voit quand meme du francais.
+```
+if (!('mediaSession' in navigator)) return;
+```
 
-**Correction** : Le PlayerContext n'a pas acces au `useTranslation()` car il est monte au-dessus du LanguageProvider dans l'arbre. Deux options :
-- Option A (recommandee) : Reorganiser l'arbre pour que `LanguageProvider` enveloppe `PlayerProvider` dans `Index.tsx` (c'est deja le cas ! LanguageProvider est au-dessus). Il suffit d'ajouter `useTranslation()` dans `PlayerProvider` et utiliser `t()` dans les toasts.
-- Ajouter les cles manquantes dans `translations.ts` : `player.streamUnavailable`, `player.streamErrorDesc`, `player.timeout`, `player.timeoutDesc`, `player.unexpectedError`, `player.unexpectedErrorDesc`
+Si `mediaSession` n'est pas disponible dans le WebView Capacitor Android, **tout le bloc est ignore**, y compris le listener `buttonClicked` qui n'a rien a voir avec MediaSession. Le listener n'est donc jamais enregistre, et les clics sur le bouton de la notification sont perdus.
 
-### 2. Toast du sleep timer en francais uniquement
-**Fichier** : `src/contexts/SleepTimerContext.tsx`, ligne 85
+**Correction** : Separer le listener `buttonClicked` du foreground service dans son propre `useEffect`, sans aucune condition sur `mediaSession`. Cela garantit que le listener est toujours enregistre sur Android, independamment du support MediaSession.
 
-Le message "La lecture a ete mise en pause automatiquement." est code en dur. Meme probleme : `SleepTimerContext` est imbrique dans `LanguageProvider`, donc `useTranslation()` est accessible.
+## Probleme 2 : Position du bouton dans la notification
 
-**Correction** : Utiliser `t("sleepTimer.stopped")` et ajouter la cle dans `translations.ts`.
+Les notifications Android ont un layout systeme impose. Le plugin `@capawesome/capacitor-android-foreground-service` ajoute les `buttons` comme des "action buttons" Android standard, qui sont **toujours affiches sous le contenu** de la notification. Il n'est pas possible de les placer a droite du titre depuis ce plugin.
 
-### 3. `importFavorites` retourne le mauvais nombre
-**Fichier** : `src/hooks/useFavorites.ts`, ligne 41
+**Alternative** : Pour avoir des controles inline (a cote du titre, comme Spotify), il faudrait une notification de type `MediaStyle` liee a un `MediaSession` natif. Cela necessite du code Java/Kotlin natif dans le projet Android (pas faisable depuis le JS seul). C'est une evolution future possible mais hors scope de ce correctif.
 
-`return stations.length` retourne le nombre TOTAL de stations dans le CSV, pas le nombre reellement importe (apres deduplication). L'utilisateur voit "15 favoris importes" alors que seulement 3 etaient nouveaux.
-
-**Correction** : Calculer et retourner le nombre de stations effectivement ajoutees.
-
-### 4. Boutons imbriques dans les sections collapsibles (accessibilite)
-**Fichier** : `src/pages/SettingsPage.tsx`
-
-`CollapsibleSection` est un `<button>` qui contient d'autres `<button>` (timer, export, etc.). C'est invalide en HTML et pose des problemes d'accessibilite. Les lecteurs d'ecran et certains navigateurs peuvent avoir un comportement imprevu.
-
-**Correction** : Remplacer le `<button>` parent par un `<div>` avec un `<button>` uniquement pour le header cliquable. Le contenu enfant ne sera plus imbrique dans un bouton.
-
-## Recommandations Google Play
-
-### 5. Lien vers la politique de confidentialite (REQUIS par Google Play)
-Google Play exige un lien vers une politique de confidentialite accessible dans l'app ET sur la fiche Play Store. L'app ne stocke aucune donnee personnelle sur serveur, mais il faut quand meme une page/lien qui le dit explicitement.
-
-**Correction** : Ajouter un lien "Politique de confidentialite" dans la section Reglages, pointant vers une URL hebergee (ex: page GitHub Pages ou Google Docs). Ajouter les cles de traduction correspondantes.
-
-### 6. Version de l'app visible dans les reglages
-Bonne pratique pour le support utilisateur et les mises a jour Google Play : afficher le numero de version (ex: "v2.2.7") en bas des reglages.
-
-**Correction** : Ajouter un petit texte `v2.2.7` en footer des reglages.
+Pour l'instant, le bouton restera en position standard (sous le titre) mais **fonctionnera correctement** apres la correction.
 
 ---
 
-## Resume des fichiers modifies
+## Fichier modifie
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/contexts/PlayerContext.tsx` | Importer `useTranslation`, remplacer les toasts FR par `t()` |
-| `src/contexts/SleepTimerContext.tsx` | Importer `useTranslation`, toast traduit |
-| `src/i18n/translations.ts` | Ajouter cles pour les erreurs player + sleep timer stopped + privacy policy |
-| `src/hooks/useFavorites.ts` | Corriger le retour de `importFavorites` |
-| `src/pages/SettingsPage.tsx` | Corriger `CollapsibleSection` (HTML valide), ajouter lien privacy + version |
+| `src/contexts/PlayerContext.tsx` | Extraire le listener `buttonClicked` dans un `useEffect` separe, sans guard `mediaSession` |
 
-## Ce qui est OK (pas besoin de toucher)
+## Detail technique
 
-- Architecture React propre, contexts bien separes
-- Gestion audio robuste (heartbeat, wake lock, silent loop, foreground service)
-- Recherche par name + tag en parallele avec deduplication
-- Android Auto integration (plugin Capacitor + MediaBrowserService)
-- Gestion des favoris/recents avec localStorage
-- i18n FR/EN (sauf les bugs ci-dessus)
-- Scroll-to-top translucide bien positionne
-- Export/Import/Partage CSV fonctionnel
-- Back button handler avec double-tap exit
-- MediaSession + notification lockscreen
-- Theming dark-only coherent
-- Tailwind config propre
+### PlayerContext.tsx — Nouveau useEffect dedie
+
+Creer un second `useEffect` qui :
+1. Importe `ForegroundService` depuis `@capawesome-team/capacitor-android-foreground-service`
+2. Enregistre le listener `buttonClicked`
+3. Appelle `handlePlay` (btnId === 1) ou `handlePause` (btnId === 2)
+4. Nettoie le listener au unmount
+
+Les fonctions `handlePlay` et `handlePause` seront extraites en `useCallback` reutilisables par les deux effects (MediaSession + ForegroundService).
 
