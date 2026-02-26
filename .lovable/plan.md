@@ -1,47 +1,71 @@
 
 
-# Refonte de la section Premium et timer personnalisable
+# Script v2.2.9 -- Notification MediaStyle sur ecran de verrouillage
 
-## Ce qui change
+## Probleme
+La lecture normale (via WebView) utilise le plugin Capawesome foreground service qui cree une notification standard. Android ne reconnait pas cette notification comme "media" et n'affiche donc pas les controles sur l'ecran de verrouillage.
 
-### 1. Remplacer les features premium fictives par les vraies
+## Solution
+Creer un nouveau fichier `radiosphere_v2_2_9.ps1` qui reprend la base du v2.2.8 et ajoute :
 
-Dans la page Premium (`PremiumPage.tsx`) et dans les reglages (`SettingsPage.tsx`), supprimer les 3 features actuelles (Sans publicite, Qualite HD, Acces exclusif) et les remplacer par :
+### 1. Nouveau fichier Java : `MediaPlaybackService.java`
+Un service Android foreground dedie qui :
+- Cree une `MediaSessionCompat` native
+- Affiche une notification `MediaStyle` liee a cette session (titre de la station, artwork, boutons Play/Pause)
+- Appelle `startForeground()` pour etre visible sur l'ecran de verrouillage et dans le volet de notifications
+- Ecoute les actions de notification (Play/Pause) et les renvoie au WebView via un broadcast
 
-- **Minuterie de sommeil** (icone Moon) : "Arret automatique de la lecture apres un delai configurable"
-- **Android Auto** (icone Car) : "Controlez Radio Sphere directement depuis Android Auto"
+Ce service ne joue PAS l'audio lui-meme (c'est le WebView qui le fait). Il sert uniquement de "miroir" pour la notification.
 
-### 2. Ajouter un timer personnalisable en minutes
+### 2. Modification de `RadioAutoPlugin.java`
+La methode `notifyPlaybackState()` existante est modifiee pour :
+- Demarrer/arreter le `MediaPlaybackService` quand la lecture commence/s'arrete
+- Passer le nom de la station, le logo, et l'etat play/pause au service via un Intent
 
-Dans `SleepTimerContext.tsx`, les options predefinies (15, 30, 45, 60, 90, 120 min) restent. On ajoute un champ de saisie libre (input numerique) dans `SettingsPage.tsx` a cote des boutons existants, permettant d'entrer un nombre de minutes custom et de lancer le timer avec cette valeur.
+### 3. Modification du Manifest
+- Declarer `MediaPlaybackService` avec `foregroundServiceType="mediaPlayback"`
+- Garder le service Capawesome en backup ou le retirer
 
-### 3. Traductions
+### 4. Gradle
+- Pas de nouvelles dependances (ExoPlayer et media-compat sont deja presents depuis v2.2.8)
 
-Mettre a jour `src/i18n/translations.ts` :
-- Remplacer `premium.noAds` / `premium.hd` / `premium.exclusive` par `premium.sleepTimer` et `premium.androidAuto` avec descriptions
-- Ajouter `sleepTimer.custom` ("Personnalise" / "Custom") et `sleepTimer.customPlaceholder` ("Minutes" / "Minutes")
+### 5. Modification de `MainActivity.java`
+- Le canal de notification `radio_playback_v3` existe deja -- on le reutilise
 
-## Fichiers modifies
+## Architecture du flux
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/i18n/translations.ts` | Nouvelles cles pour les features premium reelles + timer custom |
-| `src/pages/PremiumPage.tsx` | Remplacer les 3 features par Sleep Timer + Android Auto |
-| `src/pages/SettingsPage.tsx` | Idem dans la section Premium collapsible + ajout input custom dans le Sleep Timer |
+```text
+JS (PlayerContext) 
+  --> RadioAutoPlugin.notifyPlaybackState(name, logo, isPlaying)
+    --> Intent --> MediaPlaybackService
+      --> MediaSessionCompat (metadata + playback state)
+      --> Notification.Builder + MediaStyle
+      --> startForeground()
+      --> Lock screen + notification shade = controles media visibles
 
-## Detail technique
+Bouton Pause sur notification
+  --> MediaSession.Callback.onPause()
+    --> Broadcast --> WebView JS
+      --> PlayerContext pause l'audio
+```
 
-### PremiumPage.tsx
-- Importer `Moon` et `Car` de lucide-react (remplacer `Zap`, `Headphones`, `ShieldCheck`)
-- Le tableau `features` devient 2 elements : sleepTimer et androidAuto
+## Fichiers crees/modifies dans le script PS1
 
-### SettingsPage.tsx
-- Meme changement pour `premiumFeatures`
-- Dans la section Sleep Timer : ajouter sous la grille des boutons un petit formulaire inline (input number + bouton "Go") qui appelle `startTimer(customMinutes)`
+| Fichier | Action |
+|---------|--------|
+| `radiosphere_v2_2_9.ps1` | Nouveau script de deploiement |
+| `MediaPlaybackService.java` | Nouveau -- service foreground MediaStyle (embarque dans le PS1) |
+| `RadioAutoPlugin.java` | Modifie -- lance/arrete le MediaPlaybackService |
+| `AndroidManifest.xml` | Modifie -- declare le nouveau service |
+| `PlayerContext.tsx` | Modifie -- ecoute le broadcast "toggle" depuis la notification pour pause/play |
 
-### SleepTimerContext.tsx
-- Pas de modification necessaire : `startTimer(minutes)` accepte deja n'importe quel nombre
+## Detail technique du MediaPlaybackService.java
 
-### Chromecast
-- Non implemente dans cette iteration. Ajoute comme idee future dans le roadmap. Necessite le Google Cast SDK natif Android, developpement consequent pour une v3.
+- `onStartCommand()` : recoit l'Intent avec name/logo/isPlaying, met a jour la MediaSession et la notification
+- `buildNotification()` : cree une notification avec `Notification.Builder` + `androidx.media.app.NotificationCompat.MediaStyle` + `setMediaSession(token)` + actions Play/Pause
+- `MediaSession.Callback` : quand l'utilisateur clique Pause sur la notification, envoie un broadcast `com.radiosphere.TOGGLE_PLAYBACK` que le WebView intercepte
+
+## Ce que le script ne change PAS
+- `RadioBrowserService.java` reste intact (Android Auto uniquement)
+- Le fonctionnement web normal n'est pas affecte
 
