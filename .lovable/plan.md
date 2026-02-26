@@ -1,73 +1,63 @@
 
 
-# Plan v2.2.7 — Recherche par tags, scroll-to-top, Radio Browser info, export/import/partage favoris
+# Plan v2.2.7b — Correction recherche par tags + scroll-to-top repositionne
 
-## 1. Recherche : inclure les tags dans la recherche textuelle
+## Probleme 1 : La recherche par tags ne fonctionne pas correctement
 
-**Actuellement** : Le champ de recherche envoie uniquement le parametre `name` a l'API Radio Browser.
+**Diagnostic** : J'ai audite le code ET la documentation officielle de l'API Radio Browser. Voici ce que j'ai trouve :
 
-**Modification** : Quand l'utilisateur tape un mot-cle, effectuer **deux requetes en parallele** — une sur `name` et une sur `tag` — puis fusionner les resultats (deduplication par `id`). Cela permet de trouver des stations par leur nom OU par leurs tags (ex: taper "jazz" remontera les stations taguees jazz meme si "jazz" n'est pas dans le nom).
+L'API Radio Browser a deux parametres distincts pour les tags :
+- `tag` : cherche les stations dont un tag **contient** le terme (recherche partielle)
+- `tagList` : liste de tags separes par des virgules, tous doivent correspondre (filtrage exact)
 
-**Fichier** : `src/pages/SearchPage.tsx`
-- Modifier la `queryFn` pour lancer `Promise.all` avec deux appels `searchStations` : un avec `name`, un avec `tag` = meme mot-cle
-- Fusionner et dedupliquer les resultats
-- Conserver le tri selectionne par l'utilisateur
+**Le bug** : Actuellement, le code utilise `tag` a la fois pour les **filtres de genre** (jazz, rock, etc.) ET pour la **recherche textuelle** par tag. Quand l'utilisateur tape "disney" dans la barre de recherche :
+- L'appel "name search" envoie `name=disney` + `tag=jazz` (si un genre est selectionne) — correct
+- L'appel "tag search" envoie `tag=disney` — mais **ecrase** le filtre de genre
 
-## 2. Bouton "scroll to top" sur la page de recherche
+De plus, le `loadMore` ne fait qu'une seule requete par `name`, il ne cherche PAS par tag du tout. Donc les pages suivantes ne contiennent jamais les resultats par tag.
 
-**Modification** : Ajouter un bouton flottant (fleche vers le haut) qui apparait quand l'utilisateur a scrolle au-dela d'un certain seuil (ex: 300px). Au clic, scroll smooth vers le haut.
+**Solution** :
+1. Utiliser `tagList` pour les filtres de genre (au lieu de `tag`) — ils ne se chevauchent plus avec la recherche textuelle
+2. Ajouter `tagList` au type `SearchParams` et au `RadioService.ts`
+3. Dans le `loadMore`, faire aussi la double recherche (name + tag) comme dans la requete principale
 
-**Fichier** : `src/pages/SearchPage.tsx`
-- Ajouter un `ref` sur le container scrollable + un state `showScrollTop`
-- Ecouter l'evenement `scroll` pour afficher/masquer le bouton
-- Bouton rond fixe en bas a droite avec icone `ArrowUp` de lucide-react
-- Animation d'apparition/disparition
+## Probleme 2 : Le bouton scroll-to-top chevauche le MiniPlayer
 
-## 3. Reglages : section Radio Browser enrichie
-
-**Actuellement** : La section "Source des stations" affiche un texte generique mentionnant "plus de 30 000 radios".
-
-**Modifications** :
-- Mettre a jour le nombre a **plus de 50 000** (le site indique 51 530 actuellement)
-- Ajouter un lien cliquable vers le site : `https://www.radio-browser.info/`
-- Ajouter un lien pour ajouter une station : `https://www.radio-browser.info/add`
-
-**Fichiers** :
-- `src/i18n/translations.ts` : Mettre a jour les textes FR et EN pour `settings.radioSourceDesc`, ajouter cles `settings.radioSourceLink` et `settings.radioSourceAddStation`
-- `src/pages/SettingsPage.tsx` : Transformer le `CollapsibleDisclaimer` de Radio Browser en une section enrichie avec les liens cliquables (balises `<a>` avec `target="_blank"`)
-
-## 4. Reglages : Export / Import / Partage des favoris
-
-### Export CSV
-- Bouton "Exporter les favoris" dans une nouvelle section collapsible dans les reglages
-- Genere un fichier CSV avec colonnes : `name, streamUrl, country, tags, homepage`
-- Utilise `Blob` + `URL.createObjectURL` + lien de telechargement (ou `navigator.share` avec fichier si disponible)
-
-### Import CSV
-- Bouton "Importer des favoris" avec un `<input type="file" accept=".csv">`
-- Parse le CSV, reconstruit les objets `RadioStation` (genere un ID si absent)
-- Fusionne avec les favoris existants (pas de doublons par `streamUrl`)
-- Affiche un toast de confirmation avec le nombre de stations importees
-
-### Partage natif Android
-- Bouton "Partager mes favoris" qui utilise `navigator.share()` (Web Share API, supportee nativement sur Android/Capacitor)
-- Partage le fichier CSV en piece jointe via `navigator.share({ files: [...] })`
-- Fallback : si `navigator.share` n'est pas disponible, propose le telechargement classique
-
-**Fichiers** :
-- `src/pages/SettingsPage.tsx` : Nouvelle section collapsible "Favoris" avec les 3 boutons
-- `src/i18n/translations.ts` : Ajouter les cles de traduction FR/EN pour export, import, partage
-- `src/contexts/FavoritesContext.tsx` : Exposer la fonction `importFavorites(stations: RadioStation[])` pour ajouter en masse sans doublons
+Le bouton est positionne a `bottom-24` (6rem = 96px). Le MiniPlayer + la barre de navigation occupent environ 140-160px en bas. Il faut remonter le bouton a `bottom-40` (10rem = 160px) pour eviter le chevauchement.
 
 ---
 
-## Resume des fichiers modifies
+## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/SearchPage.tsx` | Recherche sur name + tag en parallele, bouton scroll-to-top |
-| `src/pages/SettingsPage.tsx` | Section Radio Browser avec liens, section Export/Import/Partage favoris |
-| `src/i18n/translations.ts` | Nouvelles cles de traduction (radio source, export, import, partage) + mise a jour du nombre de stations |
-| `src/contexts/FavoritesContext.tsx` | Ajouter `importFavorites` au contexte |
-| `src/hooks/useFavorites.ts` | Ajouter fonction `importFavorites` dans le hook |
+| `src/types/radio.ts` | Ajouter `tagList?: string` a `SearchParams` |
+| `src/services/RadioService.ts` | Envoyer `tagList` comme parametre API si present |
+| `src/pages/SearchPage.tsx` | Utiliser `tagList` pour les genres, `tag` pour la recherche textuelle ; corriger `loadMore` pour aussi chercher par tag ; remonter le bouton scroll-to-top |
+
+## Detail technique
+
+### 1. `src/types/radio.ts`
+Ajouter le champ `tagList` a l'interface `SearchParams` :
+```
+tagList?: string;   // comma-separated, exact tag matching (for genre filters)
+```
+
+### 2. `src/services/RadioService.ts`
+Dans `searchStations`, ajouter :
+```
+if (params.tagList) query.tagList = params.tagList;
+```
+
+### 3. `src/pages/SearchPage.tsx`
+
+**baseParams** : remplacer `tag: genres.join(",")` par `tagList: genres.join(",")` pour que les filtres de genre utilisent le bon parametre API.
+
+**queryFn (recherche principale)** : Quand `query` est present, les deux appels paralleles deviennent :
+- Appel 1 (name) : `{ ...baseParams, name: query }` — cherche par nom, filtre genre via `tagList`
+- Appel 2 (tag) : `{ ...baseParams, tag: query }` — cherche par tag "disney", filtre genre via `tagList`
+
+**loadMore** : Reproduire la meme logique de double recherche (name + tag) avec deduplication pour que les pages suivantes soient coherentes.
+
+**Bouton scroll-to-top** : Changer `bottom-24` en `bottom-40` pour passer au-dessus du MiniPlayer.
 
