@@ -1,44 +1,29 @@
 
 
-# Plan v2.2.8b — Fix bouton Play/Pause notification + layout
+# Fix script PS1 — Erreur "terminateur manquant"
 
-## Probleme 1 : Le bouton Play/Pause de la notification ne fonctionne pas
+## Diagnostic
 
-**Diagnostic** : Dans `PlayerContext.tsx` (ligne 216), l'enregistrement du listener `buttonClicked` du plugin Foreground Service est a l'interieur d'un `useEffect` qui commence par :
+PowerShell exige que le terminateur `"@` d'un **here-string expansible** (`@"..."@`) soit au **tout debut de la ligne** (colonne 1, zero espace avant). Si le `"@` est indente (meme d'un seul espace), PowerShell ne le reconnait pas comme terminateur et continue a lire le reste du fichier comme une chaine, jusqu'a l'erreur finale en ligne 930.
 
-```
-if (!('mediaSession' in navigator)) return;
-```
+Le script contient **4 here-strings expansibles** (`@"..."@`) dont certains sont dans des blocs `if` indentes :
 
-Si `mediaSession` n'est pas disponible dans le WebView Capacitor Android, **tout le bloc est ignore**, y compris le listener `buttonClicked` qui n'a rien a voir avec MediaSession. Le listener n'est donc jamais enregistre, et les clics sur le bouton de la notification sont perdus.
+| Ligne ouverture | Ligne fermeture | Variable | Risque |
+|-----------------|-----------------|----------|--------|
+| 18 | 25 | `$ConfigJSON` | Hors if, probablement OK |
+| 123 | 139 | `$ServiceDecl` | Dans un `if` — `"@` potentiellement indente |
+| 152 | 159 | `$DepsBlock` | Dans un `if` — `"@` potentiellement indente |
+| 864 | 889 | `$OnCreatePatch` | Dans un `if` — `"@` potentiellement indente |
 
-**Correction** : Separer le listener `buttonClicked` du foreground service dans son propre `useEffect`, sans aucune condition sur `mediaSession`. Cela garantit que le listener est toujours enregistre sur Android, independamment du support MediaSession.
+## Correction
 
-## Probleme 2 : Position du bouton dans la notification
+Forcer les 4 terminateurs `"@` a etre en **colonne 1** (debut absolu de ligne), meme si cela casse l'indentation visuelle du script. C'est une contrainte syntaxique de PowerShell.
 
-Les notifications Android ont un layout systeme impose. Le plugin `@capawesome/capacitor-android-foreground-service` ajoute les `buttons` comme des "action buttons" Android standard, qui sont **toujours affiches sous le contenu** de la notification. Il n'est pas possible de les placer a droite du titre depuis ce plugin.
-
-**Alternative** : Pour avoir des controles inline (a cote du titre, comme Spotify), il faudrait une notification de type `MediaStyle` liee a un `MediaSession` natif. Cela necessite du code Java/Kotlin natif dans le projet Android (pas faisable depuis le JS seul). C'est une evolution future possible mais hors scope de ce correctif.
-
-Pour l'instant, le bouton restera en position standard (sous le titre) mais **fonctionnera correctement** apres la correction.
-
----
+De plus, remplacer tous les em-dashes (`—`, U+2014) par des doubles tirets (`--`) dans tout le script pour eviter les problemes d'encodage Windows PowerShell 5.x.
 
 ## Fichier modifie
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/contexts/PlayerContext.tsx` | Extraire le listener `buttonClicked` dans un `useEffect` separe, sans guard `mediaSession` |
-
-## Detail technique
-
-### PlayerContext.tsx — Nouveau useEffect dedie
-
-Creer un second `useEffect` qui :
-1. Importe `ForegroundService` depuis `@capawesome-team/capacitor-android-foreground-service`
-2. Enregistre le listener `buttonClicked`
-3. Appelle `handlePlay` (btnId === 1) ou `handlePause` (btnId === 2)
-4. Nettoie le listener au unmount
-
-Les fonctions `handlePlay` et `handlePause` seront extraites en `useCallback` reutilisables par les deux effects (MediaSession + ForegroundService).
+| `radiosphere_v2_2_8.ps1` | Aligner les 4 `"@` en colonne 1 + remplacer `—` par `--` |
 
