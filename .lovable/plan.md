@@ -1,58 +1,57 @@
 
 
-# Plan v2.2.8e -- Roadmap + Deverrouillage test + Mode d'emploi
+# Recherche multi-genres en mode OR
 
-## 1. Mise a jour du Premium Roadmap
+## Probleme actuel
 
-Mettre a jour `docs/PREMIUM_ROADMAP.md` :
-- Android Auto : statut "Termine" (v2.2.8d)
-- Sleep Timer : statut "Termine"
-- Ajouter la fonctionnalite "Mode d'emploi integre" dans la liste
-- Mettre a jour les notes techniques (version v2.2.8e)
+Quand l'utilisateur selectionne 2+ genres (ex: "rock" et "jazz"), le code envoie `tagList=rock,jazz` a l'API Radio Browser. Ce parametre fonctionne en mode **AND** : seules les stations ayant TOUS les tags sont retournees. Cela produit tres peu de resultats.
 
-## 2. Deverrouiller le premium pour la periode de test Google
+## Solution
 
-Dans `src/contexts/PremiumContext.tsx`, changer la valeur initiale de `isPremium` a `true` pour que toutes les fonctionnalites premium soient accessibles sans code durant la periode de test Google Play.
+Remplacer l'envoi unique `tagList=rock,jazz` par **une requete par tag**, puis fusionner et dedupliquer les resultats. Les stations ayant plusieurs des tags selectionnes apparaitront naturellement dans les resultats (deduplication par ID).
 
-Cela supprime automatiquement :
-- Le filigrane "Arrive bientot" sur le Sleep Timer
-- Le filigrane "Arrive bientot" sur la section Premium
-- Le `pointer-events-none` et `opacity-50` sur ces sections
+## Fichier modifie
 
-## 3. Mode d'emploi dans les reglages
+`src/pages/SearchPage.tsx`
 
-### Composant `UserGuideModal`
+## Detail technique
 
-Creer un composant modal (`Dialog`) accessible depuis les reglages via un bouton. La modale contient des sections repliables en accordeon -- **un seul ouvert a la fois** (quand on en ouvre un, l'autre se ferme).
+### Recherche initiale (lignes 94-123)
 
-Sections prevues (une par onglet de l'app) :
+Quand `genres.length > 1` :
+- Au lieu d'envoyer `tagList: genres.join(",")`, lancer une requete `tag: genre` par genre selectionne (en parallele avec `Promise.all`)
+- Fusionner tous les resultats dans une Map par ID (deduplication)
+- Si une recherche textuelle (`query`) est aussi active, combiner avec les resultats name/tag existants
 
-| Section | Contenu |
-|---------|---------|
-| Accueil | Stations recentes, populaires, favoris rapides, decouverte hebdomadaire, genres |
-| Recherche | Barre de recherche, filtres pays/genre/langue, tri, chargement progressif |
-| Favoris | Ajouter/retirer un favori, export/import CSV, partage |
-| Reglages | Langue, minuterie, premium, gestion favoris, politique de confidentialite |
+Quand `genres.length === 1` : garder le comportement actuel avec `tag: genres[0]` (plus simple et efficace).
 
-### Implementation technique
+Quand `genres.length === 0` : aucun changement.
 
-- Composant : `src/components/UserGuideModal.tsx`
-- Pattern accordeon : un seul `openSection` en state (`string | null`), cliquer sur une section set son id ou `null` si deja ouverte
-- Traductions i18n : ajout de ~20 cles dans `src/i18n/translations.ts` (fr + en)
-- Bouton d'acces dans `SettingsPage.tsx` : icone `BookOpen` + texte "Mode d'emploi" / "User Guide", place avant les disclaimers
-- Style : coherent avec le theme existant (bg-accent, rounded-xl, gradient pour le titre)
+### Pagination / loadMore (lignes 141-175)
 
-### Mise a jour version
+Meme logique : si multi-genres, lancer des requetes paralleles par tag au lieu d'un `tagList` unique.
 
-`SettingsPage.tsx` ligne 443 : passer de `v2.2.7` a `v2.2.8e`
+### Exemple de code
 
-## Fichiers modifies
+```typescript
+// Multi-genre OR search
+if (genres.length > 1) {
+  const genreSearches = genres.map(g =>
+    radioBrowserProvider.searchStations({ ...baseParams, tag: g, tagList: undefined })
+  );
+  const genreResults = await Promise.all(genreSearches);
+  for (const batch of genreResults) {
+    for (const s of batch) {
+      if (!map.has(s.id)) map.set(s.id, s);
+    }
+  }
+}
+```
 
-| Fichier | Action |
-|---------|--------|
-| `docs/PREMIUM_ROADMAP.md` | Mise a jour statuts et ajout mode d'emploi |
-| `src/contexts/PremiumContext.tsx` | `isPremium` initialise a `true` |
-| `src/i18n/translations.ts` | Ajout traductions mode d'emploi (fr + en) |
-| `src/components/UserGuideModal.tsx` | Nouveau composant modal accordeon |
-| `src/pages/SettingsPage.tsx` | Bouton mode d'emploi + version v2.2.8e |
+### Impact
+
+- Plus de resultats pertinents lors de la selection multi-genres
+- Les stations ayant les deux tags apparaissent quand meme (elles sont dans les deux resultats)
+- Pas de changement pour la recherche mono-genre ou sans genre
+- Pas de nouveau fichier, modification uniquement dans SearchPage.tsx
 
