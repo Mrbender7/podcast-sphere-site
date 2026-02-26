@@ -1,41 +1,47 @@
 
 
-# Garde-fou anti-coupure audio (ecran verrouille)
+# Refonte de la section Premium et timer personnalisable
 
-## Probleme
+## Ce qui change
 
-Quand le telephone est verrouille, le stream peut s'arreter silencieusement. Le heartbeat actuel (toutes les 10s) ne detecte que `audio.paused`, mais quand le stream meurt, l'element audio peut etre dans un etat "stalled" ou "ended" sans etre techniquement en pause. De plus, le bouton Play/Pause tente juste `audio.play()` sur une source morte, ce qui ne fonctionne pas -- il faut recharger le flux completement.
+### 1. Remplacer les features premium fictives par les vraies
 
-## Solution
+Dans la page Premium (`PremiumPage.tsx`) et dans les reglages (`SettingsPage.tsx`), supprimer les 3 features actuelles (Sans publicite, Qualite HD, Acces exclusif) et les remplacer par :
 
-Trois ameliorations dans `src/contexts/PlayerContext.tsx` :
+- **Minuterie de sommeil** (icone Moon) : "Arret automatique de la lecture apres un delai configurable"
+- **Android Auto** (icone Car) : "Controlez Radio Sphere directement depuis Android Auto"
 
-### 1. Ecouter les evenements `stalled` et `ended`
+### 2. Ajouter un timer personnalisable en minutes
 
-Ajouter des listeners sur l'element audio pour detecter quand le flux se coupe. En cas de coupure, recharger automatiquement le stream (reset src + load + play) au lieu de simplement appeler `play()`.
+Dans `SleepTimerContext.tsx`, les options predefinies (15, 30, 45, 60, 90, 120 min) restent. On ajoute un champ de saisie libre (input numerique) dans `SettingsPage.tsx` a cote des boutons existants, permettant d'entrer un nombre de minutes custom et de lancer le timer avec cette valeur.
 
-- Limite a 3 tentatives consecutives (compteur reset quand la lecture reprend avec succes)
-- Delai de 2 secondes entre chaque tentative pour ne pas surcharger
+### 3. Traductions
 
-### 2. Ameliorer le heartbeat
+Mettre a jour `src/i18n/translations.ts` :
+- Remplacer `premium.noAds` / `premium.hd` / `premium.exclusive` par `premium.sleepTimer` et `premium.androidAuto` avec descriptions
+- Ajouter `sleepTimer.custom` ("Personnalise" / "Custom") et `sleepTimer.customPlaceholder` ("Minutes" / "Minutes")
 
-Le heartbeat (10s) verifiera aussi `audio.networkState` et `audio.readyState` en plus de `audio.paused`. Si le stream semble mort (networkState idle ou readyState trop bas) alors que l'app pense qu'on joue, il relancera le flux complet plutot qu'un simple `play()`.
+## Fichiers modifies
 
-### 3. Corriger le togglePlay (resume apres coupure)
-
-Quand l'utilisateur appuie Play apres une coupure, si `audio.play()` echoue ou si l'audio n'a plus de source valide, recharger le flux complet automatiquement (meme comportement que changer de station et revenir). Plus besoin de changer de station manuellement.
+| Fichier | Modification |
+|---------|-------------|
+| `src/i18n/translations.ts` | Nouvelles cles pour les features premium reelles + timer custom |
+| `src/pages/PremiumPage.tsx` | Remplacer les 3 features par Sleep Timer + Android Auto |
+| `src/pages/SettingsPage.tsx` | Idem dans la section Premium collapsible + ajout input custom dans le Sleep Timer |
 
 ## Detail technique
 
-- Nouveau ref `retryCountRef` pour limiter les tentatives (max 3)
-- Nouvelle fonction `reloadStream()` : reset src, load, canplay listener, play -- reutilise la logique existante de `play()` mais sans changer de station
-- Listeners `stalled` et `ended` ajoutees dans le useEffect principal (lignes 291-326)
-- `togglePlay` modifie pour appeler `reloadStream()` si `play()` echoue
-- Heartbeat enrichi avec verification `networkState === 3` (NETWORK_NO_SOURCE) ou `readyState < 2`
+### PremiumPage.tsx
+- Importer `Moon` et `Car` de lucide-react (remplacer `Zap`, `Headphones`, `ShieldCheck`)
+- Le tableau `features` devient 2 elements : sleepTimer et androidAuto
 
-## Fichier modifie
+### SettingsPage.tsx
+- Meme changement pour `premiumFeatures`
+- Dans la section Sleep Timer : ajouter sous la grille des boutons un petit formulaire inline (input number + bouton "Go") qui appelle `startTimer(customMinutes)`
 
-| Fichier | Action |
-|---------|--------|
-| `src/contexts/PlayerContext.tsx` | Ajout reloadStream, listeners stalled/ended, heartbeat ameliore, togglePlay robuste |
+### SleepTimerContext.tsx
+- Pas de modification necessaire : `startTimer(minutes)` accepte deja n'importe quel nombre
+
+### Chromecast
+- Non implemente dans cette iteration. Ajoute comme idee future dans le roadmap. Necessite le Google Cast SDK natif Android, developpement consequent pour une v3.
 
