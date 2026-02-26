@@ -430,7 +430,7 @@ export function SettingsPage() {
 
       {/* Privacy Policy */}
       <a
-        href="https://music-radio-sphere.github.io/privacy-policy/"
+        href="https://mrbender7.github.io/privacy-policy-radiosphere/"
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-4"
