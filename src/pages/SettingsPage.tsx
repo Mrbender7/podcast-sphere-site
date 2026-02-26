@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { RadioStation } from "@/types/radio";
+import { Capacitor } from "@capacitor/core";
 
 function CollapsibleSection({ icon: Icon, title, badge, children }: { icon: React.ElementType; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -296,7 +297,7 @@ export function SettingsPage() {
       <CollapsibleSection icon={Heart} title={t("favorites.manage")}>
         <div className="space-y-2">
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (favorites.length === 0) {
                 toast({ title: t("favorites.noFavoritesToExport") });
                 return;
@@ -308,13 +309,21 @@ export function SettingsPage() {
                   .join(",")
               );
               const csv = [header, ...rows].join("\n");
-              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "radiosphere_favorites.csv";
-              a.click();
-              URL.revokeObjectURL(url);
+
+              if (Capacitor.isNativePlatform() && typeof navigator.share === "function") {
+                const file = new File([csv], "radiosphere_favorites.csv", { type: "text/csv" });
+                try {
+                  await navigator.share({ files: [file], title: "Radio Sphere Favorites" });
+                } catch { /* user cancelled */ }
+              } else {
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "radiosphere_favorites.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+              }
               toast({ title: `✅ ${t("favorites.exported")}` });
             }}
             variant="outline"
