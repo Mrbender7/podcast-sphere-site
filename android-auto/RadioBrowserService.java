@@ -368,17 +368,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         Uri artworkUri = Uri.parse(artworkUrl);
 
         String artist = "Radio Sphere";
-        if (station.tags != null && !station.tags.isEmpty()) {
-            String[] tagArr = station.tags.split(",");
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < Math.min(2, tagArr.length); i++) {
-                if (i > 0) sb.append(" - ");
-                sb.append(tagArr[i].trim());
-            }
-            if (sb.length() > 0) artist = sb.toString();
-        }
-
-        String album = (station.country != null && !station.country.isEmpty()) ? station.country : "Live";
+        String album = "Live";
 
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, station.id)
@@ -532,18 +522,6 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             ? station.logo.replace("http://", "https://") : DEFAULT_ARTWORK;
 
         String subtitle = "Radio Sphere";
-        if (station.tags != null && !station.tags.isEmpty()) {
-            String[] tagArr = station.tags.split(",");
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < Math.min(2, tagArr.length); i++) {
-                if (i > 0) sb.append(" - ");
-                sb.append(tagArr[i].trim());
-            }
-            if (sb.length() > 0) subtitle = sb.toString();
-        }
-        if (subtitle.equals("Radio Sphere") && station.country != null && !station.country.isEmpty()) {
-            subtitle = station.country;
-        }
 
         MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
             .setMediaId(STATION_PREFIX + station.id)
