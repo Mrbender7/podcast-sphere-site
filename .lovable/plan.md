@@ -1,50 +1,61 @@
-
-
-# Traduire Radio Sphere en espagnol et allemand
+# Ajouter le japonais a Radio Sphere
 
 ## Objectif
-Ajouter l'espagnol (es) et l'allemand (de) comme nouvelles langues, et remplacer les sélecteurs de langue (boutons fr/en) par un menu deroulant dans les Reglages et la page de bienvenue.
+
+Ajouter le japonais (ja) comme 5e langue supportee, avec une police soignee pour les caracteres japonais (kanjis, hiragana, katakana). Il faut aussi traduire les caractères sur les boutons, mais uniquement pour le japonais en raison de l'alphabet différent.
 
 ## Fichiers a modifier
 
-### 1. `src/i18n/translations.ts`
-- Etendre le type `Language` : `"fr" | "en" | "es" | "de"`
-- Ajouter les blocs de traduction `es` et `de` avec toutes les cles existantes (environ 90 cles chacun)
-- Traductions completes pour chaque cle (navigation, recherche, favoris, premium, minuterie, lecteur, parametres, guide utilisateur, etc.)
+### 1. `src/index.css` — Police japonaise
 
-### 2. `src/contexts/LanguageContext.tsx`
-- Mettre a jour `detectInitialLanguage()` pour reconnaitre `"es"` et `"de"` dans le localStorage et dans `navigator.language`
+- Importer **Noto Sans JP** depuis Google Fonts (police soignee, tres lisible pour les kanjis/hiragana/katakana, gratuite)
+- L'ajouter au `font-family` du body en fallback apres Inter, pour que les caracteres japonais soient automatiquement rendus avec Noto Sans JP
 
-### 3. `src/pages/WelcomePage.tsx`
-- Remplacer les deux boutons fr/en par un **Select dropdown** (composant `Select` existant de Radix)
-- Adapter les textes statiques de la page (subtitle, label "Choisissez la langue") pour utiliser la langue selectionnee plutot que du texte bilingue en dur
-- Adapter les `FEATURES` avec `labelEs` et `labelDe` (ou passer par des cles de traduction)
-- Adapter le bouton "Commencer" / "Get started" pour les 4 langues
+### 2. `src/i18n/translations.ts`
 
-### 4. `src/pages/SettingsPage.tsx`
-- Remplacer les deux boutons de langue (lignes 113-128) par un **Select dropdown** avec les 4 langues
-- Adapter la reference `language === "fr" ? opt.labelFr : opt.labelEn` dans le sleep timer pour supporter les 4 langues
+- Etendre le type `Language` : `"fr" | "en" | "es" | "de" | "ja"`
+- Ajouter `{ value: "ja", flag: "🇯🇵", label: "日本語" }` dans `LANGUAGE_OPTIONS`
+- Ajouter le bloc complet `ja: { ... }` avec les ~90 cles traduites en japonais naturel et soigne :
+  - Navigation : ホーム, 検索, お気に入り, 設定...
+  - Lecteur : 再生中, 再生エラー, ストリームが利用できません...
+  - Premium : プレミアム, スリープタイマー, Android Auto...
+  - Minuterie : 15分, 30分, 1時間, 1時間30分, 2時間...
+  - Reglages : 言語, データ使用量, ステーションソース...
+  - Guide : 使い方ガイド, ホーム画面, 検索, お気に入り...
+  - Bienvenue : 世界のラジオを手のひらに, 言語を選択, 始める...
+  - Favoris : お気に入り管理, CSVエクスポート, CSVインポート...
+  - Sortie : アプリを閉じますか？, 終了...
 
-### 5. `src/contexts/SleepTimerContext.tsx`
-- Ajouter `labelEs` et `labelDe` aux options du sleep timer (ou simplifier avec une cle de traduction)
+### 3. `src/contexts/LanguageContext.tsx`
+
+- Ajouter `"ja"` dans la verification du localStorage
+- Ajouter la detection de `navigator.language` commencant par `"ja"`
+
+### 4. `src/pages/WelcomePage.tsx`
+
+- Aucune modification structurelle necessaire (utilise deja `LANGUAGE_OPTIONS` dynamiquement et les cles de traduction)
+
+### 5. `src/pages/SettingsPage.tsx`
+
+- Aucune modification structurelle necessaire (utilise deja `LANGUAGE_OPTIONS` dynamiquement)
 
 ---
 
 ## Details techniques
 
-### Nouvelles langues dans le Select
-Chaque option affichera un drapeau emoji + nom :
-- `🇫🇷 Francais`
-- `🇬🇧 English`
-- `🇪🇸 Espanol`
-- `🇩🇪 Deutsch`
+### Police Noto Sans JP
 
-### Composant Select
-Le projet dispose deja de `src/components/ui/select.tsx` (Radix Select). Il sera utilise directement dans WelcomePage et SettingsPage.
+- Import Google Fonts : `Noto+Sans+JP:wght@400;500;700`
+- Appliquee en fallback : `font-family: 'Inter', 'Noto Sans JP', sans-serif`
+- Cela garantit que seuls les caracteres japonais utilisent Noto Sans JP, les caracteres latins restent en Inter
+- Noto Sans JP est reconnue comme l'une des meilleures polices pour le japonais sur le web
 
-### Sleep Timer
-Pour eviter de multiplier les labels par langue, les options `labelFr`/`labelEn` seront etendues avec `labelEs`/`labelDe`, et un helper simple choisira le bon label selon la langue courante.
+### Volume
 
-### Volume de traductions
-Environ 90 cles x 2 nouvelles langues = ~180 nouvelles traductions a ajouter dans le fichier translations.ts.
+- ~90 cles de traduction a ajouter pour le japonais
+- Traductions naturelles et idiomatiques (pas de traduction mot-a-mot)
 
+### Impact minimal
+
+- Seuls 3 fichiers necessitent des modifications (translations.ts, LanguageContext.tsx, index.css)
+- Les pages WelcomePage et SettingsPage fonctionnent deja dynamiquement grace a LANGUAGE_OPTIONS
