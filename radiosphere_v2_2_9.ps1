@@ -30,7 +30,7 @@ $ConfigJSON = @"
 # ═══════════════════════════════════════════════════════════════════
 Write-Host ">>> Installation des dependances et build..." -ForegroundColor Yellow
 npm install --legacy-peer-deps
-npm install @capacitor/core @capacitor/cli @capawesome-team/capacitor-android-foreground-service @capacitor/app @capacitor/local-notifications
+npm install @capacitor/core @capacitor/cli @capawesome-team/capacitor-android-foreground-service @capacitor/app @capacitor/local-notifications @capacitor/filesystem @capacitor/share
 npm run build
 npm install @capacitor/android
 npx cap add android
@@ -1185,6 +1185,8 @@ Write-Host "  - MODIFIE: AndroidManifest.xml -- declare nouveau service + receiv
 Write-Host "  - Notification MediaStyle avec artwork + Play/Pause sur ecran de verrouillage" -ForegroundColor White
 Write-Host "  - MediaSession native liee a la notification (Android reconnait comme media)" -ForegroundColor White
 Write-Host "  - Boutons notification renvoient toggle au WebView via broadcast" -ForegroundColor White
+Write-Host "  - NOUVEAU: @capacitor/filesystem + @capacitor/share pour export CSV natif Android" -ForegroundColor White
+Write-Host "  - MODIFIE: SettingsPage.tsx -- export favoris via Filesystem+Share sur Android" -ForegroundColor White
 Write-Host ""
 Write-Host "INCHANGE depuis v2.2.8 :" -ForegroundColor Yellow
 Write-Host "  - RadioBrowserService.java (Android Auto)" -ForegroundColor White
@@ -1198,5 +1200,6 @@ Write-Host "  2. Build APK dans Android Studio" -ForegroundColor White
 Write-Host "  3. Lancer une station et verrouiller l'ecran" -ForegroundColor White
 Write-Host "  4. Verifier les controles media sur l'ecran de verrouillage" -ForegroundColor White
 Write-Host "  5. Tester Play/Pause depuis la notification" -ForegroundColor White
+Write-Host "  6. Tester export CSV favoris (Reglages > Favoris > Exporter)" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
