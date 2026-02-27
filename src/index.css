@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=Poppins:wght@600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -54,7 +54,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
     overflow: hidden;
     position: fixed;
     width: 100%;

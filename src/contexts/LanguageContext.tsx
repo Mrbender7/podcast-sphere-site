@@ -12,11 +12,12 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 function detectInitialLanguage(): Language {
   try {
     const stored = localStorage.getItem("radiosphere_language");
-    if (stored === "fr" || stored === "en" || stored === "es" || stored === "de") return stored;
+    if (stored === "fr" || stored === "en" || stored === "es" || stored === "de" || stored === "ja") return stored;
     const nav = navigator.language?.toLowerCase();
     if (nav?.startsWith("fr")) return "fr";
     if (nav?.startsWith("es")) return "es";
     if (nav?.startsWith("de")) return "de";
+    if (nav?.startsWith("ja")) return "ja";
     return "en";
   } catch {
     return "en";
