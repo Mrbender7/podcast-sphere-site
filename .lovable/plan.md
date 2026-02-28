@@ -1,61 +1,115 @@
-# Ajouter le japonais a Radio Sphere
+# Plan d'implementation : Chromecast, correctifs MiniPlayer et Android Auto
 
-## Objectif
+## 1. Corriger le MiniPlayer cache par la BottomNav
 
-Ajouter le japonais (ja) comme 5e langue supportee, avec une police soignee pour les caracteres japonais (kanjis, hiragana, katakana). Il faut aussi traduire les caractères sur les boutons, mais uniquement pour le japonais en raison de l'alphabet différent.
+**Probleme** : La `BottomNav` est en `fixed bottom-0`, mais le `MiniPlayer` est positionne en flux normal juste avant elle. Sur l'APK Android, le MiniPlayer est masque sous la barre de navigation fixe.
 
-## Fichiers a modifier
+**Solution** : Rendre le MiniPlayer egalement `fixed`, positionne juste au-dessus de la BottomNav. Ajuster le padding du contenu en consequence.
 
-### 1. `src/index.css` — Police japonaise
+**Fichiers modifies** :
 
-- Importer **Noto Sans JP** depuis Google Fonts (police soignee, tres lisible pour les kanjis/hiragana/katakana, gratuite)
-- L'ajouter au `font-family` du body en fallback apres Inter, pour que les caracteres japonais soient automatiquement rendus avec Noto Sans JP
-
-### 2. `src/i18n/translations.ts`
-
-- Etendre le type `Language` : `"fr" | "en" | "es" | "de" | "ja"`
-- Ajouter `{ value: "ja", flag: "🇯🇵", label: "日本語" }` dans `LANGUAGE_OPTIONS`
-- Ajouter le bloc complet `ja: { ... }` avec les ~90 cles traduites en japonais naturel et soigne :
-  - Navigation : ホーム, 検索, お気に入り, 設定...
-  - Lecteur : 再生中, 再生エラー, ストリームが利用できません...
-  - Premium : プレミアム, スリープタイマー, Android Auto...
-  - Minuterie : 15分, 30分, 1時間, 1時間30分, 2時間...
-  - Reglages : 言語, データ使用量, ステーションソース...
-  - Guide : 使い方ガイド, ホーム画面, 検索, お気に入り...
-  - Bienvenue : 世界のラジオを手のひらに, 言語を選択, 始める...
-  - Favoris : お気に入り管理, CSVエクスポート, CSVインポート...
-  - Sortie : アプリを閉じますか？, 終了...
-
-### 3. `src/contexts/LanguageContext.tsx`
-
-- Ajouter `"ja"` dans la verification du localStorage
-- Ajouter la detection de `navigator.language` commencant par `"ja"`
-
-### 4. `src/pages/WelcomePage.tsx`
-
-- Aucune modification structurelle necessaire (utilise deja `LANGUAGE_OPTIONS` dynamiquement et les cles de traduction)
-
-### 5. `src/pages/SettingsPage.tsx`
-
-- Aucune modification structurelle necessaire (utilise deja `LANGUAGE_OPTIONS` dynamiquement)
+- `src/components/MiniPlayer.tsx` : ajouter `fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-30` et un `bottom` calcule pour se placer au-dessus de la BottomNav (~56px)
+- `src/pages/Index.tsx` : augmenter le `pb-14` en `pb-28` quand un MiniPlayer est visible (via le contexte Player), pour laisser la place aux deux barres fixes
 
 ---
 
-## Details techniques
+## 2. Integration Google Cast (Chromecast)
 
-### Police Noto Sans JP
+### 2a. Hook `src/hooks/useCast.ts`
 
-- Import Google Fonts : `Noto+Sans+JP:wght@400;500;700`
-- Appliquee en fallback : `font-family: 'Inter', 'Noto Sans JP', sans-serif`
-- Cela garantit que seuls les caracteres japonais utilisent Noto Sans JP, les caracteres latins restent en Inter
-- Noto Sans JP est reconnue comme l'une des meilleures polices pour le japonais sur le web
+Nouveau fichier. Charge dynamiquement le SDK Cast Sender (`cast_sender.js?loadCastFramework=1`). Configure le `CastContext` avec l'Application ID `65257ADB`.
 
-### Volume
+Expose :
 
-- ~90 cles de traduction a ajouter pour le japonais
-- Traductions naturelles et idiomatiques (pas de traduction mot-a-mot)
+- `isCastAvailable` : true si un appareil Cast est detecte sur le reseau
+- `isCasting` : true si connecte
+- `castDeviceName` : nom de l'appareil
+- `startCast()` : ouvre le picker
+- `stopCast()` : deconnecte
+- `loadMedia(station)` : envoie le flux au Chromecast avec `contentId` (streamUrl), `metadata` (titre, favicon URL), et `customData` (tags pour le genre)
 
-### Impact minimal
+### 2b. Bouton Cast `src/components/CastButton.tsx`
 
-- Seuls 3 fichiers necessitent des modifications (translations.ts, LanguageContext.tsx, index.css)
-- Les pages WelcomePage et SettingsPage fonctionnent deja dynamiquement grace a LANGUAGE_OPTIONS
+Nouveau composant. Icone Cast (lucide `Cast`). Rendu uniquement si `isCastAvailable === true`. Quand connecte, icone en couleur primaire. Clic : toggle connect/disconnect.
+
+### 2c. Integration dans le PlayerContext
+
+`**src/contexts/PlayerContext.tsx**` :
+
+- Importer et utiliser `useCast`
+- Quand `play(station)` est appele et que `isCasting` est true : appeler `loadMedia(station)` en plus de la lecture locale
+- Quand `togglePlay()` en mode cast : envoyer play/pause au Chromecast via le `RemotePlayer`
+- Exposer `isCasting` et `castDeviceName` dans le contexte
+
+### 2d. UI - HomePage et FullScreenPlayer
+
+`**src/pages/HomePage.tsx**` : Ajouter `CastButton` dans le header, a droite du titre "Radio Sphere"
+
+`**src/components/FullScreenPlayer.tsx**` : Ajouter `CastButton` dans le header, entre le bouton "www" et le bouton partage. Afficher un badge "Casting vers [appareil]" quand actif.
+
+### 2e. MiniPlayer
+
+`**src/components/MiniPlayer.tsx**` : Quand `isCasting`, afficher une petite icone Cast + nom de l'appareil
+
+### 2f. Traductions
+
+`**src/i18n/translations.ts**` : Ajouter les cles `cast.castingTo`, `cast.controlFromPhone`, `cast.connected`, `cast.disconnected` dans les 5 langues.
+
+### 2g. Donnees envoyees au receiver
+
+Le sender envoie au receiver via les metadonnees Cast :
+
+- `title` : nom de la station
+- `images[0].url` : URL du favicon de la station (ou placeholder)
+- `customData.tags` : les tags de la station (pour que le receiver detecte le genre et affiche l'animation correspondante)
+
+---
+
+## 3. Receiver Cast (`public/cast-receiver.html`)
+
+Reecriture complete du fichier. Page HTML standalone (pas React) qui tourne sur le Chromecast. Utilise le Cast Web Receiver SDK v3.
+
+**Design** :
+
+- Fond sombre (#0a0a1a) avec degradee bleu/violet aux couleurs du theme Radio Sphere
+- **En haut** : Logo anime RadioSphere (SVG inspire de `RadioSphereLogo.tsx`) + texte "Radio Sphere"
+- **Au centre** : Grande animation SVG (~250px) correspondant au genre detecte dans les tags. Les 24 genres sont reproduits en SVG anime standalone (adaptes de `GenreAnimations.tsx`). Si aucun genre reconnu : animation ondes radio generique.
+- **Sous l'animation** : Nom de la station en grand, gradient bleu-violet. Tags en dessous (pas de pays).
+- **En bas** : Mini-lecteur avec petite icone station (favicon), nom, barres equaliseur animees
+- **Tout en bas** : Mention discrete "Controlez la lecture depuis votre telephone" en 5 langues (detectee via `customData.lang` ou defaut FR)
+
+Polices chargees via Google Fonts : Inter + Poppins.
+
+---
+
+## 4. Audit Android Auto : stations qui "tournent dans le vide"
+
+**Probleme identifie** : Le `RadioBrowserService.java` utilise ExoPlayer pour la lecture native independante du WebView. Quand on selectionne une station dans Android Auto, `playStation()` est appele, qui configure ExoPlayer avec l'URL du stream. Cependant, le probleme potentiel est que certains streams radio utilisent des redirections HTTP ou des URLs `http://` (non HTTPS) qui peuvent etre bloquees par la politique de securite reseau d'Android.
+
+**Actions correctives prevues** :
+
+- Verifier que `playStation()` dans `RadioBrowserService.java` gere correctement les redirections HTTP et le mixed content (http/https). Ajouter `player.setMediaItem(MediaItem.fromUri(...))` avec les headers adequats si necessaire.
+- S'assurer que le `network_security_config.xml` autorise le cleartext traffic pour les streams radio (beaucoup de stations n'ont pas de HTTPS)
+- Ajouter un fichier `android-auto/network_security_config.xml` avec `cleartextTrafficPermitted="true"` et documenter son ajout dans le `AndroidManifest.xml`
+- Ajouter un log dans `playerListener.onPlaybackStateChanged` pour diagnostiquer les cas ou le stream reste en buffering indefiniment
+
+---
+
+EDIT : auditer le fichier ps1 pour vérifier que tout est en place et en ordre pour android auto et chrome cast + fonctionnalités de base.  
+  
+Resume des fichiers
+
+
+| Fichier                                    | Action                                    |
+| ------------------------------------------ | ----------------------------------------- |
+| `src/hooks/useCast.ts`                     | Creer                                     |
+| `src/components/CastButton.tsx`            | Creer                                     |
+| `public/cast-receiver.html`                | Creer (reecriture complete)               |
+| `src/contexts/PlayerContext.tsx`           | Modifier (integration Cast)               |
+| `src/components/MiniPlayer.tsx`            | Modifier (fix position + indicateur Cast) |
+| `src/components/FullScreenPlayer.tsx`      | Modifier (bouton Cast)                    |
+| `src/pages/HomePage.tsx`                   | Modifier (bouton Cast header)             |
+| `src/pages/Index.tsx`                      | Modifier (padding dynamique)              |
+| `src/i18n/translations.ts`                 | Modifier (cles cast.*)                    |
+| `android-auto/network_security_config.xml` | Creer                                     |
+| `android-auto/RadioBrowserService.java`    | Modifier (logs debug buffering)           |
