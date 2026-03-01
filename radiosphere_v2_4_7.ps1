@@ -186,16 +186,11 @@ if (Test-Path $ManifestPath) {
         android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
         android:value="__ACTUAL_PACKAGE__.CastOptionsProvider" />
 
-    <!-- v2.4.5: MediaPlaybackService with MediaBrowserService action for unified AA -->
+    <!-- v2.4.7-fix: MediaPlaybackService - foreground notification only (NOT a MediaBrowserService) -->
     <service
         android:name=".MediaPlaybackService"
-        android:exported="true"
-        android:enabled="true"
-        android:foregroundServiceType="mediaPlayback">
-        <intent-filter>
-            <action android:name="android.media.browse.MediaBrowserService" />
-        </intent-filter>
-    </service>
+        android:exported="false"
+        android:foregroundServiceType="mediaPlayback" />
 
     <!-- v2.2.9: Broadcast receiver for notification toggle -->
     <receiver
@@ -411,7 +406,7 @@ public class MediaPlaybackService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        mediaSession = new MediaSessionCompat(this, "RadioSphereSession");
+        mediaSession = new MediaSessionCompat(this, "RadioSphereNotif");
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -1319,7 +1314,7 @@ Write-Host "    - CastButton.tsx : clic bloque tant que castInitState != ready" 
 Write-Host "    - PlayerContext.tsx : castInitState expose dans le contexte" -ForegroundColor White
 Write-Host ""
 Write-Host "  ANDROID AUTO :" -ForegroundColor Cyan
-Write-Host "    - RadioBrowserService + MediaPlaybackService : MediaSession unifiee 'RadioSphereSession'" -ForegroundColor White
+Write-Host "    - RadioBrowserService (MediaSession 'RadioSphereSession') + MediaPlaybackService (MediaSession 'RadioSphereNotif')" -ForegroundColor White
 Write-Host "    - Manifest : meta-data SmallIcon pour notifications AA" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
