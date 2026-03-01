@@ -1,53 +1,96 @@
 
 
-# v2.4.7 — Alignement total sur le recepteur par defaut Google (CC1AD845)
+# Audit Android Auto v2.4.7 — Deux problemes identifies
 
-Le probleme est confirme : le `CastOptionsProvider` utilise `65257ADB` (custom) tandis que le `mediaRouteSelector` alternait entre l'ID par defaut et le custom selon les versions. Cette incoherence empeche le SDK Cast de demarrer une session apres la decouverte.
+## Probleme 1 : Deux "Radio Sphere" dans le lanceur Android Auto
 
-La solution : tout aligner sur `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` (`CC1AD845`), le recepteur universel de Google, qui est le plus stable et ne necessite aucune configuration cote Google Cast Console.
+**Cause racine identifiee** : Le Manifest declare DEUX services avec le meme intent-filter `android.media.browse.MediaBrowserService` :
+
+```text
+Service 1: RadioBrowserService     → Le vrai service AA (ExoPlayer, browse tree)
+Service 2: MediaPlaybackService    → Service de notification lock screen (PAS un MediaBrowserService)
+```
+
+`MediaPlaybackService` etend `Service` (pas `MediaBrowserServiceCompat`), donc Android Auto le detecte comme source media mais ne peut pas l'interroger → ecran noir qui tourne a vide.
+
+**Correction** : Retirer l'intent-filter `android.media.browse.MediaBrowserService` de `MediaPlaybackService`. Il doit rester un simple foreground service sans visibilite Android Auto.
+
+### Fichiers impactes :
+- `android-auto/AndroidManifest-snippet.xml` (lignes 62-70)
+- `radiosphere_v2_4_7.ps1` (lignes 190-198)
+- `android-auto/MediaPlaybackService.java` (pas de changement Java necessaire, juste Manifest)
+
+### Avant :
+```xml
+<service android:name=".MediaPlaybackService"
+    android:exported="true"
+    android:foregroundServiceType="mediaPlayback">
+    <intent-filter>
+        <action android:name="android.media.browse.MediaBrowserService" />
+    </intent-filter>
+</service>
+```
+
+### Apres :
+```xml
+<service android:name=".MediaPlaybackService"
+    android:exported="false"
+    android:foregroundServiceType="mediaPlayback" />
+```
 
 ---
 
-## Changements prevus
+## Probleme 2 : Conflit de MediaSession (cause potentielle de flux non lus)
 
-### 1. `android-auto/CastOptionsProvider.java`
-- Remplacer `"65257ADB"` par `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
-- Ajouter l'import `CastMediaControlIntent` correspondant
+Les deux services creent une `MediaSessionCompat` avec le **meme tag** `"RadioSphereSession"`. Quand les deux services tournent simultanement, le systeme Android peut confondre les sessions, ce qui provoque :
+- Des commandes play/pause envoyees au mauvais service
+- Des etats de lecture incoherents
+- Des flux qui semblent "ne pas jouer" car le mauvais service recoit les commandes
 
-### 2. `android-auto/CastPlugin.java`
-- Changer la constante `CAST_APP_ID` de `"65257ADB"` vers `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
-- Dans `doInitialize`, utiliser `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` pour le `mediaRouteSelector`
-- Ajouter `Log.d(TAG, "CastContext status: " + (castContext != null))` dans `doInitialize`
-- Modifier `hasDiscoveryPermissions()` pour Android 13+ : exiger `NEARBY_WIFI_DEVICES` **ET** `ACCESS_FINE_LOCATION` (les deux sont necessaires pour mDNS)
-- Garder `contentType("audio/*")` dans `loadMedia` pour compatibilite maximale
+**Correction** : Changer le tag MediaSession de `MediaPlaybackService` en `"RadioSphereNotif"` pour le differencier.
 
-### 3. `src/hooks/useCast.ts`
-- Changer `CAST_APP_ID` de `"65257ADB"` vers `"CC1AD845"`
-- Le `loadMedia` reste inchange (envoie l'URL sans modification)
-
-### 4. `radiosphere_v2_4_6.ps1` → `radiosphere_v2_4_7.ps1`
-- Renommer le script
-- Mettre a jour le Java embarque dans le script avec les memes corrections :
-  - `CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
-  - `hasPerms()` : `nearby && fine` sur API 33+
-  - `contentType("audio/*")` dans `loadMedia`
-- Verifier que le Manifest contient `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` et `NEARBY_WIFI_DEVICES`
+### Fichiers impactes :
+- `android-auto/MediaPlaybackService.java` (ligne 53)
+- `radiosphere_v2_4_7.ps1` (bloc MediaPlaybackService embeded)
 
 ---
 
-## Details techniques
+## Probleme 3 (verifie OK) : HTTP/HTTPS des flux
 
-### Pourquoi CC1AD845 ?
-- C'est l'ID par defaut de Google, toujours disponible, pas besoin d'enregistrer un receiver
-- Ce matin ca marchait avec cet ID → on y revient de maniere coherente partout
-- Le custom receiver (65257ADB) necessite une configuration specifique sur la Google Cast Console qui peut expirer ou etre mal configuree
+L'audit confirme que la configuration reseau est correcte :
+- `network_security_config.xml` autorise le cleartext (`cleartextTrafficPermitted="true"`)
+- `usesCleartextTraffic="true"` est injecte dans le Manifest
+- `resolveStreamUrl` suit les redirects et parse m3u/pls correctement
+- `tryProtocolFallback` bascule HTTP↔HTTPS apres 10s de buffering
+- ExoPlayer recoit l'URL resolue sans forcer HTTPS
 
-### Pourquoi NEARBY_WIFI_DEVICES ET ACCESS_FINE_LOCATION ?
-Le Cast SDK sur Android 13+ utilise mDNS pour la decouverte. Google exige les deux permissions simultanement pour que le scan fonctionne de maniere fiable.
+**Conclusion** : Les flux HTTP devraient fonctionner. Si certains ne jouent toujours pas apres correction des problemes 1 et 2, c'est probablement le conflit de MediaSession qui envoyait les commandes au mauvais service.
 
-### Fichiers impactes
-- `android-auto/CastOptionsProvider.java`
-- `android-auto/CastPlugin.java`
-- `src/hooks/useCast.ts`
-- `radiosphere_v2_4_6.ps1` → renomme en `radiosphere_v2_4_7.ps1`
+---
+
+## Resume des changements
+
+### 1. `android-auto/AndroidManifest-snippet.xml`
+- Retirer l'intent-filter `MediaBrowserService` de `MediaPlaybackService`
+- Passer `exported="false"` (pas besoin d'etre expose)
+- Simplifier en tag auto-fermant
+
+### 2. `android-auto/MediaPlaybackService.java`
+- Changer le tag MediaSession de `"RadioSphereSession"` a `"RadioSphereNotif"`
+
+### 3. `radiosphere_v2_4_7.ps1`
+- Meme correction du Manifest (retirer intent-filter de MediaPlaybackService)
+- Meme correction du tag MediaSession dans le Java embarque
+
+### 4. Aucun changement cote frontend (`useCast.ts`, `PlayerContext`, etc.)
+
+---
+
+## Verification apres patch
+
+1. Regenerer avec le script PS1 corrige
+2. `npx cap sync android` puis build
+3. Verifier dans Android Auto : **une seule entree** "Radio Sphere"
+4. Ouvrir → Favoris/Recents/Genres doivent s'afficher
+5. Lancer une station HTTP et une station HTTPS → les deux doivent jouer
 
