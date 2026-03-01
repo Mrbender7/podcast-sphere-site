@@ -1,55 +1,68 @@
 
+Diagnostic trouvé: le comportement “appareils détectés mais connexion impossible” vient très probablement d’une incohérence d’App ID dans la chaîne de connexion native.
 
-## v2.4.2 - Cast Audio + Android Auto Visibility
+- `android-auto/CastPlugin.java` fait la découverte/choix de route avec `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` (sélecteur de route).
+- `android-auto/CastOptionsProvider.java` lance la session avec l’App ID custom `65257ADB`.
+- Résultat possible: la liste d’appareils s’affiche, mais la session Cast ne démarre pas correctement (spinner puis échec silencieux ou sans état clair côté JS).
 
-### 1. Pause audio local lors du Cast (`src/contexts/PlayerContext.tsx`)
+Je propose une v2.4.7 “stabilisation connexion” avec les étapes suivantes.
 
-Dans le `useEffect` qui gere le push media vers le Chromecast (lignes 529-542), ajouter :
-- Un `wasCastingRef` pour detecter la transition `isCasting: false -> true`
-- Quand Cast se connecte : `audio.pause()` + `stopSilentLoop()` pour couper le son local
-- Quand Cast se deconnecte : `audio.play()` + `startSilentLoop()` pour reprendre le son local
+## 1) Corriger l’incohérence d’App ID (cause principale)
 
-### 2. Unification MediaSession (`android-auto/RadioBrowserService.java`)
+### Fichier: `android-auto/CastPlugin.java`
+- Dans `doInitialize`, remplacer le sélecteur:
+  - de `categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)`
+  - vers `categoryForCast(CAST_APP_ID)` où `CAST_APP_ID = "65257ADB"`.
 
-Ligne 146 : Changer `"RadioSphereAuto"` en `"RadioSphereMedia"` pour correspondre au nom utilise dans `MediaPlaybackService.java` (ligne 402) et eviter les doublons dans le systeme Android.
+Objectif: découverte + sélection + démarrage de session alignés sur le même receiver.
 
-### 3. Visibilite Android Auto (`android-auto/AndroidManifest-snippet.xml`)
+### Fichier: `radiosphere_v2_4_6.ps1`
+- Dans le bloc de génération de `CastPlugin.java`, faire la même correction (sinon chaque exécution du script réintroduit le bug).
+- Garder `CastOptionsProvider.java` sur `65257ADB` (déjà le cas).
 
-- Ajouter `android:label="@string/app_name"` et `android:icon="@mipmap/ic_launcher"` sur la declaration du service `RadioBrowserService`
-- Ajouter la meta-data `com.google.android.gms.car.notification.SmallIcon` pointant vers `@drawable/ic_notification`
+## 2) Rendre l’échec de connexion visible côté frontend (debug fiable)
 
-### 4. Script PS1 (`radiosphere_v2_4_2.ps1`) - Corrections multiples
+### Fichier: `android-auto/CastPlugin.java`
+- Enrichir `onSessionStartFailed`:
+  - conserver `castStateChanged` avec `connected: false`
+  - ajouter `errorCode` et `reason` dans l’event (ex: `data.put("errorCode", err)`).
+- Ajouter log explicite:
+  - `Log.e(TAG, "Session start failed, code=" + err + ", appId=" + CAST_APP_ID);`
 
-**App ID production** (le user a confirme que la detection fonctionne) :
-- Ligne 586 : Remplacer `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` par `"65257ADB"`
-- Ligne 885 : Remplacer `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` par `"65257ADB"`
+### Fichier: `src/hooks/useCast.ts`
+- Dans le listener `castStateChanged`, logger aussi `errorCode` s’il existe.
+- Si `connected: false` avec erreur, afficher un warning clair en console (et éventuellement toast non bloquant).
 
-**Manifest - RadioBrowserService** (lignes 168-175) :
-- Ajouter `android:label="@string/app_name"` et `android:icon="@mipmap/ic_launcher"` au service
-- Ajouter la meta-data SmallIcon apres le bloc service
+Objectif: savoir immédiatement si l’échec vient de session launch (App ID/receiver), pas du flux audio.
 
-**Manifest - RadioBrowserService MediaSession** (ligne 1022 dans le here-string) :
-- Changer `"RadioSphereAuto"` en `"RadioSphereMedia"`
+## 3) Garder le flux média tel quel (pas de changement risqué inutile)
 
-**Fix syntaxe PS1** :
-- Ligne 695 : Le tiret long `—` dans `"Network permission callback — granted: "` doit etre remplace par un tiret standard `-` (meme correction que precedemment)
+- Ne pas toucher à `loadMedia` pour l’instant (le problème signalé est “ne se connecte pas”, donc en amont du `rmc.load`).
+- Conserver le log `Loading URL to Cast: ...` pour l’étape suivante si la session démarre mais ne joue pas.
 
-**Resume final** (lignes 1519+) :
-- Ajouter les changements Android Auto (label, icon, SmallIcon, MediaSession unifiee)
-- Ajouter le rappel "Sources Inconnues" pour Android Auto
-- Mettre a jour l'App ID mentionne dans les logs de diagnostic
+## 4) Vérification E2E stricte après patch
 
-### 5. Rappel Sources Inconnues
+1. Regénérer avec script corrigé puis `npx cap sync android`.
+2. Ouvrir app Android, cliquer Cast, sélectionner un appareil.
+3. Vérifier Logcat (filtre `CastPlugin`) :
+   - `Initializing Cast SDK with AppID: 65257ADB`
+   - session started OU session start failed + code explicite.
+4. Vérifier côté JS (console):
+   - `castDevicesAvailable event`
+   - `castStateChanged event` avec `connected: true` attendu à la connexion.
+5. Lancer une station et confirmer que seul le Chromecast émet le son.
 
-Ajouter dans le resume final du PS1 une ligne :
-`"ANDROID AUTO : Activer 'Sources inconnues' dans Parametres > Developpeur de l'app Android Auto sur le smartphone"`
+## 5) File list impactée
 
-### Fichiers modifies
+- `android-auto/CastPlugin.java`
+- `src/hooks/useCast.ts`
+- `radiosphere_v2_4_6.ps1`
 
-| Fichier | Changement |
-|---------|-----------|
-| `src/contexts/PlayerContext.tsx` | Pause/resume audio local lors du Cast connect/disconnect |
-| `android-auto/RadioBrowserService.java` | MediaSession tag "RadioSphereMedia" |
-| `android-auto/AndroidManifest-snippet.xml` | label, icon, SmallIcon sur RadioBrowserService |
-| `radiosphere_v2_4_2.ps1` | App ID 65257ADB, Manifest AA, MediaSession, fix tiret, resume |
+## 6) Plan B contrôlé (si échec persistant)
 
+Faire un test A/B rapide mais cohérent:
+- Variante A: `65257ADB` partout (CastPlugin selector + CastOptionsProvider + web).
+- Variante B: `CC1AD845` partout (temporaire diagnostic).
+Important: ne jamais mélanger les IDs entre selector/session provider.
+
+Ce plan corrige d’abord le point le plus bloquant (mismatch d’App ID), puis améliore la télémétrie pour arrêter de “brûler des crédits” à l’aveugle.
