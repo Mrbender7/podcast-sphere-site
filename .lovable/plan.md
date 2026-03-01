@@ -1,68 +1,53 @@
 
-Diagnostic trouvé: le comportement “appareils détectés mais connexion impossible” vient très probablement d’une incohérence d’App ID dans la chaîne de connexion native.
 
-- `android-auto/CastPlugin.java` fait la découverte/choix de route avec `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` (sélecteur de route).
-- `android-auto/CastOptionsProvider.java` lance la session avec l’App ID custom `65257ADB`.
-- Résultat possible: la liste d’appareils s’affiche, mais la session Cast ne démarre pas correctement (spinner puis échec silencieux ou sans état clair côté JS).
+# v2.4.7 — Alignement total sur le recepteur par defaut Google (CC1AD845)
 
-Je propose une v2.4.7 “stabilisation connexion” avec les étapes suivantes.
+Le probleme est confirme : le `CastOptionsProvider` utilise `65257ADB` (custom) tandis que le `mediaRouteSelector` alternait entre l'ID par defaut et le custom selon les versions. Cette incoherence empeche le SDK Cast de demarrer une session apres la decouverte.
 
-## 1) Corriger l’incohérence d’App ID (cause principale)
+La solution : tout aligner sur `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` (`CC1AD845`), le recepteur universel de Google, qui est le plus stable et ne necessite aucune configuration cote Google Cast Console.
 
-### Fichier: `android-auto/CastPlugin.java`
-- Dans `doInitialize`, remplacer le sélecteur:
-  - de `categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)`
-  - vers `categoryForCast(CAST_APP_ID)` où `CAST_APP_ID = "65257ADB"`.
+---
 
-Objectif: découverte + sélection + démarrage de session alignés sur le même receiver.
+## Changements prevus
 
-### Fichier: `radiosphere_v2_4_6.ps1`
-- Dans le bloc de génération de `CastPlugin.java`, faire la même correction (sinon chaque exécution du script réintroduit le bug).
-- Garder `CastOptionsProvider.java` sur `65257ADB` (déjà le cas).
+### 1. `android-auto/CastOptionsProvider.java`
+- Remplacer `"65257ADB"` par `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
+- Ajouter l'import `CastMediaControlIntent` correspondant
 
-## 2) Rendre l’échec de connexion visible côté frontend (debug fiable)
+### 2. `android-auto/CastPlugin.java`
+- Changer la constante `CAST_APP_ID` de `"65257ADB"` vers `CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
+- Dans `doInitialize`, utiliser `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` pour le `mediaRouteSelector`
+- Ajouter `Log.d(TAG, "CastContext status: " + (castContext != null))` dans `doInitialize`
+- Modifier `hasDiscoveryPermissions()` pour Android 13+ : exiger `NEARBY_WIFI_DEVICES` **ET** `ACCESS_FINE_LOCATION` (les deux sont necessaires pour mDNS)
+- Garder `contentType("audio/*")` dans `loadMedia` pour compatibilite maximale
 
-### Fichier: `android-auto/CastPlugin.java`
-- Enrichir `onSessionStartFailed`:
-  - conserver `castStateChanged` avec `connected: false`
-  - ajouter `errorCode` et `reason` dans l’event (ex: `data.put("errorCode", err)`).
-- Ajouter log explicite:
-  - `Log.e(TAG, "Session start failed, code=" + err + ", appId=" + CAST_APP_ID);`
+### 3. `src/hooks/useCast.ts`
+- Changer `CAST_APP_ID` de `"65257ADB"` vers `"CC1AD845"`
+- Le `loadMedia` reste inchange (envoie l'URL sans modification)
 
-### Fichier: `src/hooks/useCast.ts`
-- Dans le listener `castStateChanged`, logger aussi `errorCode` s’il existe.
-- Si `connected: false` avec erreur, afficher un warning clair en console (et éventuellement toast non bloquant).
+### 4. `radiosphere_v2_4_6.ps1` → `radiosphere_v2_4_7.ps1`
+- Renommer le script
+- Mettre a jour le Java embarque dans le script avec les memes corrections :
+  - `CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`
+  - `hasPerms()` : `nearby && fine` sur API 33+
+  - `contentType("audio/*")` dans `loadMedia`
+- Verifier que le Manifest contient `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` et `NEARBY_WIFI_DEVICES`
 
-Objectif: savoir immédiatement si l’échec vient de session launch (App ID/receiver), pas du flux audio.
+---
 
-## 3) Garder le flux média tel quel (pas de changement risqué inutile)
+## Details techniques
 
-- Ne pas toucher à `loadMedia` pour l’instant (le problème signalé est “ne se connecte pas”, donc en amont du `rmc.load`).
-- Conserver le log `Loading URL to Cast: ...` pour l’étape suivante si la session démarre mais ne joue pas.
+### Pourquoi CC1AD845 ?
+- C'est l'ID par defaut de Google, toujours disponible, pas besoin d'enregistrer un receiver
+- Ce matin ca marchait avec cet ID → on y revient de maniere coherente partout
+- Le custom receiver (65257ADB) necessite une configuration specifique sur la Google Cast Console qui peut expirer ou etre mal configuree
 
-## 4) Vérification E2E stricte après patch
+### Pourquoi NEARBY_WIFI_DEVICES ET ACCESS_FINE_LOCATION ?
+Le Cast SDK sur Android 13+ utilise mDNS pour la decouverte. Google exige les deux permissions simultanement pour que le scan fonctionne de maniere fiable.
 
-1. Regénérer avec script corrigé puis `npx cap sync android`.
-2. Ouvrir app Android, cliquer Cast, sélectionner un appareil.
-3. Vérifier Logcat (filtre `CastPlugin`) :
-   - `Initializing Cast SDK with AppID: 65257ADB`
-   - session started OU session start failed + code explicite.
-4. Vérifier côté JS (console):
-   - `castDevicesAvailable event`
-   - `castStateChanged event` avec `connected: true` attendu à la connexion.
-5. Lancer une station et confirmer que seul le Chromecast émet le son.
-
-## 5) File list impactée
-
+### Fichiers impactes
+- `android-auto/CastOptionsProvider.java`
 - `android-auto/CastPlugin.java`
 - `src/hooks/useCast.ts`
-- `radiosphere_v2_4_6.ps1`
+- `radiosphere_v2_4_6.ps1` → renomme en `radiosphere_v2_4_7.ps1`
 
-## 6) Plan B contrôlé (si échec persistant)
-
-Faire un test A/B rapide mais cohérent:
-- Variante A: `65257ADB` partout (CastPlugin selector + CastOptionsProvider + web).
-- Variante B: `CC1AD845` partout (temporaire diagnostic).
-Important: ne jamais mélanger les IDs entre selector/session provider.
-
-Ce plan corrige d’abord le point le plus bloquant (mismatch d’App ID), puis améliore la télémétrie pour arrêter de “brûler des crédits” à l’aveugle.
