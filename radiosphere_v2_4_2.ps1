@@ -1536,6 +1536,6 @@ Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
 Write-Host "  2. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
 Write-Host "  3. Si Total routes > 2, le scan fonctionne (routes reseau detectees)" -ForegroundColor White
 Write-Host "  4. Si matching > 0, les Chromecasts sont visibles" -ForegroundColor White
-Write-Host "  5. Verifier 'Network permission callback — granted: true'" -ForegroundColor White
+Write-Host "  5. Verifier 'Network permission callback - granted: true'" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
