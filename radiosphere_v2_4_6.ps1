@@ -596,7 +596,7 @@ public class CastPlugin extends Plugin {
             notifyListeners("castStateChanged", data);
             JSObject p = new JSObject(); p.put("action", "pauseLocal"); notifyListeners("localAudioControl", p);
         }
-        @Override public void onSessionStartFailed(@NonNull CastSession s, int e) { JSObject d = new JSObject(); d.put("connected", false); notifyListeners("castStateChanged", d); }
+        @Override public void onSessionStartFailed(@NonNull CastSession s, int e) { Log.e(TAG, "Session start failed, code=" + e + ", appId=" + CAST_APP_ID); JSObject d = new JSObject(); d.put("connected", false); d.put("errorCode", e); d.put("reason", "session_start_failed"); notifyListeners("castStateChanged", d); }
         @Override public void onSessionEnding(@NonNull CastSession s) {}
         @Override public void onSessionEnded(@NonNull CastSession s, int e) {
             JSObject d = new JSObject(); d.put("connected", false); notifyListeners("castStateChanged", d);
@@ -626,7 +626,7 @@ public class CastPlugin extends Plugin {
     @PermissionCallback private void networkPermissionCallback(PluginCall call) { boolean g = hasPerms(); JSObject r = new JSObject(); r.put("granted", g); call.resolve(r); if (g && savedInitCall != null) { PluginCall s = savedInitCall; savedInitCall = null; doInitialize(s); } }
     @PluginMethod public void initialize(PluginCall call) { if (!hasPerms()) { savedInitCall = call; requestPermissionForAlias("network", call, "networkPermissionCallback"); return; } doInitialize(call); }
     private void doInitialize(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { castContext = CastContext.getSharedInstance(getContext()); castContext.getSessionManager().addSessionManagerListener(sessionListener, CastSession.class);
-        mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)).build();
+        mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CAST_APP_ID)).build();
         mediaRouter = MediaRouter.getInstance(getContext()); mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY | MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
         updateDeviceAvailability(mediaRouter); JSObject res = new JSObject(); res.put("initialized", true); res.put("available", devicesAvailable); call.resolve(res);
         } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
