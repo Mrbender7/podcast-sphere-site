@@ -58,16 +58,11 @@
     android:name="com.google.android.gms.car.notification.SmallIcon"
     android:resource="@drawable/ic_notification" />
 
-<!-- 3. MediaPlaybackService — foreground notification + MediaBrowserService for unified AA -->
+<!-- 3. MediaPlaybackService — foreground notification only (NOT a MediaBrowserService) -->
 <service
     android:name=".MediaPlaybackService"
-    android:exported="true"
-    android:enabled="true"
-    android:foregroundServiceType="mediaPlayback">
-    <intent-filter>
-        <action android:name="android.media.browse.MediaBrowserService" />
-    </intent-filter>
-</service>
+    android:exported="false"
+    android:foregroundServiceType="mediaPlayback" />
 
 <!-- 4. Chromecast — CastOptionsProvider (OBLIGATOIRE pour Cast SDK) -->
 <meta-data
