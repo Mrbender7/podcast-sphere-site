@@ -128,6 +128,9 @@ export function useCast() {
 
       plugin.addListener("castStateChanged", (data: any) => {
         console.log("[RadioSphere][Cast] castStateChanged event:", JSON.stringify(data));
+        if (!data.connected && data.errorCode !== undefined) {
+          console.error(`[RadioSphere][Cast] ❌ Session failed — errorCode=${data.errorCode}, reason=${data.reason || "unknown"}`);
+        }
         setIsCasting(data.connected);
         setCastDeviceName(data.connected ? data.deviceName : null);
       });

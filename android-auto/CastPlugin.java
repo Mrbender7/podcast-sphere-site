@@ -78,8 +78,12 @@ public class CastPlugin extends Plugin {
             Log.d(TAG, "Sent localAudioControl:pauseLocal to JS");
         }
         @Override public void onSessionStartFailed(@NonNull CastSession s, int err) {
-            Log.e(TAG, "Session start failed: " + err);
-            JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
+            Log.e(TAG, "Session start failed, code=" + err + ", appId=" + CAST_APP_ID);
+            JSObject data = new JSObject();
+            data.put("connected", false);
+            data.put("deviceName", "");
+            data.put("errorCode", err);
+            data.put("reason", "session_start_failed");
             notifyListeners("castStateChanged", data);
         }
         @Override public void onSessionEnding(@NonNull CastSession s) {}
@@ -211,10 +215,9 @@ public class CastPlugin extends Plugin {
                     SessionManager sm = castContext.getSessionManager();
                     sm.addSessionManagerListener(sessionListener, CastSession.class);
 
-                    // v2.4.2: Use DEFAULT_MEDIA_RECEIVER for broadest device discovery
+                    // v2.4.7: Use CAST_APP_ID for aligned discovery + session
                     mediaRouteSelector = new MediaRouteSelector.Builder()
-                        .addControlCategory(CastMediaControlIntent.categoryForCast(
-                            CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
+                        .addControlCategory(CastMediaControlIntent.categoryForCast(CAST_APP_ID))
                         .build();
 
                     mediaRouter = MediaRouter.getInstance(getContext());
