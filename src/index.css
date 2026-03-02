@@ -76,3 +76,8 @@
     scrollbar-width: none;
   }
 }
+
+.mask-radial-fade {
+  mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
+}

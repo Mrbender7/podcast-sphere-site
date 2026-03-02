@@ -14,13 +14,14 @@ interface StationCardProps {
 
 function StationLogo({ src, alt, className }: { src?: string; alt: string; className?: string }) {
   const secureSrc = src?.replace('http://', 'https://');
+  const isPlaceholder = !secureSrc;
   return (
     <img
       src={secureSrc || stationPlaceholder}
       alt={alt}
       loading="lazy"
-      className={cn("w-full h-full object-cover", className)}
-      onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+      className={cn("w-full h-full object-cover", isPlaceholder && "mask-radial-fade", className)}
+      onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; (e.target as HTMLImageElement).classList.add("mask-radial-fade"); }}
     />
   );
 }
