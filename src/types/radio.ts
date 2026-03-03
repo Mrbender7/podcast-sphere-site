@@ -30,4 +30,5 @@ export interface SearchParams {
   order?: string;
   reverse?: string;
   tagList?: string;
+  signal?: AbortSignal;
 }

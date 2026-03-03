@@ -5,7 +5,7 @@ import { StationCard } from "@/components/StationCard";
 import { RadioStation } from "@/types/radio";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, X, ChevronDown, ChevronUp, Check, ArrowUpDown, ArrowUp } from "lucide-react";
+import { Search, Loader2, X, ChevronDown, ChevronUp, Check, ArrowUpDown, ArrowUp, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -29,6 +29,15 @@ function countryCodeToFlag(iso: string): string {
 
 const GENRES = ["60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical", "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal", "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"];
 const LANGUAGES = ["arabic", "english", "french", "german", "japanese", "portuguese", "spanish"];
+
+/** Merge fulfilled results from Promise.allSettled, ignoring failures */
+function mergeSettled<T>(results: PromiseSettledResult<T[]>[]): T[] {
+  const merged: T[] = [];
+  for (const r of results) {
+    if (r.status === "fulfilled") merged.push(...r.value);
+  }
+  return merged;
+}
 
 interface SearchPageProps {
   isFavorite: (id: string) => boolean;
@@ -60,9 +69,9 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   const { data: apiCountries, isError: isCountriesError, refetch: retryCountries } = useQuery({
     queryKey: ["countries"],
-    queryFn: getCountries,
+    queryFn: ({ signal }) => getCountries(signal),
     staleTime: 30 * 60 * 1000,
-    retry: 2,
+    retry: 1,
   });
 
   const countryList = useMemo(() => {
@@ -72,6 +81,8 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       value: c.name,
     }));
   }, [apiCountries]);
+
+  const usingFallbackCountries = !apiCountries || apiCountries.length === 0;
 
   const hasFilters = !!(query || country || genres.length || languages.length);
 
@@ -99,7 +110,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   const { data: results, isLoading, isError: isSearchError, refetch: retrySearch } = useQuery({
     queryKey: ["search", query, country, genres, languages, sortBy],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const baseParams = {
         country: country || undefined,
         language: languages.length ? languages.join(",") : undefined,
@@ -107,6 +118,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         offset: 0,
         order: sortBy,
         reverse: sortReverse,
+        signal,
       };
 
       const map = new Map<string, RadioStation>();
@@ -115,15 +127,20 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       if (genres.length > 1) {
         const genreSearches = genres.map(g =>
           query
-            ? Promise.all([
+            ? Promise.allSettled([
                 radioBrowserProvider.searchStations({ ...baseParams, tag: g, name: query }),
                 radioBrowserProvider.searchStations({ ...baseParams, tag: [g, query].join(",") }),
-              ]).then(([a, b]) => [...a, ...b])
+              ]).then(mergeSettled)
             : radioBrowserProvider.searchStations({ ...baseParams, tag: g })
         );
-        const allBatches = await Promise.all(genreSearches);
-        for (const batch of allBatches) {
-          for (const s of batch) if (!map.has(s.id)) map.set(s.id, s);
+        const settled = await Promise.allSettled(genreSearches);
+        const allBatches = mergeSettled(settled);
+        for (const s of allBatches) {
+          if (Array.isArray(s)) {
+            for (const st of s as RadioStation[]) if (!map.has(st.id)) map.set(st.id, st);
+          } else if (s && typeof s === "object" && "id" in s) {
+            if (!map.has((s as RadioStation).id)) map.set((s as RadioStation).id, s as RadioStation);
+          }
         }
         return Array.from(map.values());
       }
@@ -133,12 +150,18 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       if (singleTag) baseParams["tag"] = singleTag;
 
       if (query) {
-        const [nameResults, tagResults] = await Promise.all([
+        const settled = await Promise.allSettled([
           radioBrowserProvider.searchStations({ ...baseParams, name: query }),
           radioBrowserProvider.searchStations({ ...baseParams, tag: singleTag ? [singleTag, query].join(",") : query }),
         ]);
-        for (const s of nameResults) map.set(s.id, s);
-        for (const s of tagResults) if (!map.has(s.id)) map.set(s.id, s);
+        for (const r of settled) {
+          if (r.status === "fulfilled") {
+            for (const s of r.value) if (!map.has(s.id)) map.set(s.id, s);
+          }
+        }
+        if (map.size === 0 && settled.every(r => r.status === "rejected")) {
+          throw settled[0].status === "rejected" ? settled[0].reason : new Error("Search failed");
+        }
         return Array.from(map.values());
       } else {
         return radioBrowserProvider.searchStations(baseParams);
@@ -146,6 +169,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     },
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
+    retry: 1,
   });
 
   // Derive allResults from query data + extra loaded pages
@@ -182,15 +206,20 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       if (genres.length > 1) {
         const genreSearches = genres.map(g =>
           query
-            ? Promise.all([
+            ? Promise.allSettled([
                 radioBrowserProvider.searchStations({ ...baseParams, tag: g, name: query }),
                 radioBrowserProvider.searchStations({ ...baseParams, tag: [g, query].join(",") }),
-              ]).then(([a, b]) => [...a, ...b])
+              ]).then(mergeSettled)
             : radioBrowserProvider.searchStations({ ...baseParams, tag: g })
         );
-        const allBatches = await Promise.all(genreSearches);
-        for (const batch of allBatches) {
-          for (const s of batch) if (!map.has(s.id)) map.set(s.id, s);
+        const settled = await Promise.allSettled(genreSearches);
+        const allBatches = mergeSettled(settled);
+        for (const s of allBatches) {
+          if (Array.isArray(s)) {
+            for (const st of s as RadioStation[]) if (!map.has(st.id)) map.set(st.id, st);
+          } else if (s && typeof s === "object" && "id" in s) {
+            if (!map.has((s as RadioStation).id)) map.set((s as RadioStation).id, s as RadioStation);
+          }
         }
         data = Array.from(map.values());
       } else {
@@ -198,12 +227,15 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         if (singleTag) baseParams["tag"] = singleTag;
 
         if (query) {
-          const [nameResults, tagResults] = await Promise.all([
+          const settled = await Promise.allSettled([
             radioBrowserProvider.searchStations({ ...baseParams, name: query }),
             radioBrowserProvider.searchStations({ ...baseParams, tag: singleTag ? [singleTag, query].join(",") : query }),
           ]);
-          for (const s of nameResults) map.set(s.id, s);
-          for (const s of tagResults) if (!map.has(s.id)) map.set(s.id, s);
+          for (const r of settled) {
+            if (r.status === "fulfilled") {
+              for (const s of r.value) if (!map.has(s.id)) map.set(s.id, s);
+            }
+          }
           data = Array.from(map.values());
         } else {
           data = await radioBrowserProvider.searchStations(baseParams);
@@ -260,6 +292,15 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
           <button onClick={() => setCountry("")} className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
             <X className="w-3 h-3" /> {t("search.clearCountry")}
           </button>
+        )}
+        {usingFallbackCountries && !isCountriesError && (
+          <div className="flex items-center gap-1.5 mt-1 px-1">
+            <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
+            <p className="text-xs text-muted-foreground">{t("search.reducedCountryList") || "Liste de pays réduite (temporaire)"}</p>
+            <button onClick={() => retryCountries()} className="text-xs text-primary hover:underline font-medium ml-1">
+              {t("search.retry")}
+            </button>
+          </div>
         )}
       </div>
 
@@ -399,8 +440,6 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Removed autofocus to avoid opening keyboard on mobile
-
   const checkScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
@@ -514,8 +553,6 @@ function CountryDropdown({ countries, value, onChange, placeholder }: { countrie
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  // Removed autofocus to avoid opening keyboard on mobile
 
   const checkScroll = useCallback(() => {
     const el = listRef.current;
