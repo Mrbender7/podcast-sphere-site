@@ -34,6 +34,9 @@
 
 <!-- ═══════════════════════════════════════════════════════════════════
      SECTION 2: Inside <application> tag
+     Add these attributes to the <application> tag:
+       android:allowBackup="false"
+       android:fullBackupContent="false"
      ═══════════════════════════════════════════════════════════════════ -->
 
 <!-- 1. Android Auto metadata — tells Android this is a media app -->

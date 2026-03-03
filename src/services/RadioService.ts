@@ -9,9 +9,12 @@ const FALLBACK_MIRRORS = [
 ];
 
 const USER_AGENT = "RadioSphere/1.0";
+const REQUEST_TIMEOUT_MS = 5000;
 
 // Cache the working mirror for the session to avoid retrying dead ones
 let cachedWorkingMirror: string | null = null;
+let dynamicMirrors: string[] | null = null;
+let mirrorFetchPromise: Promise<string[]> | null = null;
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -20,6 +23,62 @@ function shuffleArray<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/** Fetch dynamic mirror list from Radio Browser's DNS-based server list */
+async function fetchDynamicMirrors(): Promise<string[]> {
+  try {
+    const res = await fetch("https://all.api.radio-browser.info/json/servers", {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (!res.ok) return FALLBACK_MIRRORS;
+    const servers: { name: string; ip: string }[] = await res.json();
+    const urls = servers
+      .map(s => `https://${s.name}`)
+      .filter(u => u.includes("api.radio-browser.info"));
+    return urls.length > 0 ? urls : FALLBACK_MIRRORS;
+  } catch {
+    return FALLBACK_MIRRORS;
+  }
+}
+
+/** Get mirrors, fetching dynamic list once per session */
+async function getMirrors(): Promise<string[]> {
+  if (dynamicMirrors) return dynamicMirrors;
+  if (!mirrorFetchPromise) {
+    mirrorFetchPromise = fetchDynamicMirrors().then(mirrors => {
+      dynamicMirrors = mirrors;
+      return mirrors;
+    });
+  }
+  return mirrorFetchPromise;
+}
+
+async function fetchWithMirrors(path: string, params?: Record<string, string>): Promise<any[]> {
+  const query = params ? "?" + new URLSearchParams(params).toString() : "";
+  const allMirrors = await getMirrors();
+
+  // Try cached working mirror first, then shuffled others
+  const mirrors = cachedWorkingMirror
+    ? [cachedWorkingMirror, ...shuffleArray(allMirrors.filter(m => m !== cachedWorkingMirror))]
+    : shuffleArray(allMirrors);
+
+  let lastError: Error | null = null;
+  for (const mirror of mirrors) {
+    try {
+      const res = await fetch(`${mirror}/json/${path}${query}`, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      cachedWorkingMirror = mirror;
+      return await res.json();
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      continue;
+    }
+  }
+  throw lastError || new Error("All Radio Browser mirrors failed");
 }
 
 function normalizeStation(raw: any): RadioStation {
@@ -37,29 +96,6 @@ function normalizeStation(raw: any): RadioStation {
     votes: raw.votes || 0,
     homepage: raw.homepage || "",
   };
-}
-
-async function fetchWithMirrors(path: string, params?: Record<string, string>): Promise<any[]> {
-  const query = params ? "?" + new URLSearchParams(params).toString() : "";
-
-  // Try cached working mirror first, then shuffled fallbacks
-  const mirrors = cachedWorkingMirror
-    ? [cachedWorkingMirror, ...shuffleArray(FALLBACK_MIRRORS.filter(m => m !== cachedWorkingMirror))]
-    : shuffleArray(FALLBACK_MIRRORS);
-
-  for (const mirror of mirrors) {
-    try {
-      const res = await fetch(`${mirror}/json/${path}${query}`, {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (!res.ok) continue;
-      cachedWorkingMirror = mirror;
-      return await res.json();
-    } catch {
-      continue;
-    }
-  }
-  throw new Error("All Radio Browser mirrors failed");
 }
 
 /** Search station by exact stream URL — used to refresh metadata after CSV import */

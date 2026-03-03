@@ -151,6 +151,11 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
     }
 
+    # Disable auto backup (clean uninstall = full data wipe)
+    if ($ManifestContent -notmatch 'allowBackup') {
+        $ManifestContent = $ManifestContent -replace '<application', '<application android:allowBackup="false" android:fullBackupContent="false"'
+    }
+
     # networkSecurityConfig
     if ($ManifestContent -notmatch 'networkSecurityConfig') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:networkSecurityConfig="@xml/network_security_config"'
@@ -1102,7 +1107,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         if (station.logo != null && !station.logo.isEmpty()) {
             artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
         } else {
-            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/drawable/station_placeholder");
         }
 
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
@@ -1226,7 +1231,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         if (station.logo != null && !station.logo.isEmpty()) {
             artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
         } else {
-            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/drawable/station_placeholder");
         }
         MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
             .setMediaId(STATION_PREFIX + station.id).setTitle(station.name)
