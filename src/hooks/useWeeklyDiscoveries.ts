@@ -83,8 +83,11 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
         searches.push(radioBrowserProvider.searchStations({ country, limit: 15 }));
       }
 
-      const results = await Promise.all(searches);
-      const all = results.flat();
+      const settled = await Promise.allSettled(searches);
+      const all: RadioStation[] = [];
+      for (const r of settled) {
+        if (r.status === "fulfilled") all.push(...r.value);
+      }
 
       const seen = new Set<string>();
       const candidates = all.filter(s => {

@@ -10,11 +10,14 @@ const FALLBACK_MIRRORS = [
 
 const USER_AGENT = "RadioSphere/1.0";
 const REQUEST_TIMEOUT_MS = 5000;
+const MAX_MIRROR_ATTEMPTS = 3;
 
-// Cache the working mirror for the session to avoid retrying dead ones
+// Session-level mirror state
 let cachedWorkingMirror: string | null = null;
 let dynamicMirrors: string[] | null = null;
 let mirrorFetchPromise: Promise<string[]> | null = null;
+const blacklistedMirrors = new Map<string, number>(); // mirror -> blacklist expiry timestamp
+const BLACKLIST_DURATION_MS = 60_000; // 1 minute
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -25,21 +28,88 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-/** Fetch dynamic mirror list from Radio Browser's DNS-based server list */
+function isBlacklisted(mirror: string): boolean {
+  const expiry = blacklistedMirrors.get(mirror);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    blacklistedMirrors.delete(mirror);
+    return false;
+  }
+  return true;
+}
+
+function blacklistMirror(mirror: string) {
+  blacklistedMirrors.set(mirror, Date.now() + BLACKLIST_DURATION_MS);
+}
+
+/** Safe JSON fetch: validates content-type, detects HTML error pages, ensures array response */
+async function fetchJsonArray<T = any>(url: string, options?: RequestInit): Promise<T[]> {
+  const res = await fetch(url, options);
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} from ${url}`);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json") && !contentType.includes("text/json")) {
+    const text = await res.text();
+    if (text.trim().startsWith("<!") || text.includes("<html")) {
+      throw new Error(`[RadioService] HTML response instead of JSON from ${url} (Cloudflare/auth wall)`);
+    }
+    // Try parsing anyway — some mirrors omit content-type
+    try {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("Not an array");
+      return parsed;
+    } catch {
+      throw new Error(`[RadioService] Unexpected format from ${url}: ${contentType}`);
+    }
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) {
+    throw new Error(`[RadioService] Expected array but got ${typeof data} from ${url}`);
+  }
+  return data;
+}
+
+/** Create a timeout-compatible AbortSignal, merging with an optional external signal */
+function createTimeoutSignal(externalSignal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  // If external signal aborts, propagate
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+  }
+
+  // Clean up timer when aborted
+  controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+
+  return controller.signal;
+}
+
+/** Fetch dynamic mirror list from Radio Browser */
 async function fetchDynamicMirrors(): Promise<string[]> {
   try {
-    const res = await fetch("https://all.api.radio-browser.info/json/servers", {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (!res.ok) return FALLBACK_MIRRORS;
-    const servers: { name: string; ip: string }[] = await res.json();
-    const urls = servers
-      .map(s => `https://${s.name}`)
-      .filter(u => u.includes("api.radio-browser.info"));
-    // Merge dynamic + static fallbacks, deduplicated, to ensure we always have backup mirrors
+    const signal = createTimeoutSignal();
+    const data = await fetchJsonArray<{ name: string; ip: string }>(
+      "https://all.api.radio-browser.info/json/servers",
+      { signal }
+    );
+    const urls = data
+      .map((s: any) => `https://${s.name}`)
+      .filter((u: string) => u.includes("api.radio-browser.info"));
     const merged = new Set([...urls, ...FALLBACK_MIRRORS]);
     return Array.from(merged);
-  } catch {
+  } catch (e) {
+    console.warn("[RadioService] Dynamic mirror fetch failed, using fallbacks:", e);
     return FALLBACK_MIRRORS;
   }
 }
@@ -56,31 +126,58 @@ async function getMirrors(): Promise<string[]> {
   return mirrorFetchPromise;
 }
 
-async function fetchWithMirrors(path: string, params?: Record<string, string>): Promise<any[]> {
+/** Fetch from mirrors with prioritization, blacklisting, and bounded attempts */
+async function fetchWithMirrors(path: string, params?: Record<string, string>, externalSignal?: AbortSignal): Promise<any[]> {
   const query = params ? "?" + new URLSearchParams(params).toString() : "";
   const allMirrors = await getMirrors();
 
-  // Try cached working mirror first, then shuffled others
-  const mirrors = cachedWorkingMirror
-    ? [cachedWorkingMirror, ...shuffleArray(allMirrors.filter(m => m !== cachedWorkingMirror))]
-    : shuffleArray(allMirrors);
+  // Filter out blacklisted mirrors
+  const available = allMirrors.filter(m => !isBlacklisted(m));
+  if (available.length === 0) {
+    // All blacklisted — clear blacklist and retry all
+    blacklistedMirrors.clear();
+    available.push(...allMirrors);
+  }
+
+  // Prioritize cached working mirror
+  const mirrors = cachedWorkingMirror && available.includes(cachedWorkingMirror)
+    ? [cachedWorkingMirror, ...shuffleArray(available.filter(m => m !== cachedWorkingMirror))]
+    : shuffleArray(available);
+
+  // Limit attempts
+  const toTry = mirrors.slice(0, MAX_MIRROR_ATTEMPTS);
 
   let lastError: Error | null = null;
-  for (const mirror of mirrors) {
+  for (const mirror of toTry) {
+    // Check if external signal already aborted
+    if (externalSignal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+
     try {
-      const res = await fetch(`${mirror}/json/${path}${query}`, {
+      const signal = createTimeoutSignal(externalSignal);
+      const url = `${mirror}/json/${path}${query}`;
+      const data = await fetchJsonArray(url, {
         headers: { "User-Agent": USER_AGENT },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal,
       });
-      if (!res.ok) continue;
+      // Success — cache this mirror
       cachedWorkingMirror = mirror;
-      return await res.json();
+      console.debug(`[RadioService] ✓ ${mirror} for ${path}`);
+      return data;
     } catch (e) {
-      lastError = e instanceof Error ? e : new Error(String(e));
-      continue;
+      const err = e instanceof Error ? e : new Error(String(e));
+      // If it's an abort from external signal, rethrow immediately
+      if (err.name === "AbortError" && externalSignal?.aborted) {
+        throw err;
+      }
+      console.warn(`[RadioService] ✗ ${mirror} for ${path}:`, err.message);
+      blacklistMirror(mirror);
+      lastError = err;
     }
   }
-  throw lastError || new Error("All Radio Browser mirrors failed");
+
+  throw lastError || new Error("[RadioService] All mirrors failed");
 }
 
 function normalizeStation(raw: any): RadioStation {
@@ -100,12 +197,11 @@ function normalizeStation(raw: any): RadioStation {
   };
 }
 
-/** Search station by exact stream URL — used to refresh metadata after CSV import */
+/** Search station by exact stream URL */
 export async function searchStationByUrl(streamUrl: string): Promise<RadioStation | null> {
   try {
     const data = await fetchWithMirrors("stations/byurl", { url: streamUrl, limit: "1" });
     if (data.length > 0) return normalizeStation(data[0]);
-    // Fallback: try searching by exact URL match
     const data2 = await fetchWithMirrors("stations/search", { url: streamUrl, limit: "1" });
     if (data2.length > 0) return normalizeStation(data2[0]);
     return null;
@@ -114,7 +210,7 @@ export async function searchStationByUrl(streamUrl: string): Promise<RadioStatio
   }
 }
 
-/** Notify Radio Browser that a station was clicked (community contribution) */
+/** Notify Radio Browser that a station was clicked */
 export async function reportStationClick(stationuuid: string): Promise<void> {
   if (!stationuuid) return;
   try {
@@ -123,7 +219,7 @@ export async function reportStationClick(stationuuid: string): Promise<void> {
       headers: { "User-Agent": USER_AGENT },
     });
   } catch {
-    // Best-effort, don't block playback
+    // Best-effort
   }
 }
 
@@ -133,8 +229,8 @@ export interface CountryInfo {
   stationcount: number;
 }
 
-export async function getCountries(): Promise<CountryInfo[]> {
-  const data = await fetchWithMirrors("countries", { order: "name", reverse: "false" });
+export async function getCountries(signal?: AbortSignal): Promise<CountryInfo[]> {
+  const data = await fetchWithMirrors("countries", { order: "name", reverse: "false" }, signal);
   return data
     .filter((c: any) => c.name && c.iso_3166_1 && c.stationcount > 0)
     .map((c: any) => ({ name: c.name, iso_3166_1: c.iso_3166_1, stationcount: c.stationcount }))
@@ -151,13 +247,12 @@ export const radioBrowserProvider: RadioProvider = {
       hidebroken: "true",
     };
     if (params.name) query.name = params.name;
-    // Keep using country name — the API supports both, and our UI uses display names
     if (params.country) query.country = params.country;
     if (params.tag) query.tag = params.tag;
     if (params.tagList) query.tagList = params.tagList;
     if (params.language) query.language = params.language;
 
-    const data = await fetchWithMirrors("stations/search", query);
+    const data = await fetchWithMirrors("stations/search", query, params.signal);
     return data.map(normalizeStation);
   },
 
