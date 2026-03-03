@@ -11,6 +11,7 @@
 - **Tags cliquables dans le FullScreenPlayer** : Cliquer sur un tag d'une station lance automatiquement une recherche filtrée sur ce tag (sans autre filtre actif)
 - **Vitesse de défilement constante du titre (MiniPlayer)** : Le marquee du titre utilise désormais une vitesse constante de 40px/s au lieu d'une durée fixe (les titres longs ne défilent plus trop vite)
 - **Détection d'overflow améliorée (MiniPlayer)** : La zone de défilement du titre est correctement limitée à l'espace visible (entre le logo et les contrôles), le texte défile uniquement quand il dépasse réellement
+- **Android Auto — changement de station fiabilisé** : ajout d'un reset forcé du player entre stations (stop/pause/clearMediaItems), d'un garde anti-race pour ignorer les requêtes obsolètes et d'un timeout strict (8s) sur la résolution des flux pour éviter le gel de l'interface
 
 ---
 
