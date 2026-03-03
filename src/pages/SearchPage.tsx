@@ -58,10 +58,11 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     }
   }, [initialGenre]);
 
-  const { data: apiCountries } = useQuery({
+  const { data: apiCountries, isError: isCountriesError, refetch: retryCountries } = useQuery({
     queryKey: ["countries"],
     queryFn: getCountries,
     staleTime: 30 * 60 * 1000,
+    retry: 2,
   });
 
   const countryList = useMemo(() => {
@@ -96,7 +97,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const { data: results, isLoading } = useQuery({
+  const { data: results, isLoading, isError: isSearchError, refetch: retrySearch } = useQuery({
     queryKey: ["search", query, country, genres, languages, sortBy],
     queryFn: async () => {
       const baseParams = {
@@ -302,6 +303,28 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       {isLoading && (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       )}
+      {isSearchError && !isLoading && (
+        <div className="flex flex-col items-center gap-3 py-12">
+          <p className="text-sm text-destructive text-center">{t("search.networkError")}</p>
+          <button
+            onClick={() => retrySearch()}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {t("search.retry")}
+          </button>
+        </div>
+      )}
+      {isCountriesError && (
+        <div className="flex items-center gap-2 mb-3 px-2">
+          <p className="text-xs text-destructive">{t("search.countriesError")}</p>
+          <button
+            onClick={() => retryCountries()}
+            className="text-xs text-primary hover:underline font-medium"
+          >
+            {t("search.retry")}
+          </button>
+        </div>
+      )}
       {allResults.length > 0 && (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 mb-2">
@@ -336,11 +359,11 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
           )}
         </div>
       )}
-      {results && allResults.length === 0 && !isLoading && (
+      {results && allResults.length === 0 && !isLoading && !isSearchError && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
       )}
 
-      {!hasFilters && (
+      {!hasFilters && !isSearchError && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
       )}
 

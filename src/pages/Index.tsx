@@ -56,13 +56,17 @@ function AppContentInner() {
     setShowWelcome(true);
   }, []);
 
-  const handleResetApp = useCallback(() => {
+  const handleResetApp = useCallback(async () => {
     try {
-      localStorage.removeItem("radioflow_favorites");
-      localStorage.removeItem("radioflow_recent");
-      localStorage.removeItem("radiosphere_language");
-      localStorage.removeItem("radiosphere_premium");
-      localStorage.removeItem(ONBOARDING_KEY);
+      // Clear all localStorage
+      localStorage.clear();
+    } catch {}
+    // Delete all IndexedDB databases
+    try {
+      const dbs = await window.indexedDB.databases();
+      for (const db of dbs) {
+        if (db.name) window.indexedDB.deleteDatabase(db.name);
+      }
     } catch {}
     window.location.reload();
   }, []);
