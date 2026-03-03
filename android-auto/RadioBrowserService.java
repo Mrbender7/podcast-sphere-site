@@ -29,6 +29,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * RadioBrowserService — Android Auto MediaBrowserService for RadioSphere.
@@ -52,6 +58,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private static final String KEY_RECENTS = "recents_json";
 
     private static final String USER_AGENT = "RadioSphere/1.0";
+    private static final int STREAM_BUFFER_TIMEOUT_MS = 8000;
+    private static final int RESOLVE_TIMEOUT_MS = 8000;
+    private static final int NETWORK_TIMEOUT_MS = 5000;
 
     private static final String[] API_MIRRORS = {
         "https://de1.api.radio-browser.info",
@@ -70,6 +79,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private Runnable bufferingTimeoutRunnable;
     private StationData currentStation;
     private boolean triedProtocolFallback = false;
+    private final ExecutorService streamResolverExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicInteger playbackRequestSeq = new AtomicInteger(0);
 
     private static class StationData {
         final String id;
@@ -153,6 +164,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     @Override
     public void onDestroy() {
         cancelBufferingTimeout();
+        playbackRequestSeq.incrementAndGet(); // invalidate pending async station switches
+        streamResolverExecutor.shutdownNow();
+        handler.removeCallbacksAndMessages(null);
         abandonAudioFocus();
         player.release();
         mediaSession.release();
@@ -363,12 +377,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private void startBufferingTimeout() {
         cancelBufferingTimeout();
         bufferingTimeoutRunnable = () -> {
-            Log.w(TAG, "Buffering timeout (15s) — trying protocol fallback");
+            Log.w(TAG, "Buffering timeout (" + (STREAM_BUFFER_TIMEOUT_MS / 1000) + "s) — trying protocol fallback");
             if (currentStation != null && !triedProtocolFallback) {
                 tryProtocolFallback();
             }
         };
-        handler.postDelayed(bufferingTimeoutRunnable, 15000);
+        handler.postDelayed(bufferingTimeoutRunnable, STREAM_BUFFER_TIMEOUT_MS);
     }
 
     private void cancelBufferingTimeout() {
@@ -376,6 +390,15 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             handler.removeCallbacks(bufferingTimeoutRunnable);
             bufferingTimeoutRunnable = null;
         }
+    }
+
+    private void forceResetPlayerForSwitch() {
+        cancelBufferingTimeout();
+        player.setPlayWhenReady(false);
+        player.pause();
+        player.stop();
+        player.clearMediaItems();
+        updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
     }
 
     private void tryProtocolFallback() {
@@ -390,11 +413,36 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         } else {
             return;
         }
+
         Log.d(TAG, "Protocol fallback: " + url + " -> " + fallbackUrl);
-        player.stop();
-        player.setMediaItem(MediaItem.fromUri(fallbackUrl));
-        player.prepare();
-        player.play();
+        handler.post(() -> {
+            forceResetPlayerForSwitch();
+            player.setMediaItem(MediaItem.fromUri(fallbackUrl));
+            player.prepare();
+            player.setVolume(1.0f);
+            player.play();
+            updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
+        });
+    }
+
+    private String resolveStreamUrlSafely(String urlStr) {
+        Future<String> future = streamResolverExecutor.submit(() -> resolveStreamUrl(urlStr));
+        try {
+            return future.get(RESOLVE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            Log.w(TAG, "resolveStreamUrl timeout (" + RESOLVE_TIMEOUT_MS + "ms), using raw URL");
+            return urlStr;
+        } catch (InterruptedException e) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            Log.w(TAG, "resolveStreamUrl interrupted, using raw URL");
+            return urlStr;
+        } catch (Exception e) {
+            future.cancel(true);
+            Log.w(TAG, "resolveStreamUrl failed, using raw URL: " + e.getMessage());
+            return urlStr;
+        }
     }
 
     // ─── Stream URL Resolution ──────────────────────────────────────────
@@ -414,8 +462,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             try {
                 HttpURLConnection headConn = (HttpURLConnection) new URL(resolved).openConnection();
                 headConn.setRequestMethod("HEAD");
-                headConn.setConnectTimeout(8000);
-                headConn.setReadTimeout(8000);
+                headConn.setConnectTimeout(NETWORK_TIMEOUT_MS);
+                headConn.setReadTimeout(NETWORK_TIMEOUT_MS);
                 headConn.setRequestProperty("User-Agent", USER_AGENT);
                 headConn.setInstanceFollowRedirects(true);
                 contentType = headConn.getContentType();
@@ -458,8 +506,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         for (int i = 0; i < maxRedirects; i++) {
             HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
             conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
+            conn.setConnectTimeout(NETWORK_TIMEOUT_MS);
+            conn.setReadTimeout(NETWORK_TIMEOUT_MS);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", USER_AGENT);
             int code = conn.getResponseCode();
@@ -527,22 +575,30 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         triedProtocolFallback = false;
         cancelBufferingTimeout();
 
+        final int requestSeq = playbackRequestSeq.incrementAndGet();
+
         if (!requestAudioFocus()) {
             Log.w(TAG, "Could not get audio focus, aborting playback");
             return;
         }
 
-        // Resolve URL in background then play
+        // Resolve URL in background then play (stale requests are ignored)
         new Thread(() -> {
-            String resolvedUrl = resolveStreamUrl(station.streamUrl);
+            String resolvedUrl = resolveStreamUrlSafely(station.streamUrl);
             Log.d(TAG, "Playing resolved URL: " + resolvedUrl);
 
             handler.post(() -> {
-                player.stop();
+                if (requestSeq != playbackRequestSeq.get()) {
+                    Log.d(TAG, "Ignoring stale play request for " + station.name);
+                    return;
+                }
+
+                forceResetPlayerForSwitch();
                 player.setMediaItem(MediaItem.fromUri(resolvedUrl));
                 player.prepare();
                 player.setVolume(1.0f);
                 player.play();
+                updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
             });
         }).start();
 
@@ -664,8 +720,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private String httpGet(String urlStr) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
         conn.setRequestMethod("GET");
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(8000);
+        conn.setConnectTimeout(NETWORK_TIMEOUT_MS);
+        conn.setReadTimeout(NETWORK_TIMEOUT_MS);
         conn.setRequestProperty("User-Agent", USER_AGENT);
         conn.setInstanceFollowRedirects(true);
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
