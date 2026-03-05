@@ -124,15 +124,14 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   const startCapture = useCallback(() => {
     stopCapture();
 
-    const stream = (globalAudio as any).captureStream?.() || (globalAudio as any).mozCaptureStream?.();
-    if (!stream) {
-      console.warn("[StreamBuffer] captureStream not available");
-      setBufferAvailable(false);
-      setRecordingAvailable(false);
-      return;
-    }
-
     try {
+      const stream = (globalAudio as any).captureStream?.() || (globalAudio as any).mozCaptureStream?.();
+      if (!stream) {
+        console.warn("[StreamBuffer] captureStream not available");
+        setBufferAvailable(false);
+        setRecordingAvailable(false);
+        return;
+      }
       isFirstChunkRef.current = true;
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
 
