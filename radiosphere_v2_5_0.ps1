@@ -65,6 +65,15 @@ if (Test-Path $FallbackSrc) {
     Write-Host "    Fallback drawable/ic_notification.png OK" -ForegroundColor DarkGray
 }
 
+# Copy station_placeholder.jpg for default artwork
+$PlaceholderSrc = "android-auto/res/drawable/station_placeholder.jpg"
+if (Test-Path $PlaceholderSrc) {
+    Copy-Item $PlaceholderSrc "$DrawablePath/station_placeholder.jpg" -Force
+    Write-Host "    station_placeholder.jpg copie dans drawable/" -ForegroundColor Green
+} else {
+    Write-Host "    ATTENTION: station_placeholder.jpg introuvable dans android-auto/res/drawable/" -ForegroundColor Red
+}
+
 # ===================================================================
 # 3b. Generation automotive_app_desc.xml
 # ===================================================================
@@ -503,7 +512,12 @@ public class MediaPlaybackService extends Service {
         mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
             .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f).build());
         Notification notification = buildNotification(name, isPlaying, artwork);
-        startForeground(NOTIFICATION_ID, notification);
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
     }
 
     private Notification buildNotification(String stationName, boolean isPlaying, Bitmap artwork) {
@@ -885,7 +899,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             .build();
 
         if (!foregroundStarted) {
-            startForeground(AUTO_NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(AUTO_NOTIFICATION_ID, notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(AUTO_NOTIFICATION_ID, notification);
+            }
             foregroundStarted = true;
             Log.d(TAG, "Started foreground service for Android Auto playback");
         } else {

@@ -197,7 +197,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             .build();
 
         if (!foregroundStarted) {
-            startForeground(AUTO_NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(AUTO_NOTIFICATION_ID, notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(AUTO_NOTIFICATION_ID, notification);
+            }
             foregroundStarted = true;
             Log.d(TAG, "Started foreground service for Android Auto playback");
         } else {
