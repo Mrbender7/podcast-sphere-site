@@ -1,44 +1,79 @@
 
 
-## Diagnostic : Pourquoi le bouton REC et la barre TimeMachine ont disparu
+## Audit Android Auto — Diagnostic complet
 
-### Cause racine
+### Cause racine identifiee : `startForeground()` crash silencieux sur Android 14+
 
-`captureStream()` lance une `SecurityError` sur **toute** source audio cross-origin (= tous les flux radio). Le `catch` fait exactement ce qu'il doit faire : il met `bufferAvailable = false` et `recordingAvailable = false`. L'UI réagit correctement en masquant le bouton REC et la barre de seek-back.
+Sur Android 14 (API 34) et superieur, appeler `startForeground(id, notification)` **sans specifier le type de service foreground** provoque une `MissingForegroundServiceTypeException` quand le service declare `foregroundServiceType="mediaPlayback"` dans le Manifest.
 
-**Le problème n'est pas un bug — c'est une limitation fondamentale du navigateur.** `captureStream()` est soumis aux mêmes restrictions CORS que `fetch()`. On a remplacé un système qui marchait (fetch + proxy) par un système qui ne peut pas fonctionner sur les flux radio cross-origin.
+Le code actuel dans `RadioBrowserService.startAsForeground()` :
+```java
+startForeground(AUTO_NOTIFICATION_ID, notification);  // CRASH sur API 34+
+```
 
-### Solution proposée : revenir à fetch direct SANS proxy
+Devrait etre :
+```java
+if (Build.VERSION.SDK_INT >= 34) {
+    startForeground(AUTO_NOTIFICATION_ID, notification,
+        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+} else {
+    startForeground(AUTO_NOTIFICATION_ID, notification);
+}
+```
 
-Le vrai problème était `corsproxy.io` qui injectait des pubs. La solution n'est pas d'abandonner `fetch()`, mais d'abandonner le proxy :
+Le service crash **avant meme de demander l'audio focus**, donc aucun flux ne peut jouer. L'app reste visible dans AA car `onGetRoot`/`onLoadChildren` fonctionnent (pas besoin de foreground pour le browse tree), mais `playStation` echoue systematiquement.
 
-1. **Tenter un `fetch()` direct** sur l'URL du flux radio
-2. **Si ça marche** (le serveur envoie des headers CORS) → buffer et enregistrement disponibles
-3. **Si ça échoue** (pas de CORS) → `bufferAvailable = false`, la lecture continue normalement via `<audio>`, pas de buffer/REC mais pas de crash
+Le meme bug existe dans `MediaPlaybackService.updateSessionAndNotification()`.
 
-### Modifications dans `src/contexts/StreamBufferContext.tsx`
+### Probleme secondaire : drawable `station_placeholder` absent
 
-- **Remplacer** `startCapture()` (MediaRecorder/captureStream) par `startFetch()` simplifié :
-  - `fetch(streamUrl)` direct, sans aucun proxy ni fallback CORS
-  - Lire le `ReadableStream` et pousser les chunks dans `chunksRef` (même format `TimestampedChunk`)
-  - Si le fetch échoue (CORS, réseau) → `bufferAvailable = false`, log warning, pas de crash
-- **Supprimer** les refs liées à MediaRecorder : `captureRecorderRef`, `webmHeaderRef`, `isFirstChunkRef`
-- **Ajouter** `fetchControllerRef` (AbortController) pour pouvoir stopper le fetch
-- **Le MIME type** sera détecté depuis le `Content-Type` de la réponse, ou fallback `audio/mpeg`
-- **`seekBack()`** : les chunks sont du MP3/AAC brut (pas du WebM), donc pas besoin de header spécial — le blob est directement jouable
-- **`stopRecording()`** : même logique, extension `.mp3` ou basée sur le codec détecté
+Le PS1 ne copie jamais `android-auto/res/drawable/station_placeholder.jpg` dans le projet Android. L'artwork par defaut ne s'affiche pas, mais ce n'est pas bloquant.
+
+### Plan de corrections
+
+**Fichiers a modifier (4 fichiers, meme fix) :**
+
+1. **`android-auto/RadioBrowserService.java`** — methode `startAsForeground()` : ajouter le type foreground service pour API 34+
+2. **`android-auto/MediaPlaybackService.java`** — methode `updateSessionAndNotification()` : meme fix
+3. **`radiosphere_v2_5_0.ps1`** — mettre a jour les 2 versions inline (RadioBrowserService + MediaPlaybackService) avec le meme fix + ajouter la copie de `station_placeholder.jpg`
+
+**Detail technique du fix pour `startAsForeground` (RadioBrowserService) :**
+```java
+if (!foregroundStarted) {
+    if (Build.VERSION.SDK_INT >= 34) {
+        startForeground(AUTO_NOTIFICATION_ID, notification,
+            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+    } else {
+        startForeground(AUTO_NOTIFICATION_ID, notification);
+    }
+    foregroundStarted = true;
+} else {
+    // Update existing notification
+    NotificationManager nm = ...;
+    nm.notify(AUTO_NOTIFICATION_ID, notification);
+}
+```
+
+**Detail technique du fix pour `updateSessionAndNotification` (MediaPlaybackService) :**
+```java
+if (Build.VERSION.SDK_INT >= 34) {
+    startForeground(NOTIFICATION_ID, notification,
+        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+} else {
+    startForeground(NOTIFICATION_ID, notification);
+}
+```
+
+**PS1 — ajout copie station_placeholder :**
+```powershell
+# Apres la copie de ic_notification.png
+$PlaceholderSrc = "android-auto/res/drawable/station_placeholder.jpg"
+# ... copie vers android/app/src/main/res/drawable/
+```
 
 ### Ce qui ne change pas
 
-- Toute la logique buffer circulaire, `trimBuffer`, `updateBufferSeconds`
-- `startRecording` avec la logique seek-back index
-- `handleBlobEnded` transition seek→live pendant enregistrement
-- `returnToLiveInternal`
-- Aucun autre fichier modifié
-
-### Résultat attendu
-
-- Stations avec CORS activé → buffer + REC + TimeMachine fonctionnels, sans pub
-- Stations sans CORS → lecture normale, buffer désactivé silencieusement
-- Zéro dépendance à un proxy externe
+- Toute la logique browse tree, resolution de flux, ExoPlayer, audio focus, protocol fallback
+- Le Manifest, les permissions, les dependances Gradle
+- Les fichiers TypeScript/React cote web
 
