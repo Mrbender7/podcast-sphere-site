@@ -284,7 +284,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
