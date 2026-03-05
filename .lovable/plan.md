@@ -1,87 +1,37 @@
 
-Objectif: corriger définitivement le time-shift (remonter bien au-delà de 3–5s) et stabiliser la lecture rewind sur APK, tout en auditant les permissions et le PS1.
 
-1) Diagnostic (audit code actuel)
+## Diagnostic des 3 problemes restants
 
-- `FullScreenPlayer.tsx`
-  - Le slider est contrôlé par `value={[isLive ? 0 : -1]}`: hors direct, la valeur reste figée à `-1`, donc la position choisie n’est jamais conservée.
-  - Le seek est déclenché sur `onValueChange` (pendant le drag), ce qui reconstruit/recharge un Blob en boucle → saccades et lecture instable.
-- `StreamBufferContext.tsx`
-  - Le seek est basé sur `Date.now()` + timestamps de chunks, pas sur un index audio robuste.
-  - Le buffer ne gère pas explicitement les flux ICY avec metadata (`icy-metaint`) : ces bytes parasites peuvent corrompre le flux rewind (symptôme typique: lecture qui casse après quelques secondes).
-- `PlayerContext.tsx`
-  - Les watchdogs (`stalled`/`ended`/heartbeat) sont pensés pour le live réseau; ils peuvent perturber la lecture `blob:` du time-shift.
-- Permissions
-  - Demandes dupliquées (App.tsx + PlayerContext + Welcome/guide).
-  - `requestAllPermissions()` demande le storage, alors que le flux actuel “cache + share sheet” n’en a pas besoin.
-- PS1
-  - Vérifié: compatible avec des fixes TS.
-  - À aligner côté permissions Android (éviter READ/WRITE external si non utilisées).
+### 1. Crash du playback apres quelques secondes
 
-2) Plan d’implémentation
+**Cause** : Le `handleError` dans `PlayerContext.tsx` (ligne 317) tue completement la lecture (`isPlaying: false`, arret heartbeat, toast d'erreur) sans verifier si la source est un `blob:`. Quand le blob commence a un endroit arbitraire du flux (pas sur une frontiere de frame audio), le decodeur peut emettre une erreur transitoire. Le handler tue alors tout, et le player devient inutilisable sans changer de station.
 
-A. Stabiliser le rewind (priorité 1)
-- Fichier: `src/components/FullScreenPlayer.tsx`
-  - Remplacer la logique slider:
-    - `onValueChange`: met à jour uniquement un état UI local (pas de seek réel).
-    - `onValueCommit`: applique le seek une seule fois.
-  - Binder le slider sur un vrai offset courant (pas `-1` fixe), exposé par le context.
-  - Garder bouton LIVE pour retour instantané.
+**Fix** : Dans `handleError`, si `audio.src.startsWith('blob:')`, ignorer l'erreur et declencher un retour au live automatique au lieu de tuer la lecture.
 
-B. Rendre le buffer seekable de façon fiable (priorité 1)
-- Fichier: `src/contexts/StreamBufferContext.tsx`
-  - Ajouter parsing ICY:
-    - Lire header `icy-metaint`.
-    - Retirer les blocs metadata lors de la capture des chunks audio.
-  - Passer le seek en mode “byte-accurate”:
-    - Calculer la position cible depuis la fin du buffer (bytes), pas uniquement par timestamp.
-    - Conserver l’offset réellement appliqué (`currentSeekOffsetSeconds`) pour l’UI.
-  - Limiter les reconstructions inutiles (un seek = une reconstruction blob).
-  - Exposer `currentSeekOffsetSeconds` (et éventuellement `isSeeking`) au player.
+### 2. Flux AAC non bufferises / non enregistres
 
-C. Empêcher les watchdog live de casser le playback rewind (priorité 1)
-- Fichier: `src/contexts/PlayerContext.tsx`
-  - Dans `stalled/ended/heartbeat`, ignorer la logique de reload quand `audio.src` est un `blob:` de time-shift.
-  - Sur fin naturelle du blob rewind: retour direct maîtrisé (ou trigger explicite vers `returnToLive`), sans reload agressif.
+**Cause** : Beaucoup de serveurs AAC/Icecast bloquent les requetes `fetch()` cross-origin (pas de header CORS). Le `startFetch` echoue silencieusement et `bufferAvailable` reste `false`. Le fallback MediaRecorder via `captureStream()` n'est pas disponible dans le WebView Android Capacitor. Resultat : ni buffer, ni enregistrement.
 
-D. Audit permissions (priorité 2)
-- Fichiers: `src/utils/permissions.ts`, `src/App.tsx`, `src/contexts/PlayerContext.tsx`, `src/pages/WelcomePage.tsx`, `src/components/UserGuideModal.tsx`
-  - Centraliser les prompts:
-    - garder un point d’entrée user-gesture (Welcome + bouton manuel guide),
-    - supprimer les demandes auto redondantes.
-  - Supprimer la demande storage runtime non nécessaire pour “cache + share”.
-  - Conserver notifications (Android 13+) avec flux explicite.
+**Fix** : Utiliser un proxy CORS leger. Un service public comme `https://corsproxy.io/?url=` permet de contourner. On tente d'abord le fetch direct, et en cas d'echec on retente via le proxy. Cela permettra de capturer les flux AAC/OGG dans le buffer.
 
-E. Vérification PS1 (préférence mémorisée: toujours vérifier)
-- Fichier: `radiosphere_v2_5_0.ps1`
-  - Vérifier cohérence build (OK).
-  - Ajuster la liste de permissions injectées:
-    - retirer `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` si non requises.
-  - Ajouter note de version (ex: v2.5.1) sur les fixes time-shift + permissions.
+### 3. Volume control — deplacer a droite du player
 
-3) Détails techniques (implémentation)
+**Fix** : Transformer le slider volume en slider vertical, positionne a droite du bloc artwork+controles, entre la hauteur du titre et le bouton play.
 
-- Slider:
-  - `value={[seekDraft ?? currentSeekOffsetSeconds]}` (en négatif côté UI).
-  - `onValueChange` = UI only.
-  - `onValueCommit` = `seekBack(abs(value))`.
-- Buffer:
-  - Parser ICY stateful (gère les coupures de blocs metadata entre chunks).
-  - Concaténation seek en parts `BlobPart[]` (éviter copies massives inutiles).
-- Robustesse:
-  - Ne pas relancer le stream live pendant lecture `blob:`.
-  - Traces logs ciblées: offset demandé/appliqué, metaint détecté, taille blob, raison des retours live.
+### Fichiers a modifier
 
-4) Validation E2E (APK)
+| Fichier | Modification |
+|---|---|
+| `src/contexts/PlayerContext.tsx` | `handleError` : skip pour `blob:` URLs, emettre un event custom pour que StreamBuffer retourne au live |
+| `src/contexts/StreamBufferContext.tsx` | Ecouter l'event d'erreur blob pour auto-return-to-live. Ajouter fallback proxy CORS dans `startFetch`. |
+| `src/components/FullScreenPlayer.tsx` | Deplacer le volume en slider vertical a droite du player, borne entre titre et play button |
+| `radiosphere_v2_5_0.ps1` | Verifier coherence (pas de changement natif requis) |
 
-- Cas MP3 + AAC/OGG:
-  1. Lancer station, attendre 2–3 min.
-  2. Rewind à -30s, -90s, -180s.
-  3. Vérifier lecture fluide (>30s) sans saccades.
-  4. Retour LIVE immédiat.
-- Enregistrement:
-  - Démarrer pendant live, puis pendant rewind.
-  - Stop + export/share: fichier lisible et durée cohérente.
-- Permissions:
-  - Premier démarrage: prompt notification au bon moment.
-  - Pas de prompt storage inutile.
+### Details techniques
+
+**Proxy CORS** : On tente `fetch(streamUrl)`. Si erreur reseau/CORS, on retente `fetch('https://corsproxy.io/?' + encodeURIComponent(streamUrl))`. Le proxy renvoie les headers `Content-Type` et `icy-metaint` correctement.
+
+**Auto-recovery blob error** : Plutot qu'un event custom, on ajoute un listener `error` sur `globalAudio` dans `StreamBufferContext` qui detecte `blob:` et appelle `returnToLiveInternal()`. Cela evite le couplage entre les deux contextes.
+
+**Volume vertical** : Slider Radix `orientation="vertical"`, hauteur contrainte entre le titre et le play button (~120-160px), positionne en `absolute` a droite du conteneur principal.
+
