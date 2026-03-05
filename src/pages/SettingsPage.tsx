@@ -538,7 +538,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       </CollapsibleSection>
 
       {/* User Guide */}
-      <UserGuideModal />
+      <UserGuideModal onReopenWelcome={onReopenWelcome} />
 
       {/* Collapsible disclaimers */}
       {[

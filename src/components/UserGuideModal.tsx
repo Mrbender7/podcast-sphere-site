@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { BookOpen, Home, Search, Heart, Settings, ChevronDown, Moon, Car, Cast, Crown, ShieldAlert } from "lucide-react";
+import { BookOpen, Home, Search, Heart, Settings, ChevronDown, Moon, Car, Cast, Crown, ShieldAlert, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { requestAllPermissions } from "@/utils/permissions";
 
 const SECTIONS = [
   { id: "home", icon: Home, titleKey: "guide.home", contentKey: "guide.homeContent" },
@@ -15,12 +16,20 @@ const SECTIONS = [
   { id: "chromecast", icon: Cast, titleKey: "guide.chromecast", contentKey: "guide.chromecastContent", premium: true },
 ] as const;
 
-export function UserGuideModal() {
+interface UserGuideModalProps {
+  onReopenWelcome?: () => void;
+}
+
+export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
 
   const toggle = (id: string) => setOpenSection(prev => (prev === id ? null : id));
+
+  const handleReRequestPermissions = async () => {
+    await requestAllPermissions();
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -42,6 +51,7 @@ export function UserGuideModal() {
           {SECTIONS.map(({ id, icon: Icon, titleKey, contentKey, ...rest }) => {
             const isOpen = openSection === id;
             const isPremium = 'premium' in rest && rest.premium;
+            const isPermissions = id === "permissions";
             return (
               <div key={id} className="rounded-xl bg-accent overflow-hidden">
                 <button
@@ -62,12 +72,40 @@ export function UserGuideModal() {
                 <div
                   className={cn(
                     "overflow-hidden transition-all duration-300 ease-in-out",
-                    isOpen ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
+                    isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
                   )}
                 >
-                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-3.5">
+                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2">
                     {t(contentKey)}
                   </p>
+                  {isPermissions && isOpen && (
+                    <div className="flex flex-col gap-2 px-3.5 pb-3.5">
+                      <button
+                        onClick={handleReRequestPermissions}
+                        className="flex items-center gap-2 text-xs font-medium text-primary hover:underline"
+                        type="button"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        {t("guide.permissionsReRequest")}
+                      </button>
+                      {onReopenWelcome && (
+                        <button
+                          onClick={() => {
+                            setOpen(false);
+                            onReopenWelcome();
+                          }}
+                          className="flex items-center gap-2 text-xs font-medium text-primary hover:underline"
+                          type="button"
+                        >
+                          <Home className="w-3.5 h-3.5" />
+                          {t("guide.permissionsReopenWelcome")}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!isPermissions && (
+                    <div className="pb-1.5" />
+                  )}
                 </div>
               </div>
             );

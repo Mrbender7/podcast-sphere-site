@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
+import { requestAllPermissions } from "@/utils/permissions";
 import type { Language } from "@/i18n/translations";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import translations from "@/i18n/translations";
@@ -22,6 +23,14 @@ const FEATURE_KEYS = ["welcome.stations", "welcome.search", "welcome.favExport",
 export function WelcomePage({ onComplete }: WelcomePageProps) {
   const [selectedLang, setSelectedLang] = useState<Language>("fr");
   const t = (key: string) => translations[selectedLang][key] ?? key;
+
+  // Request all permissions when welcome page is shown
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      requestAllPermissions();
+    }, 800); // Small delay so the page renders first
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-6 py-10 text-center overflow-y-auto">
