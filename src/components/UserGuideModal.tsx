@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { BookOpen, Home, Search, Heart, Settings, ChevronDown, Moon, Car, Cast, Crown } from "lucide-react";
+import { BookOpen, Home, Search, Heart, Settings, ChevronDown, Moon, Car, Cast, Crown, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
@@ -9,6 +9,7 @@ const SECTIONS = [
   { id: "search", icon: Search, titleKey: "guide.search", contentKey: "guide.searchContent" },
   { id: "favorites", icon: Heart, titleKey: "guide.favorites", contentKey: "guide.favoritesContent" },
   { id: "settings", icon: Settings, titleKey: "guide.settings", contentKey: "guide.settingsContent" },
+  { id: "permissions", icon: ShieldAlert, titleKey: "guide.permissions", contentKey: "guide.permissionsContent" },
   { id: "sleepTimer", icon: Moon, titleKey: "guide.sleepTimer", contentKey: "guide.sleepTimerContent", premium: true },
   { id: "androidAuto", icon: Car, titleKey: "guide.androidAuto", contentKey: "guide.androidAutoContent", premium: true },
   { id: "chromecast", icon: Cast, titleKey: "guide.chromecast", contentKey: "guide.chromecastContent", premium: true },
