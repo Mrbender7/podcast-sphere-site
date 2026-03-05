@@ -154,7 +154,12 @@ public class MediaPlaybackService extends Service {
 
         // Build notification
         Notification notification = buildNotification(name, isPlaying, artwork);
-        startForeground(NOTIFICATION_ID, notification);
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
     }
 
     private Notification buildNotification(String stationName, boolean isPlaying, Bitmap artwork) {
