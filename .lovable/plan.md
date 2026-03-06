@@ -1,37 +1,32 @@
 
 
-## Plan : Unification Android Auto + Nettoyage MediaPlaybackService — TERMINÉ ✅
+## Fix: Brace mismatch in PS1 inline template for RadioBrowserService.java
 
-### Architecture finale
+### Root Cause
 
-**Un seul service media : `RadioBrowserService`**, qui fonctionne en deux modes :
-1. **Mode Android Auto** : Browse tree + ExoPlayer natif (inchangé)
-2. **Mode Notification (Mirror)** : Reçoit les updates de `RadioAutoPlugin` via Intent `ACTION_UPDATE`, met à jour sa MediaSession unique et affiche une notification MediaStyle unifiée
+In `radiosphere_v2_5_0.ps1`, line 1328, the `searchStations` method is missing its declaration signature. The code jumps from the closing brace of `fetchStationByUuid` (line 1326) directly into the method body:
 
-### v2.5.2 — Corrections favoris + navigation Android Auto
+```text
+Line 1326:     }
+Line 1327:
+Line 1328:         List<StationData> nameResults = new ArrayList<>();  // <-- BUG: no method signature!
+```
 
-| Correction | Détail |
-|-----------|--------|
-| **onPlayFromMediaId** | Fallback en 4 étapes : currentStations → favorites → recents → API (fetchStationByUuid) |
-| **updateFavorites/updateRecents** | Méthodes statiques appelées par RadioAutoPlugin pour rafraîchir le browse tree en temps réel via `notifyChildrenChanged()` |
-| **fetchStationByUuid** | Nouvelle méthode pour récupérer une station par UUID depuis l'API radio-browser |
-| **buildBrowsableItem** | Ajout d'une icône placeholder pour les dossiers (pas de trou visuel) |
-| **Ordre des dossiers** | Top Stations → Mes Favoris → Récents |
-| **activeInstance** | Set dans onCreate, cleared dans onDestroy pour le pattern static |
+This causes the compiler to interpret `for` loops and `return` as top-level statements outside the class, producing all 25 errors.
 
-### Changements effectués
+### Fix (2 changes)
 
-| Fichier | Action |
-|---------|--------|
-| `android-auto/RadioBrowserService.java` | v2.5.2: onPlayFromMediaId fallback, updateFavorites/updateRecents static, fetchStationByUuid, folder icons |
-| `android-auto/RadioAutoPlugin.java` | v2.5.2: Appelle RadioBrowserService.updateFavorites/updateRecents après sync |
-| `android-auto/AndroidManifest-snippet.xml` | v2.5.2: Nettoyé, MediaPlaybackService supprimé |
-| `radiosphere_v2_5_0.ps1` | Templates inline mis à jour v2.5.2 |
-| `android-auto/MediaPlaybackService.java` | **Supprimé** (v2.5.1) |
+#### 1. `radiosphere_v2_5_0.ps1` — Add missing method signature (line 1328)
 
-### Ce qui n'a pas changé
-- `CastPlugin.java`, `CastOptionsProvider.java` — déjà corrects
-- `PlayerContext.tsx`, `useCast.ts` — logique Cast déjà en place
-- `StationCard.tsx` — placeholder déjà géré
-- `MediaToggleReceiver.java` — inchangé (appelle RadioAutoPlugin)
-- Browse tree, ExoPlayer, audio focus, stream resolution
+Replace line 1328:
+```
+        List<StationData> nameResults = new ArrayList<>();
+```
+With:
+```
+    private List<StationData> searchStations(String query, int limit) {
+        List<StationData> nameResults = new ArrayList<>();
+```
+
+This single missing line is the cause of the entire build failure. The standalone `RadioBrowserService.java` file is already correct and needs no changes.
+
