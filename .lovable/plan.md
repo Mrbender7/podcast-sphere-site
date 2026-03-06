@@ -1,37 +1,34 @@
 
 
-## Plan : Unification Android Auto + Nettoyage MediaPlaybackService — TERMINÉ ✅
+## Plan: Mise a jour du Premium Roadmap + PremiumPage
 
-### Architecture finale
+### Constat
 
-**Un seul service media : `RadioBrowserService`**, qui fonctionne en deux modes :
-1. **Mode Android Auto** : Browse tree + ExoPlayer natif (inchangé)
-2. **Mode Notification (Mirror)** : Reçoit les updates de `RadioAutoPlugin` via Intent `ACTION_UPDATE`, met à jour sa MediaSession unique et affiche une notification MediaStyle unifiée
+1. **`docs/PREMIUM_ROADMAP.md`** est desynchronise :
+   - Le mode d'emploi (§3) est liste comme premium alors qu'il est gratuit
+   - Le Chromecast (§4) est encore en "futur" alors qu'il est termine
+   - La numerotation est incoherente
 
-### v2.5.2 — Corrections favoris + navigation Android Auto
+2. **`src/pages/PremiumPage.tsx`** ne liste que 2 features (Sleep Timer + Android Auto) au lieu des 4. Cette page semble etre une ancienne version non utilisee (la vraie liste est dans `SettingsPage.tsx` ligne 116-121 avec les 4 features correctes).
 
-| Correction | Détail |
-|-----------|--------|
-| **onPlayFromMediaId** | Fallback en 4 étapes : currentStations → favorites → recents → API (fetchStationByUuid) |
-| **updateFavorites/updateRecents** | Méthodes statiques appelées par RadioAutoPlugin pour rafraîchir le browse tree en temps réel via `notifyChildrenChanged()` |
-| **fetchStationByUuid** | Nouvelle méthode pour récupérer une station par UUID depuis l'API radio-browser |
-| **buildBrowsableItem** | Ajout d'une icône placeholder pour les dossiers (pas de trou visuel) |
-| **Ordre des dossiers** | Top Stations → Mes Favoris → Récents |
-| **activeInstance** | Set dans onCreate, cleared dans onDestroy pour le pattern static |
+3. **`src/contexts/PremiumContext.tsx`** : le `isPremium` default a `true` pour la periode de test — c'est correct, on ne touche pas.
 
-### Changements effectués
+4. **Gates premium dans le code** : verifies et corrects dans `SettingsPage` (sleep timer) et `FullScreenPlayer` (enregistrement). Le Chromecast et Android Auto sont gates via la section premium des settings.
 
-| Fichier | Action |
-|---------|--------|
-| `android-auto/RadioBrowserService.java` | v2.5.2: onPlayFromMediaId fallback, updateFavorites/updateRecents static, fetchStationByUuid, folder icons |
-| `android-auto/RadioAutoPlugin.java` | v2.5.2: Appelle RadioBrowserService.updateFavorites/updateRecents après sync |
-| `android-auto/AndroidManifest-snippet.xml` | v2.5.2: Nettoyé, MediaPlaybackService supprimé |
-| `radiosphere_v2_5_0.ps1` | Templates inline mis à jour v2.5.2 |
-| `android-auto/MediaPlaybackService.java` | **Supprimé** (v2.5.1) |
+### Changements prevus
 
-### Ce qui n'a pas changé
-- `CastPlugin.java`, `CastOptionsProvider.java` — déjà corrects
-- `PlayerContext.tsx`, `useCast.ts` — logique Cast déjà en place
-- `StationCard.tsx` — placeholder déjà géré
-- `MediaToggleReceiver.java` — inchangé (appelle RadioAutoPlugin)
-- Browse tree, ExoPlayer, audio focus, stream resolution
+#### 1. `docs/PREMIUM_ROADMAP.md` — Rewrite complet
+- 4 features premium : Sleep Timer, Enregistrement/Time-shift, Android Auto, Chromecast — toutes en statut "Termine"
+- Mode d'emploi retire de la section premium (fonctionnalite de base)
+- Section "futures" nettoyee
+- Notes techniques mises a jour (periode de test, Stripe one-shot a venir)
+
+#### 2. `src/pages/PremiumPage.tsx` — Ajout des 4 features
+- Ajouter les icones Disc (recorder) et Cast (chromecast) a la liste des features
+- Aligner avec ce qui est deja dans `SettingsPage.tsx`
+
+### Pas de changement fonctionnel
+Aucun changement de logique ou de gates premium. Le code est deja pret pour la production avec `isPremium = true` par defaut. Quand tu voudras activer le paiement reel, il suffira de :
+1. Integrer Stripe (one-shot 9.99€)
+2. Changer le default de `isPremium` a `false` dans `PremiumContext.tsx`
+
