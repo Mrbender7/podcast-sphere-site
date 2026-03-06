@@ -325,6 +325,7 @@ public class RadioAutoPlugin extends Plugin {
     public void syncFavorites(PluginCall call) {
         String stations = call.getString("stations", "[]");
         getPrefs().edit().putString(KEY_FAVORITES, stations).apply();
+        RadioBrowserService.updateFavorites(stations);
         call.resolve();
     }
 
@@ -332,6 +333,7 @@ public class RadioAutoPlugin extends Plugin {
     public void syncRecents(PluginCall call) {
         String stations = call.getString("stations", "[]");
         getPrefs().edit().putString(KEY_RECENTS, stations).apply();
+        RadioBrowserService.updateRecents(stations);
         call.resolve();
     }
 
