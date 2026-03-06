@@ -1,4 +1,4 @@
-import { Crown, Moon, Car, CheckCircle } from "lucide-react";
+import { Crown, Moon, Car, CheckCircle, Disc, Cast } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -9,7 +9,9 @@ export function PremiumPage() {
 
   const features = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
+    { icon: Disc, title: t("premium.recorder"), desc: t("premium.recorderDesc") },
     { icon: Car, title: t("premium.androidAuto"), desc: t("premium.androidAutoDesc") },
+    { icon: Cast, title: t("premium.chromecast"), desc: t("premium.chromecastDesc") },
   ];
 
   return (
