@@ -894,6 +894,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     @Override
     public void onDestroy() {
+        activeInstance = null;
         cancelBufferingTimeout();
         playbackRequestSeq.incrementAndGet();
         streamResolverExecutor.shutdownNow();
