@@ -917,9 +917,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         switch (parentId) {
             case ROOT_ID: {
                 List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-                items.add(buildBrowsableItem(FAVORITES_ID, "Favoris", "Vos stations preferees"));
-                items.add(buildBrowsableItem(RECENTS_ID, "Recents", "Dernieres stations ecoutees"));
                 items.add(buildBrowsableItem(TOP_STATIONS_ID, "Top Stations", "Les stations les plus populaires"));
+                items.add(buildBrowsableItem(FAVORITES_ID, "Mes Favoris", "Vos stations préférées"));
+                items.add(buildBrowsableItem(RECENTS_ID, "Récents", "Dernières stations écoutées"));
                 result.sendResult(items);
                 break;
             }
