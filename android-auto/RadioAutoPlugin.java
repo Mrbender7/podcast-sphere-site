@@ -15,7 +15,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * Receives favorites, recents, and playback state from the WebView
  * and stores them in SharedPreferences so RadioBrowserService can read them.
  *
- * v2.2.9: Also starts/stops MediaPlaybackService for lock screen MediaStyle notification.
+ * v2.5.1: Points to RadioBrowserService (unified) instead of MediaPlaybackService.
  */
 @CapacitorPlugin(name = "RadioAutoPlugin")
 public class RadioAutoPlugin extends Plugin {
@@ -71,7 +71,7 @@ public class RadioAutoPlugin extends Plugin {
 
             Context ctx = getContext();
             try {
-                ctx.stopService(new Intent(ctx, MediaPlaybackService.class));
+                ctx.stopService(new Intent(ctx, RadioBrowserService.class));
             } catch (Exception ignored) {
                 // Service may not be running
             }
@@ -104,10 +104,10 @@ public class RadioAutoPlugin extends Plugin {
             + "}";
         getPrefs().edit().putString(KEY_PLAYBACK_STATE, json).apply();
 
-        // Start or update MediaPlaybackService for lock screen notification
+        // Start or update RadioBrowserService for unified notification
         Context ctx = getContext();
-        Intent serviceIntent = new Intent(ctx, MediaPlaybackService.class);
-        serviceIntent.setAction(MediaPlaybackService.ACTION_UPDATE);
+        Intent serviceIntent = new Intent(ctx, RadioBrowserService.class);
+        serviceIntent.setAction(RadioBrowserService.ACTION_UPDATE);
         serviceIntent.putExtra("station_name", name);
         serviceIntent.putExtra("station_logo", logo);
         serviceIntent.putExtra("is_playing", isPlaying);

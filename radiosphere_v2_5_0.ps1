@@ -161,6 +161,11 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
     }
 
+    # appCategory="audio" for media app detection
+    if ($ManifestContent -notmatch 'android:appCategory') {
+        $ManifestContent = $ManifestContent -replace '<application', '<application android:appCategory="audio"'
+    }
+
     # Disable auto backup (clean uninstall = full data wipe)
     $ManifestContent = [regex]::Replace($ManifestContent, 'android:allowBackup="[^"]*"', 'android:allowBackup="false"')
     if ($ManifestContent -notmatch 'android:allowBackup=') {
@@ -182,7 +187,7 @@ if (Test-Path $ManifestPath) {
     <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
     <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="mediaPlayback" />
 
-    <!-- Android Auto -->
+    <!-- Android Auto + Unified Media Service -->
     <meta-data
         android:name="com.google.android.gms.car.application"
         android:resource="@xml/automotive_app_desc" />
@@ -203,18 +208,12 @@ if (Test-Path $ManifestPath) {
         android:name="com.google.android.gms.car.notification.SmallIcon"
         android:resource="@drawable/ic_notification" />
 
-    <!-- v2.4.0: Chromecast CastOptionsProvider (OBLIGATOIRE) -->
+    <!-- Chromecast CastOptionsProvider -->
     <meta-data
         android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
         android:value="__ACTUAL_PACKAGE__.CastOptionsProvider" />
 
-    <!-- v2.4.7-fix: MediaPlaybackService - foreground notification only (NOT a MediaBrowserService) -->
-    <service
-        android:name=".MediaPlaybackService"
-        android:exported="false"
-        android:foregroundServiceType="mediaPlayback" />
-
-    <!-- v2.2.9: Broadcast receiver for notification toggle -->
+    <!-- Broadcast receiver for notification toggle (unified) -->
     <receiver
         android:name=".MediaToggleReceiver"
         android:exported="false">
@@ -286,8 +285,8 @@ if (Test-Path $ManifestPath) {
     Write-Host "    Manifest: CastOptionsProvider package set to $ActualPackage" -ForegroundColor DarkGray
 }
 
-# --- RadioAutoPlugin.java (v2.2.9) ---
-Write-Host "    Generation RadioAutoPlugin.java (v2.2.9)..." -ForegroundColor DarkGray
+# --- RadioAutoPlugin.java (v2.5.1 -- unified, points to RadioBrowserService) ---
+Write-Host "    Generation RadioAutoPlugin.java (v2.5.1)..." -ForegroundColor DarkGray
 $RadioAutoPluginJava = @'
 package __PACKAGE__;
 
@@ -347,7 +346,7 @@ public class RadioAutoPlugin extends Plugin {
 
             Context ctx = getContext();
             try {
-                ctx.stopService(new Intent(ctx, MediaPlaybackService.class));
+                ctx.stopService(new Intent(ctx, RadioBrowserService.class));
             } catch (Exception e) {
                 // Service not running, ignore
             }
@@ -380,8 +379,8 @@ public class RadioAutoPlugin extends Plugin {
         getPrefs().edit().putString(KEY_PLAYBACK_STATE, json).apply();
 
         Context ctx = getContext();
-        Intent serviceIntent = new Intent(ctx, MediaPlaybackService.class);
-        serviceIntent.setAction(MediaPlaybackService.ACTION_UPDATE);
+        Intent serviceIntent = new Intent(ctx, RadioBrowserService.class);
+        serviceIntent.setAction(RadioBrowserService.ACTION_UPDATE);
         serviceIntent.putExtra("station_name", name);
         serviceIntent.putExtra("station_logo", logo);
         serviceIntent.putExtra("is_playing", isPlaying);
@@ -412,159 +411,8 @@ $RadioAutoPluginJava = $RadioAutoPluginJava -replace '__PACKAGE__', $ActualPacka
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioAutoPlugin.java"), $RadioAutoPluginJava, $UTF8NoBOM)
 Write-Host "    RadioAutoPlugin.java genere avec succes" -ForegroundColor Green
 
-# --- MediaPlaybackService.java (v2.2.9) ---
-Write-Host "    Generation MediaPlaybackService.java (v2.2.9)..." -ForegroundColor DarkGray
-$MediaPlaybackServiceJava = @'
-package __PACKAGE__;
+# (MediaPlaybackService.java removed in v2.5.1 — unified into RadioBrowserService)
 
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.app.Service;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Build;
-import android.os.IBinder;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.media.app.NotificationCompat.MediaStyle;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
-public class MediaPlaybackService extends Service {
-
-    private static final String CHANNEL_ID = "radio_playback_v3";
-    private static final int NOTIFICATION_ID = 2001;
-    public static final String ACTION_UPDATE = "com.radiosphere.ACTION_UPDATE_MEDIA";
-    public static final String ACTION_STOP = "com.radiosphere.ACTION_STOP_MEDIA";
-    public static final String BROADCAST_TOGGLE = "com.radiosphere.TOGGLE_PLAYBACK";
-
-    private MediaSessionCompat mediaSession;
-    private Bitmap cachedArtwork;
-    private String cachedLogoUrl = "";
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        mediaSession = new MediaSessionCompat(this, "RadioSphereNotif");
-        mediaSession.setFlags(
-            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-            MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
-        );
-        mediaSession.setCallback(new MediaSessionCompat.Callback() {
-            @Override public void onPlay() { sendBroadcast(new Intent(BROADCAST_TOGGLE).setPackage(getPackageName())); }
-            @Override public void onPause() { sendBroadcast(new Intent(BROADCAST_TOGGLE).setPackage(getPackageName())); }
-            @Override public void onStop() { stopForeground(true); stopSelf(); }
-        });
-        mediaSession.setActive(true);
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null) return START_NOT_STICKY;
-        String action = intent.getAction();
-        if (ACTION_STOP.equals(action)) {
-            mediaSession.setActive(false);
-            stopForeground(true);
-            stopSelf();
-            return START_NOT_STICKY;
-        }
-        String name = intent.getStringExtra("station_name");
-        String logo = intent.getStringExtra("station_logo");
-        boolean isPlaying = intent.getBooleanExtra("is_playing", false);
-        if (name == null) name = "Radio Sphere";
-        if (logo == null) logo = "";
-        final String finalLogo = logo;
-        final String finalName = name;
-        final boolean finalIsPlaying = isPlaying;
-        if (!logo.isEmpty() && !logo.equals(cachedLogoUrl)) {
-            cachedLogoUrl = logo;
-            new Thread(() -> {
-                cachedArtwork = downloadBitmap(finalLogo);
-                updateSessionAndNotification(finalName, finalIsPlaying, cachedArtwork);
-            }).start();
-        } else if (logo.isEmpty()) {
-            cachedLogoUrl = "";
-            cachedArtwork = null;
-        }
-        updateSessionAndNotification(name, isPlaying, cachedArtwork);
-        return START_NOT_STICKY;
-    }
-
-    private void updateSessionAndNotification(String name, boolean isPlaying, Bitmap artwork) {
-        MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Radio Sphere")
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Live")
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1);
-        if (artwork != null) {
-            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork);
-            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artwork);
-        }
-        mediaSession.setMetadata(metaBuilder.build());
-        int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
-        long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-            | PlaybackStateCompat.ACTION_STOP | PlaybackStateCompat.ACTION_PLAY_PAUSE;
-        mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
-            .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f).build());
-        Notification notification = buildNotification(name, isPlaying, artwork);
-        if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-            startForeground(NOTIFICATION_ID, notification);
-        }
-    }
-
-    private Notification buildNotification(String stationName, boolean isPlaying, Bitmap artwork) {
-        Intent openIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-            openIntent != null ? openIntent : new Intent(),
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Intent toggleIntent = new Intent(BROADCAST_TOGGLE);
-        toggleIntent.setPackage(getPackageName());
-        PendingIntent togglePendingIntent = PendingIntent.getBroadcast(this, 0,
-            toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        int toggleIcon = isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        String toggleLabel = isPlaying ? "Pause" : "Play";
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(stationName).setContentText("Radio Sphere").setSubText("Live")
-            .setSmallIcon(getApplicationInfo().icon).setContentIntent(contentIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setOngoing(isPlaying).setShowWhen(false)
-            .addAction(toggleIcon, toggleLabel, togglePendingIntent)
-            .setStyle(new MediaStyle().setMediaSession(mediaSession.getSessionToken()).setShowActionsInCompactView(0));
-        if (artwork != null) builder.setLargeIcon(artwork);
-        return builder.build();
-    }
-
-    @Nullable
-    private Bitmap downloadBitmap(String urlStr) {
-        try {
-            String safeUrl = urlStr.replace("http://", "https://");
-            HttpURLConnection conn = (HttpURLConnection) new URL(safeUrl).openConnection();
-            conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
-            InputStream in = conn.getInputStream();
-            Bitmap bmp = BitmapFactory.decodeStream(in);
-            in.close(); conn.disconnect();
-            return bmp;
-        } catch (Exception e) { return null; }
-    }
-
-    @Override public void onDestroy() {
-        if (mediaSession != null) { mediaSession.setActive(false); mediaSession.release(); }
-        super.onDestroy();
-    }
-
-    @Nullable @Override public IBinder onBind(Intent intent) { return null; }
-}
-'@
-$MediaPlaybackServiceJava = $MediaPlaybackServiceJava -replace '__PACKAGE__', $ActualPackage
-[System.IO.File]::WriteAllText((Join-Path $PackageDir "MediaPlaybackService.java"), $MediaPlaybackServiceJava, $UTF8NoBOM)
-Write-Host "    MediaPlaybackService.java genere avec succes" -ForegroundColor Green
 
 # --- MediaToggleReceiver.java (v2.2.9) ---
 Write-Host "    Generation MediaToggleReceiver.java..." -ForegroundColor DarkGray
@@ -727,8 +575,8 @@ $CastOptionsProviderJava = $CastOptionsProviderJava -replace '__PACKAGE__', $Act
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "CastOptionsProvider.java"), $CastOptionsProviderJava, $UTF8NoBOM)
 Write-Host "    CastOptionsProvider.java genere avec succes (v2.4.7)" -ForegroundColor Green
 
-# --- RadioBrowserService.java (v2.5.0 -- foreground service + HEAD redirects + onPrepare) ---
-Write-Host "    Generation RadioBrowserService.java (v2.5.0)..." -ForegroundColor DarkGray
+# --- RadioBrowserService.java (v2.5.1 -- unified service: Android Auto + notification mirror) ---
+Write-Host "    Generation RadioBrowserService.java (v2.5.1)..." -ForegroundColor DarkGray
 $RadioBrowserServiceJava = @'
 package __PACKAGE__;
 
@@ -738,6 +586,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.AudioFocusRequest;
 import android.net.Uri;
@@ -763,6 +613,7 @@ import com.google.android.exoplayer2.Player;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -794,6 +645,14 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private static final String AUTO_CHANNEL_ID = "radio_auto_playback";
     private static final int AUTO_NOTIFICATION_ID = 3001;
     private boolean foregroundStarted = false;
+
+    // Mirror mode constants (replaces MediaPlaybackService)
+    public static final String ACTION_UPDATE = "com.radiosphere.ACTION_UPDATE_MEDIA";
+    public static final String ACTION_STOP = "com.radiosphere.ACTION_STOP_MEDIA";
+    public static final String BROADCAST_TOGGLE = "com.radiosphere.TOGGLE_PLAYBACK";
+
+    private Bitmap cachedMirrorArtwork;
+    private String cachedMirrorLogoUrl = "";
 
     private static final String[] API_MIRRORS = {
         "https://de1.api.radio-browser.info",
@@ -863,9 +722,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
-                AUTO_CHANNEL_ID, "Android Auto Playback", NotificationManager.IMPORTANCE_LOW);
+                AUTO_CHANNEL_ID, "Radio Sphere Playback", NotificationManager.IMPORTANCE_LOW);
             channel.setShowBadge(false);
-            channel.setDescription("Notification pour la lecture Android Auto");
+            channel.setDescription("Notification pour la lecture Radio Sphere");
             channel.enableVibration(false);
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(channel);
@@ -873,31 +732,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     }
 
     private void startAsForeground(String stationName, boolean isPlaying) {
-        Intent openIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        android.app.PendingIntent contentIntent = android.app.PendingIntent.getActivity(this, 0,
-            openIntent != null ? openIntent : new Intent(),
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
-
-        int toggleIcon = isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        String toggleLabel = isPlaying ? "Pause" : "Play";
-        Intent toggleIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        toggleIntent.setPackage(getPackageName());
-        android.app.PendingIntent togglePending = android.app.PendingIntent.getBroadcast(this, 1,
-            toggleIntent, android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
-
-        Notification notification = new NotificationCompat.Builder(this, AUTO_CHANNEL_ID)
-            .setContentTitle(stationName != null ? stationName : "Radio Sphere")
-            .setContentText("Radio Sphere").setSubText("Live")
-            .setSmallIcon(getApplicationInfo().icon)
-            .setContentIntent(contentIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(isPlaying).setShowWhen(false)
-            .addAction(toggleIcon, toggleLabel, togglePending)
-            .setStyle(new MediaStyle()
-                .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0))
-            .build();
-
+        Notification notification = buildUnifiedNotification(stationName, isPlaying, null);
         if (!foregroundStarted) {
             if (Build.VERSION.SDK_INT >= 34) {
                 startForeground(AUTO_NOTIFICATION_ID, notification,
@@ -906,11 +741,38 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 startForeground(AUTO_NOTIFICATION_ID, notification);
             }
             foregroundStarted = true;
-            Log.d(TAG, "Started foreground service for Android Auto playback");
+            Log.d(TAG, "Started foreground service for playback");
         } else {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.notify(AUTO_NOTIFICATION_ID, notification);
         }
+    }
+
+    private Notification buildUnifiedNotification(String stationName, boolean isPlaying, Bitmap artwork) {
+        Intent openIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+            openIntent != null ? openIntent : new Intent(),
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Intent toggleIntent = new Intent(BROADCAST_TOGGLE);
+        toggleIntent.setPackage(getPackageName());
+        PendingIntent togglePendingIntent = PendingIntent.getBroadcast(this, 0,
+            toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        int toggleIcon = isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
+        String toggleLabel = isPlaying ? "Pause" : "Play";
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, AUTO_CHANNEL_ID)
+            .setContentTitle(stationName != null ? stationName : "Radio Sphere")
+            .setContentText("Radio Sphere").setSubText("Live")
+            .setSmallIcon(getApplicationInfo().icon).setContentIntent(contentIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setOngoing(isPlaying).setShowWhen(false)
+            .addAction(toggleIcon, toggleLabel, togglePendingIntent)
+            .setStyle(new MediaStyle().setMediaSession(mediaSession.getSessionToken()).setShowActionsInCompactView(0));
+        if (artwork != null) {
+            builder.setLargeIcon(artwork);
+        } else {
+            Bitmap fallback = BitmapFactory.decodeResource(getResources(), R.drawable.station_placeholder);
+            if (fallback != null) builder.setLargeIcon(fallback);
+        }
+        return builder.build();
     }
 
     @Override
@@ -929,6 +791,90 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         mediaSession.setActive(true);
         setSessionToken(mediaSession.getSessionToken());
         updatePlaybackState(PlaybackStateCompat.STATE_NONE);
+    }
+
+    // --- Mirror Mode: onStartCommand (replaces MediaPlaybackService) ---
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent == null) return START_NOT_STICKY;
+        String action = intent.getAction();
+        if (ACTION_STOP.equals(action)) {
+            if (foregroundStarted) { stopForeground(true); foregroundStarted = false; }
+            return START_NOT_STICKY;
+        }
+        if (ACTION_UPDATE.equals(action)) {
+            String name = intent.getStringExtra("station_name");
+            String logo = intent.getStringExtra("station_logo");
+            boolean isPlaying = intent.getBooleanExtra("is_playing", false);
+            if (name == null) name = "Radio Sphere";
+            if (logo == null) logo = "";
+            final String finalLogo = logo;
+            final String finalName = name;
+            final boolean finalIsPlaying = isPlaying;
+            if (!logo.isEmpty() && !logo.equals(cachedMirrorLogoUrl)) {
+                cachedMirrorLogoUrl = logo;
+                new Thread(() -> {
+                    cachedMirrorArtwork = downloadBitmap(finalLogo);
+                    updateMirrorNotification(finalName, finalIsPlaying, cachedMirrorArtwork);
+                }).start();
+            } else if (logo.isEmpty()) {
+                cachedMirrorLogoUrl = "";
+                cachedMirrorArtwork = null;
+            }
+            updateMirrorNotification(name, isPlaying, cachedMirrorArtwork);
+        }
+        return START_NOT_STICKY;
+    }
+
+    private void updateMirrorNotification(String name, boolean isPlaying, Bitmap artwork) {
+        MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Radio Sphere")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Live")
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1);
+        if (artwork != null) {
+            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork);
+            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artwork);
+        } else {
+            Bitmap fallback = BitmapFactory.decodeResource(getResources(), R.drawable.station_placeholder);
+            if (fallback != null) {
+                metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, fallback);
+                metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, fallback);
+            }
+        }
+        mediaSession.setMetadata(metaBuilder.build());
+        int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+        long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+            | PlaybackStateCompat.ACTION_STOP | PlaybackStateCompat.ACTION_PLAY_PAUSE;
+        mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
+            .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f).build());
+        Notification notification = buildUnifiedNotification(name, isPlaying, artwork);
+        if (!foregroundStarted) {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(AUTO_NOTIFICATION_ID, notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(AUTO_NOTIFICATION_ID, notification);
+            }
+            foregroundStarted = true;
+        } else {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.notify(AUTO_NOTIFICATION_ID, notification);
+        }
+    }
+
+    @Nullable
+    private Bitmap downloadBitmap(String urlStr) {
+        try {
+            String safeUrl = urlStr.replace("http://", "https://");
+            HttpURLConnection conn = (HttpURLConnection) new URL(safeUrl).openConnection();
+            conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
+            InputStream in = conn.getInputStream();
+            Bitmap bmp = BitmapFactory.decodeStream(in);
+            in.close(); conn.disconnect();
+            return bmp;
+        } catch (Exception e) { return null; }
     }
 
     @Override
@@ -1068,33 +1014,25 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                     triedProtocolFallback = false;
                     if (player.isPlaying()) {
                         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
-                        Log.d(TAG, "Stream is now playing");
                         if (currentStation != null) startAsForeground(currentStation.name, true);
                     }
                     break;
                 case Player.STATE_ENDED:
                     cancelBufferingTimeout();
-                    Log.w(TAG, "Stream ended unexpectedly");
                     updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
                     break;
                 case Player.STATE_IDLE:
                     cancelBufferingTimeout();
-                    Log.d(TAG, "Player is idle");
                     break;
             }
         }
-
         @Override
         public void onPlayerError(PlaybackException error) {
             cancelBufferingTimeout();
             Log.e(TAG, "ExoPlayer error: " + error.getMessage() + " | errorCode=" + error.errorCode, error);
-            if (!triedProtocolFallback && currentStation != null) {
-                tryProtocolFallback();
-            } else {
-                updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
-            }
+            if (!triedProtocolFallback && currentStation != null) { tryProtocolFallback(); }
+            else { updatePlaybackState(PlaybackStateCompat.STATE_ERROR); }
         }
-
         @Override
         public void onIsPlayingChanged(boolean isPlaying) {
             updatePlaybackState(isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
@@ -1152,11 +1090,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             return urlStr;
         } catch (InterruptedException e) {
             future.cancel(true); Thread.currentThread().interrupt();
-            Log.w(TAG, "resolveStreamUrl interrupted, using raw URL");
             return urlStr;
         } catch (Exception e) {
             future.cancel(true);
-            Log.w(TAG, "resolveStreamUrl failed, using raw URL: " + e.getMessage());
             return urlStr;
         }
     }
@@ -1165,37 +1101,31 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         Log.d(TAG, "resolveStreamUrl: " + urlStr);
         try {
             String resolved = followRedirects(urlStr, 5);
-
             String contentType = "";
             try {
                 HttpURLConnection headConn = (HttpURLConnection) new URL(resolved).openConnection();
                 headConn.setRequestMethod("HEAD");
-                headConn.setConnectTimeout(NETWORK_TIMEOUT_MS);
-                headConn.setReadTimeout(NETWORK_TIMEOUT_MS);
+                headConn.setConnectTimeout(NETWORK_TIMEOUT_MS); headConn.setReadTimeout(NETWORK_TIMEOUT_MS);
                 headConn.setRequestProperty("User-Agent", USER_AGENT);
                 headConn.setInstanceFollowRedirects(true);
                 contentType = headConn.getContentType();
                 headConn.disconnect();
                 if (contentType == null) contentType = "";
                 contentType = contentType.toLowerCase();
-                Log.d(TAG, "Content-Type for " + resolved + ": " + contentType);
             } catch (Exception e) {
-                Log.w(TAG, "HEAD request failed, falling back to extension detection: " + e.getMessage());
+                Log.w(TAG, "HEAD failed, extension detection: " + e.getMessage());
             }
-
             String lower = resolved.toLowerCase();
             boolean isPls = contentType.contains("audio/x-scpls") || lower.endsWith(".pls") || lower.contains(".pls?");
             boolean isM3u = contentType.contains("audio/mpegurl") || contentType.contains("audio/x-mpegurl")
                 || lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains(".m3u?");
-
             if (isM3u) {
                 String fromPlaylist = parseM3uPlaylist(resolved);
-                if (fromPlaylist != null) { Log.d(TAG, "Resolved M3U: " + fromPlaylist); return fromPlaylist; }
+                if (fromPlaylist != null) return fromPlaylist;
             } else if (isPls) {
                 String fromPlaylist = parsePlsPlaylist(resolved);
-                if (fromPlaylist != null) { Log.d(TAG, "Resolved PLS: " + fromPlaylist); return fromPlaylist; }
+                if (fromPlaylist != null) return fromPlaylist;
             }
-            Log.d(TAG, "Resolved URL: " + resolved);
             return resolved;
         } catch (Exception e) {
             Log.w(TAG, "resolveStreamUrl failed: " + e.getMessage());
@@ -1212,9 +1142,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             conn.setRequestMethod("HEAD");
             conn.setRequestProperty("User-Agent", USER_AGENT);
             int code;
-            try {
-                code = conn.getResponseCode();
-            } catch (Exception e) {
+            try { code = conn.getResponseCode(); }
+            catch (Exception e) {
                 conn.disconnect();
                 conn = (HttpURLConnection) new URL(current).openConnection();
                 conn.setInstanceFollowRedirects(false);
@@ -1231,7 +1160,6 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                     URL base = new URL(current);
                     location = base.getProtocol() + "://" + base.getHost() + location;
                 }
-                Log.d(TAG, "Redirect " + code + ": " + current + " -> " + location);
                 current = location;
             } else { conn.disconnect(); break; }
         }
@@ -1269,34 +1197,24 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         triedProtocolFallback = false;
         cancelBufferingTimeout();
         final int requestSeq = playbackRequestSeq.incrementAndGet();
-
-        // CRITICAL: Start foreground BEFORE requesting audio focus (Android 14+)
         startAsForeground(station.name, true);
-
         if (!requestAudioFocus()) { Log.w(TAG, "Could not get audio focus"); return; }
-
         new Thread(() -> {
             String resolvedUrl = resolveStreamUrlSafely(station.streamUrl);
-            Log.d(TAG, "Playing resolved URL: " + resolvedUrl);
             handler.post(() -> {
-                if (requestSeq != playbackRequestSeq.get()) {
-                    Log.d(TAG, "Ignoring stale play request for " + station.name);
-                    return;
-                }
+                if (requestSeq != playbackRequestSeq.get()) return;
                 forceResetPlayerForSwitch();
                 player.setMediaItem(MediaItem.fromUri(resolvedUrl));
                 player.prepare(); player.setVolume(1.0f); player.play();
                 updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
             });
         }).start();
-
         Uri artworkUri;
         if (station.logo != null && !station.logo.isEmpty()) {
             artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
         } else {
             artworkUri = Uri.parse("android.resource://" + getPackageName() + "/drawable/station_placeholder");
         }
-
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, station.id)
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, station.name)
@@ -1318,8 +1236,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder()
             .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
         if (state == PlaybackStateCompat.STATE_ERROR) {
-            builder.setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR,
-                "Impossible de lire cette station");
+            builder.setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR, "Impossible de lire cette station");
         }
         mediaSession.setPlaybackState(builder.build());
     }
@@ -1347,10 +1264,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     private List<StationData> fetchTopStations(int limit) {
         for (String mirror : API_MIRRORS) {
-            try {
-                String url = mirror + "/json/stations/topvote?limit=" + limit + "&hidebroken=true";
-                return parseApiResponse(httpGet(url));
-            } catch (Exception e) { /* next */ }
+            try { return parseApiResponse(httpGet(mirror + "/json/stations/topvote?limit=" + limit + "&hidebroken=true")); }
+            catch (Exception e) { /* next */ }
         }
         return new ArrayList<>();
     }
@@ -1441,7 +1356,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 '@
 $RadioBrowserServiceJava = $RadioBrowserServiceJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioBrowserService.java"), $RadioBrowserServiceJava, $UTF8NoBOM)
-Write-Host "    RadioBrowserService.java genere avec succes (v2.5.0)" -ForegroundColor Green
+Write-Host "    RadioBrowserService.java genere avec succes (v2.5.1)" -ForegroundColor Green
 
 Write-Host "    Tous les fichiers Java generes avec succes!" -ForegroundColor Green
 
@@ -1468,16 +1383,10 @@ if ($MainAct) {
     super.onCreate(savedInstanceState);
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
         android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
-        android.app.NotificationChannel channel = new android.app.NotificationChannel(
-            "radio_playback_v3", "Radio Playback", android.app.NotificationManager.IMPORTANCE_LOW);
-        channel.setShowBadge(false);
-        channel.setDescription("Notification silencieuse pour la lecture radio");
-        channel.enableVibration(false);
-        nm.createNotificationChannel(channel);
         android.app.NotificationChannel autoChannel = new android.app.NotificationChannel(
-            "radio_auto_playback", "Android Auto Playback", android.app.NotificationManager.IMPORTANCE_LOW);
+            "radio_auto_playback", "Radio Sphere Playback", android.app.NotificationManager.IMPORTANCE_LOW);
         autoChannel.setShowBadge(false);
-        autoChannel.setDescription("Notification pour la lecture Android Auto");
+        autoChannel.setDescription("Notification pour la lecture Radio Sphere");
         autoChannel.enableVibration(false);
         nm.createNotificationChannel(autoChannel);
     }
