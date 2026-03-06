@@ -973,12 +973,39 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private final MediaSessionCompat.Callback mediaSessionCallback = new MediaSessionCompat.Callback() {
         @Override public void onPlayFromMediaId(String mediaId, Bundle extras) {
             if (mediaId == null) return;
+            Log.d(TAG, "onPlayFromMediaId: " + mediaId);
             String stationId = mediaId.startsWith(STATION_PREFIX) ? mediaId.substring(STATION_PREFIX.length()) : mediaId;
+            // 1. Search currentStations
             for (int i = 0; i < currentStations.size(); i++) {
                 if (currentStations.get(i).id.equals(stationId)) {
                     currentIndex = i; playStation(currentStations.get(i)); return;
                 }
             }
+            // 2. Fallback: favorites
+            List<StationData> favorites = loadStations(KEY_FAVORITES);
+            for (int i = 0; i < favorites.size(); i++) {
+                if (favorites.get(i).id.equals(stationId)) {
+                    currentStations = favorites; currentIndex = i; playStation(favorites.get(i)); return;
+                }
+            }
+            // 3. Fallback: recents
+            List<StationData> recents = loadStations(KEY_RECENTS);
+            for (int i = 0; i < recents.size(); i++) {
+                if (recents.get(i).id.equals(stationId)) {
+                    currentStations = recents; currentIndex = i; playStation(recents.get(i)); return;
+                }
+            }
+            // 4. Last resort: fetch by UUID from API
+            Log.d(TAG, "Station not found locally, fetching from API: " + stationId);
+            new Thread(() -> {
+                StationData station = fetchStationByUuid(stationId);
+                if (station != null) {
+                    handler.post(() -> {
+                        currentStations = new ArrayList<>(); currentStations.add(station);
+                        currentIndex = 0; playStation(station);
+                    });
+                } else { Log.w(TAG, "Station not found anywhere: " + stationId); }
+            }).start();
         }
         @Override public void onPrepare() { onPlay(); }
         @Override public void onPlay() {
