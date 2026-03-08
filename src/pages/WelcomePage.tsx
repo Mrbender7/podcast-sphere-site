@@ -99,7 +99,7 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
       </button>
 
       <a
-        href="https://mrbender7.github.io/privacy-policy-radiosphere/"
+        href="https://mrbender7.github.io/privacy-policy-podcastsphere/"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:underline mt-4"

@@ -181,7 +181,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       ))}
 
       {/* Privacy Policy */}
-      <a href="https://mrbender7.github.io/privacy-policy-radiosphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
+      <a href="https://mrbender7.github.io/privacy-policy-podcastsphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
       </a>
 
