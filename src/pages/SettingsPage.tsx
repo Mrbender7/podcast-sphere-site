@@ -75,6 +75,14 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   const [premiumCode, setPremiumCode] = useState("");
   const [codeError, setCodeError] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
+  const [dlDest, setDlDest] = useState<DownloadDest>(getDownloadDest);
+
+  const handleDestChange = (v: string) => {
+    const dest = v as DownloadDest;
+    setDlDest(dest);
+    setDownloadDest(dest);
+  };
+  const [customMinutes, setCustomMinutes] = useState("");
 
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
