@@ -263,7 +263,7 @@ $MainActivityJava = @(
     '    }',
     '',
     '    @Override',
-    '    protected void onResume() {',
+    '    public void onResume() {', # FIX: 'protected' changed to 'public' to match BridgeActivity
     '        super.onResume();',
     '        WebView wv = getBridge().getWebView();',
     '        if (wv != null) {',
