@@ -1,63 +1,68 @@
 # podcastsphere_v1_0_0.ps1
-# Podcast Sphere v1.0.0 — Build script for Android (Capacitor 8)
+# Podcast Sphere v1.0.0 -- Build script Android (Clean Clone)
 # Target: E:\Projets\Podcastsphere
 # Package: com.fhm.podcastsphere
-# Date: 8 mars 2026
 
 $RepoUrl = "https://github.com/Mrbender7/podcast-sphere"
 $ProjectFolder = "E:\Projets\Podcastsphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
 Write-Host ""
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host " Podcast Sphere v1.0.0 — Build Android APK" -ForegroundColor Cyan
-Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host " Podcast Sphere v1.0.0 -- Build Android (Clean)" -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
 Write-Host ""
 
 # ===================================================================
-# 0. Clone or update repo
+# 0. Clone ou mise a jour du repo (Clean Slate)
 # ===================================================================
 if (Test-Path $ProjectFolder) {
-    Write-Host ">>> Dossier existant, suppression..." -ForegroundColor Yellow
+    Write-Host ">>> Dossier existant, suppression pour un depart clean..." -ForegroundColor Yellow
     Remove-Item -Recurse -Force $ProjectFolder
 }
+Write-Host ">>> Clonage du depot..." -ForegroundColor Yellow
 git clone $RepoUrl $ProjectFolder
-if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: git clone echoue" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: git clone a echoue" -ForegroundColor Red; exit 1 }
+
 Set-Location $ProjectFolder
 [System.Environment]::CurrentDirectory = (Get-Location).Path
+Write-Host ">>> Dossier de travail : $ProjectFolder" -ForegroundColor Green
 
 # ===================================================================
-# 1. Capacitor config
+# 1. Configuration Capacitor
 # ===================================================================
 Write-Host ">>> Configuration Capacitor..." -ForegroundColor Yellow
-$ConfigJSON = @"
-{
-  "appId": "com.fhm.podcastsphere",
-  "appName": "Podcast Sphere",
-  "webDir": "dist",
-  "server": {
-    "androidScheme": "https",
-    "allowNavigation": ["*"]
-  },
-  "plugins": {
-    "LocalNotifications": {
-      "smallIcon": "ic_notification",
-      "iconColor": "#6080ff"
-    },
-    "CapacitorHttp": {
-      "enabled": true
-    }
-  }
-}
-"@
+
+$ConfigJSON = @(
+    '{',
+    '  "appId": "com.fhm.podcastsphere",',
+    '  "appName": "Podcast Sphere",',
+    '  "webDir": "dist",',
+    '  "server": {',
+    '    "androidScheme": "https",',
+    '    "cleartext": true,',
+    '    "allowNavigation": ["*"]',
+    '  },',
+    '  "plugins": {',
+    '    "LocalNotifications": {',
+    '      "smallIcon": "ic_notification",',
+    '      "iconColor": "#6080ff"',
+    '    },',
+    '    "CapacitorHttp": {',
+    '      "enabled": true',
+    '    }',
+    '  }',
+    '}'
+) -join "`n"
+
 [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path "capacitor.config.json"), $ConfigJSON, $UTF8NoBOM)
 
 # ===================================================================
-# 2. Install & Build
+# 2. Installation & Build
 # ===================================================================
-Write-Host ">>> Installation des dependances..." -ForegroundColor Yellow
+Write-Host ">>> Installation des dependances NPM..." -ForegroundColor Yellow
 npm install --legacy-peer-deps
-if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: npm install echoue" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: npm install a echoue" -ForegroundColor Red; exit 1 }
 
 Write-Host ">>> Installation des plugins Capacitor..." -ForegroundColor Yellow
 npm install @capacitor/core @capacitor/cli @capacitor/android `
@@ -68,16 +73,15 @@ npm install @capacitor/core @capacitor/cli @capacitor/android `
 
 Write-Host ">>> Build Vite..." -ForegroundColor Yellow
 npm run build
-if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: build echoue" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: le build a echoue" -ForegroundColor Red; exit 1 }
 
-Write-Host ">>> Ajout plateforme Android..." -ForegroundColor Yellow
+Write-Host ">>> Ajout de la plateforme Android..." -ForegroundColor Yellow
 npx cap add android
 
 # ===================================================================
-# 3. Notification icons (fallback from launcher icons)
+# 3. Icones de notification
 # ===================================================================
 Write-Host ">>> Generation des icones de notification..." -ForegroundColor Yellow
-
 $sizes = @{ "mdpi"=24; "hdpi"=36; "xhdpi"=48; "xxhdpi"=72; "xxxhdpi"=96 }
 foreach ($density in $sizes.Keys) {
     $dir = "android/app/src/main/res/drawable-$density"
@@ -88,7 +92,6 @@ foreach ($density in $sizes.Keys) {
     }
     if (Test-Path $src) {
         Copy-Item $src "$dir/ic_notification.png" -Force
-        Write-Host "    Copie $density -> ic_notification.png" -ForegroundColor DarkGray
     }
 }
 
@@ -100,84 +103,67 @@ if (Test-Path $FallbackSrc) {
 }
 
 # ===================================================================
-# 3b. Network security config (allow cleartext for some podcast streams)
+# 3b. Fichiers XML de securite et partages
 # ===================================================================
-Write-Host ">>> Generation network_security_config.xml..." -ForegroundColor Yellow
+Write-Host ">>> Generation des fichiers XML (Securite & File Paths)..." -ForegroundColor Yellow
 $XmlDir = "android/app/src/main/res/xml"
 if (!(Test-Path $XmlDir)) { New-Item -ItemType Directory -Path $XmlDir -Force | Out-Null }
 
-$NetSecContent = @'
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <base-config cleartextTrafficPermitted="true">
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </base-config>
-</network-security-config>
-'@
+$NetSecContent = @(
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<network-security-config>',
+    '    <base-config cleartextTrafficPermitted="true">',
+    '        <trust-anchors>',
+    '            <certificates src="system" />',
+    '        </trust-anchors>',
+    '    </base-config>',
+    '</network-security-config>'
+) -join "`n"
 [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path "$XmlDir/network_security_config.xml"), $NetSecContent, $UTF8NoBOM)
 
-# ===================================================================
-# 3c. File provider paths (for downloads & share)
-# ===================================================================
-Write-Host ">>> Generation file_paths.xml..." -ForegroundColor Yellow
-
-$FilePathsContent = @'
-<?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <external-path name="external_files" path="." />
-    <cache-path name="cache" path="." />
-    <files-path name="internal_files" path="." />
-</paths>
-'@
+$FilePathsContent = @(
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<paths>',
+    '    <external-path name="external_files" path="." />',
+    '    <cache-path name="cache" path="." />',
+    '    <files-path name="internal_files" path="." />',
+    '</paths>'
+) -join "`n"
 [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path "$XmlDir/file_paths.xml"), $FilePathsContent, $UTF8NoBOM)
 
 # ===================================================================
-# 4. MANIFEST — Permissions & components
+# 4. Injections propres dans l'AndroidManifest.xml
 # ===================================================================
 $ManifestPath = "android/app/src/main/AndroidManifest.xml"
 if (Test-Path $ManifestPath) {
-    Write-Host ">>> Manifest: Injection des permissions..." -ForegroundColor Yellow
+    Write-Host ">>> Manifest: Injection des permissions et services..." -ForegroundColor Yellow
     $ManifestContent = Get-Content $ManifestPath -Raw
 
-    # --- Standard permissions ---
     $PermsList = @(
-        "android.permission.INTERNET",
-        "android.permission.WAKE_LOCK",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.ACCESS_NETWORK_STATE"
+        '<uses-permission android:name="android.permission.INTERNET" />',
+        '<uses-permission android:name="android.permission.WAKE_LOCK" />',
+        '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+        '<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />',
+        '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
+        '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
+        '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+        '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+        '<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />',
+        '<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />'
     )
 
     $PermsToAdd = ""
     foreach ($perm in $PermsList) {
-        if ($ManifestContent -notmatch [regex]::Escape($perm)) {
-            $PermsToAdd += "    <uses-permission android:name=`"$perm`" />`n"
-            Write-Host "    + Permission: $perm" -ForegroundColor DarkGray
-        }
-    }
-    if ($PermsToAdd.Length -gt 0) {
-        $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$PermsToAdd"
-    }
-
-    # --- Storage permissions (with maxSdkVersion for legacy) ---
-    $StoragePerms = @(
-        '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
-        '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
-        '<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />'
-    )
-    foreach ($storagePerm in $StoragePerms) {
-        $permName = [regex]::Match($storagePerm, 'android:name="([^"]+)"').Groups[1].Value
+        $permName = [regex]::Match($perm, 'android:name="([^"]+)"').Groups[1].Value
         if ($ManifestContent -notmatch [regex]::Escape($permName)) {
-            $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n    $storagePerm"
-            Write-Host "    + Permission: $permName" -ForegroundColor DarkGray
+            $PermsToAdd += "    $perm`n"
         }
     }
+    
+    if ($PermsToAdd.Length -gt 0) {
+        $ManifestContent = $ManifestContent -replace '(?s)(<application)', "$PermsToAdd`n    `$1"
+    }
 
-    # --- Application attributes ---
     if ($ManifestContent -notmatch 'usesCleartextTraffic') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
     }
@@ -188,7 +174,6 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:networkSecurityConfig="@xml/network_security_config"'
     }
 
-    # Disable auto backup
     $ManifestContent = [regex]::Replace($ManifestContent, 'android:allowBackup="[^"]*"', 'android:allowBackup="false"')
     if ($ManifestContent -notmatch 'android:allowBackup=') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:allowBackup="false"'
@@ -198,52 +183,51 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:fullBackupContent="false"'
     }
 
-    # --- Foreground service components (capawesome) ---
+    $AppInjections = ""
     if ($ManifestContent -notmatch 'NotificationActionBroadcastReceiver') {
-        $ServiceDecl = @"
-
-        <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" android:exported="false" />
-        <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="mediaPlayback" android:exported="false" />
-"@
-        $ManifestContent = $ManifestContent -replace '(</activity>)', "`$1`n$ServiceDecl"
+        $AppInjections += @(
+            '        <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" android:exported="false" />',
+            '        <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="mediaPlayback" android:exported="false" />'
+        ) -join "`n"
+        $AppInjections += "`n"
     }
 
-    # --- FileProvider for downloads/share ---
     if ($ManifestContent -notmatch 'capacitor\.android\.FileProvider') {
-        $FileProviderDecl = @"
+        $AppInjections += @(
+            '',
+            '        <provider',
+            '            android:name="com.getcapacitor.android.FileProvider"',
+            '            android:authorities="${applicationId}.fileprovider"',
+            '            android:exported="false"',
+            '            android:grantUriPermissions="true">',
+            '            <meta-data',
+            '                android:name="android.support.FILE_PROVIDER_PATHS"',
+            '                android:resource="@xml/file_paths" />',
+            '        </provider>'
+        ) -join "`n"
+    }
 
-        <provider
-            android:name="com.getcapacitor.android.FileProvider"
-            android:authorities="`${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-"@
-        $ManifestContent = $ManifestContent -replace '(</activity>)', "`$1`n$FileProviderDecl"
+    if ($AppInjections.Length -gt 0) {
+        $ManifestContent = $ManifestContent -replace '(?s)(</application>)', "$AppInjections`n    `$1"
     }
 
     [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $ManifestPath), $ManifestContent, $UTF8NoBOM)
-    Write-Host "    Manifest mis a jour" -ForegroundColor Green
+    Write-Host "    Manifest mis a jour avec succes" -ForegroundColor Green
 }
 
 # ===================================================================
-# 5. Gradle — targetSdk 34
+# 5. Configuration Gradle
 # ===================================================================
 Write-Host ">>> Verification Gradle targetSdk..." -ForegroundColor Yellow
 $BuildGradlePath = "android/app/build.gradle"
 if (Test-Path $BuildGradlePath) {
     $GradleContent = Get-Content $BuildGradlePath -Raw
-    # Ensure targetSdk is 34 for Google Play
     $GradleContent = $GradleContent -replace 'targetSdk\s*=?\s*\d+', 'targetSdk = 34'
     [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $BuildGradlePath), $GradleContent, $UTF8NoBOM)
-    Write-Host "    targetSdk = 34" -ForegroundColor Green
 }
 
 # ===================================================================
-# 6. MainActivity — WebView settings + notification channel
+# 6. MainActivity -- WebView settings + notification channel
 # ===================================================================
 Write-Host ">>> Generation MainActivity.java..." -ForegroundColor Yellow
 
@@ -259,93 +243,83 @@ if ($MainActFile) {
     }
 }
 
-$MainActivityJava = @"
-package $ActualPackage;
+$MainActivityJava = @(
+    "package $ActualPackage;",
+    "",
+    'import android.app.NotificationChannel;',
+    'import android.app.NotificationManager;',
+    'import android.os.Build;',
+    'import android.os.Bundle;',
+    'import android.webkit.WebSettings;',
+    'import android.webkit.WebView;',
+    'import com.getcapacitor.BridgeActivity;',
+    '',
+    'public class MainActivity extends BridgeActivity {',
+    '',
+    '    @Override',
+    '    protected void onCreate(Bundle savedInstanceState) {',
+    '        super.onCreate(savedInstanceState);',
+    '        createNotificationChannels();',
+    '    }',
+    '',
+    '    @Override',
+    '    protected void onResume() {',
+    '        super.onResume();',
+    '        WebView wv = getBridge().getWebView();',
+    '        if (wv != null) {',
+    '            WebSettings ws = wv.getSettings();',
+    '            ws.setMediaPlaybackRequiresUserGesture(false);',
+    '            ws.setDomStorageEnabled(true);',
+    '            ws.setDatabaseEnabled(true);',
+    '            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);',
+    '        }',
+    '    }',
+    '',
+    '    private void createNotificationChannels() {',
+    '        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {',
+    '            NotificationManager nm = getSystemService(NotificationManager.class);',
+    '            if (nm == null) return;',
+    '',
+    '            NotificationChannel playback = new NotificationChannel(',
+    '                "podcast_playback",',
+    '                "Lecture Podcast",',
+    '                NotificationManager.IMPORTANCE_LOW',
+    '            );',
+    '            playback.setDescription("Controles de lecture Podcast Sphere");',
+    '            playback.setSound(null, null);',
+    '            playback.enableVibration(false);',
+    '            playback.setShowBadge(false);',
+    '            nm.createNotificationChannel(playback);',
+    '',
+    '            NotificationChannel downloads = new NotificationChannel(',
+    '                "podcast_downloads",',
+    '                "Telechargements",',
+    '                NotificationManager.IMPORTANCE_LOW',
+    '            );',
+    '            downloads.setDescription("Telechargement des episodes");',
+    '            downloads.setSound(null, null);',
+    '            downloads.enableVibration(false);',
+    '            nm.createNotificationChannel(downloads);',
+    '        }',
+    '    }',
+    '}'
+) -join "`n"
 
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.os.Build;
-import android.os.Bundle;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        createNotificationChannels();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        WebView wv = getBridge().getWebView();
-        if (wv != null) {
-            WebSettings ws = wv.getSettings();
-            ws.setMediaPlaybackRequiresUserGesture(false);
-            ws.setDomStorageEnabled(true);
-            ws.setDatabaseEnabled(true);
-            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        }
-    }
-
-    private void createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = getSystemService(NotificationManager.class);
-            if (nm == null) return;
-
-            // Playback controls channel (silent)
-            NotificationChannel playback = new NotificationChannel(
-                "podcast_playback",
-                "Lecture Podcast",
-                NotificationManager.IMPORTANCE_LOW
-            );
-            playback.setDescription("Controles de lecture Podcast Sphere");
-            playback.setSound(null, null);
-            playback.enableVibration(false);
-            playback.setShowBadge(false);
-            nm.createNotificationChannel(playback);
-
-            // Downloads channel
-            NotificationChannel downloads = new NotificationChannel(
-                "podcast_downloads",
-                "Telechargements",
-                NotificationManager.IMPORTANCE_LOW
-            );
-            downloads.setDescription("Telechargement des episodes");
-            downloads.setSound(null, null);
-            downloads.enableVibration(false);
-            nm.createNotificationChannel(downloads);
-        }
-    }
-}
-"@
 $MainActivityPath = Join-Path $PackageDir "MainActivity.java"
 [System.IO.File]::WriteAllText($MainActivityPath, $MainActivityJava, $UTF8NoBOM)
-Write-Host "    MainActivity.java genere ($ActualPackage)" -ForegroundColor Green
 
-# Delete any .kt version
 $KtVersion = Join-Path $PackageDir "MainActivity.kt"
-if (Test-Path $KtVersion) { Remove-Item $KtVersion -Force; Write-Host "    Suppression MainActivity.kt" -ForegroundColor DarkGray }
+if (Test-Path $KtVersion) { Remove-Item $KtVersion -Force }
 
 # ===================================================================
-# 7. Sync & Build
+# 7. Synchronisation Finale
 # ===================================================================
-Write-Host ">>> Sync Capacitor et build Android..." -ForegroundColor Yellow
+Write-Host ">>> Synchronisation Capacitor..." -ForegroundColor Yellow
 npx cap sync android
-if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: cap sync echoue" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: npx cap sync a echoue" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-Write-Host "============================================" -ForegroundColor Green
-Write-Host " Podcast Sphere v1.0.0 — Build termine!" -ForegroundColor Green
-Write-Host " Dossier: $ProjectFolder" -ForegroundColor Green
-Write-Host " Package: $ActualPackage" -ForegroundColor Green
-Write-Host "============================================" -ForegroundColor Green
-Write-Host ""
-Write-Host ">>> Prochaines etapes:" -ForegroundColor Cyan
-Write-Host "    1. npx cap open android" -ForegroundColor White
-Write-Host "    2. Build > Generate Signed APK/Bundle" -ForegroundColor White
-Write-Host "    3. Tester sur appareil physique" -ForegroundColor White
+Write-Host "=================================================" -ForegroundColor Green
+Write-Host " Succes ! Ton projet est pret pour Android Studio." -ForegroundColor Green
+Write-Host "=================================================" -ForegroundColor Green
 Write-Host ""
