@@ -156,11 +156,13 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         {/* Categories — collapsible */}
         <section className="mb-6">
           <button
-            onClick={() => {
+            onClick={(event) => {
               const willOpen = !categoriesOpen;
               setCategoriesOpen(willOpen);
               if (willOpen) {
-                scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                event.currentTarget.blur();
+                smoothScrollToTop();
+                setTimeout(() => smoothScrollToTop(), 160);
               }
             }}
             className="w-full flex items-center justify-between mb-3 group"
