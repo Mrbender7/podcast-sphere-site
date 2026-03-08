@@ -28,6 +28,7 @@ export function FullScreenPlayer() {
     currentTime, duration, seek, skipForward, skipBackward,
     playbackRate, setPlaybackRate,
   } = usePlayer();
+  const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const { t } = useTranslation();
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
