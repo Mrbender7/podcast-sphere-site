@@ -211,7 +211,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                   onClick={() => onCategoryClick(cat)}
                 >
                   {catImage && (
-                    <div className={`absolute -top-2 -right-2 w-24 h-24 ${cat === "Travel" ? "travel-logo-wrapper" : ""}`}>
+                    <div className={`absolute -top-2 -right-2 w-24 h-24 pointer-events-none ${cat === "Travel" ? "travel-logo-wrapper" : ""}`}>
                       <img
                         src={catImage}
                         alt={cat}
