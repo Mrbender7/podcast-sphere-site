@@ -7,6 +7,7 @@ export interface Podcast {
   url: string;
   categories: string[];
   lastEpisodeDate: number;
+  language: string;
 }
 
 export interface Episode {

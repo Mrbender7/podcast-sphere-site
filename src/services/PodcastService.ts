@@ -88,8 +88,12 @@ export async function searchPodcasts(term: string, max = 20): Promise<Podcast[]>
   return (data.feeds || []).map(normalizePodcast);
 }
 
-export async function getTrendingPodcasts(max = 20): Promise<Podcast[]> {
-  const data = await apiFetch<any>("/podcasts/trending", { max: String(max), lang: "en,fr,es,de,ja" });
+export async function getTrendingPodcasts(max = 20, lang?: string): Promise<Podcast[]> {
+  const params: Record<string, string> = { max: String(max) };
+  if (lang) {
+    params.lang = lang;
+  }
+  const data = await apiFetch<any>("/podcasts/trending", params);
   return (data.feeds || []).map(normalizePodcast);
 }
 
