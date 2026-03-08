@@ -103,12 +103,27 @@ export async function getPodcastById(feedId: number): Promise<Podcast | null> {
   return null;
 }
 
-export async function getEpisodesByFeedId(feedId: number, max = 50): Promise<Episode[]> {
-  const data = await apiFetch<any>("/episodes/byfeedid", { id: String(feedId), max: String(max) });
+export interface EpisodePage {
+  episodes: Episode[];
+  hasMore: boolean;
+}
+
+export async function getEpisodesByFeedId(feedId: number, max = 1000, before?: number): Promise<EpisodePage> {
+  const params: Record<string, string> = { id: String(feedId), max: String(max) };
+  if (before) params.before = String(before);
+  
+  const data = await apiFetch<any>("/episodes/byfeedid", params);
   const feed = data.feed || {};
-  return (data.items || []).map((e: any) =>
+  const items = data.items || [];
+  const episodes = items.map((e: any) =>
     normalizeEpisode(e, { title: feed.title, author: feed.author, image: feed.image || feed.artwork })
   );
+  
+  // If we got exactly max items, there may be more
+  return {
+    episodes,
+    hasMore: items.length >= max,
+  };
 }
 
 export async function searchPodcastsByCategory(category: string, max = 20): Promise<Podcast[]> {
