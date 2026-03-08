@@ -20,6 +20,7 @@ export function BottomNav({ activeTab, onTabChange }: { activeTab: TabId; onTabC
         <button
           key={id}
           onClick={() => onTabChange(id)}
+          aria-label={t(labelKey)}
           className={cn(
             "flex flex-col items-center gap-0.5 py-2 px-3 rounded-lg transition-colors min-w-[60px]",
             activeTab === id ? "text-primary" : "text-muted-foreground"

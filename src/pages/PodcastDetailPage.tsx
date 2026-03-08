@@ -1,15 +1,42 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
+import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 interface PodcastDetailPageProps {
   podcast: Podcast;
   onBack: () => void;
+}
+
+function PodcastDescription({ description, t }: { description: string; t: (k: string) => string }) {
+  const [expanded, setExpanded] = useState(false);
+  // Strip HTML tags for display
+  const clean = description.replace(/<[^>]*>/g, "").trim();
+  if (!clean) return null;
+
+  return (
+    <div className="mt-4">
+      <p className={`text-sm text-muted-foreground leading-relaxed ${expanded ? "" : "line-clamp-3"}`}>
+        {clean}
+      </p>
+      {clean.length > 150 && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-1 mt-1 text-xs text-primary font-medium"
+        >
+          {expanded ? t("library.showLess") : t("library.showMore")}
+          <ChevronDownDesc className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
@@ -110,7 +137,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">{podcast.author}</p>
             <button
-              onClick={() => toggleSubscription(podcast)}
+              onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
               className={`mt-3 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
                 subscribed
                   ? "bg-primary text-primary-foreground"
@@ -122,6 +149,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             </button>
           </div>
         </div>
+
+        {/* Description */}
+        {podcast.description && (
+          <PodcastDescription description={podcast.description} t={t} />
+        )}
       </div>
 
       {/* Episodes */}
@@ -140,8 +172,10 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
         </div>
 
         {isLoading && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <div className="space-y-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <EpisodeRowSkeleton key={i} />
+            ))}
           </div>
         )}
 

@@ -5,8 +5,9 @@ import { Podcast } from "@/types/podcast";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
+import { SearchResultsSkeleton } from "@/components/SkeletonLoaders";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, X, ArrowUp, Globe, FolderOpen } from "lucide-react";
+import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -40,6 +41,27 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Search history
+  const HISTORY_KEY = "podcastsphere_search_history";
+  const MAX_HISTORY = 8;
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+  });
+
+  const saveToHistory = useCallback((term: string) => {
+    if (term.length < 2) return;
+    setSearchHistory(prev => {
+      const updated = [term, ...prev.filter(h => h !== term)].slice(0, MAX_HISTORY);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setSearchHistory([]);
+    try { localStorage.removeItem(HISTORY_KEY); } catch {}
+  }, []);
+
   // Multi-select filters: default lang = app language
   const [selectedLangs, setSelectedLangs] = useState<string[]>([language]);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
@@ -59,7 +81,10 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
 
   const { data: results, isLoading, isError } = useQuery({
     queryKey: ["podcastSearch", query],
-    queryFn: () => searchPodcasts(query, 60),
+    queryFn: () => {
+      saveToHistory(query);
+      return searchPodcasts(query, 60);
+    },
     enabled: query.length >= 2,
     staleTime: 2 * 60 * 1000,
   });
@@ -136,12 +161,40 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
       </div>
 
       {!query && (
-        <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
+        <div className="py-8">
+          {searchHistory.length > 0 ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">{t("search.recentSearches") || "Recherches récentes"}</span>
+                </div>
+                <button onClick={clearHistory} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchHistory.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => setQuery(term)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-foreground hover:bg-primary/20 transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center text-center gap-2">
+              <Search className="w-10 h-10 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">{t("search.useFilters")}</p>
+            </div>
+          )}
+        </div>
       )}
 
-      {isLoading && (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      )}
+      {isLoading && <SearchResultsSkeleton />}
 
       {isError && (
         <p className="text-sm text-destructive text-center py-12">{t("search.networkError")}</p>

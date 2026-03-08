@@ -32,6 +32,7 @@ function HistoryRow({
   onPlay: (entry: HistoryEntry) => void;
   onRemove?: (episodeId: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group">
       <div
@@ -82,7 +83,8 @@ function HistoryRow({
       {onRemove && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(entry.episode.id); }}
-          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+          aria-label={t("history.clear")}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -219,7 +221,8 @@ export function LibraryPage() {
                 </div>
                 <button
                   onClick={() => removeDownload(dl.episode.id)}
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label={t("history.clear")}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

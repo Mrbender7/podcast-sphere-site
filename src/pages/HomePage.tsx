@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { CategoryAnimation } from "@/components/CategoryAnimations";
 import { useQuery } from "@tanstack/react-query";
+import { TrendingRowSkeleton } from "@/components/SkeletonLoaders";
 import { Podcast } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
 import { PodcastCard } from "@/components/PodcastCard";
@@ -70,7 +71,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     { value: "ar", label: "🇸🇦 العربية" },
   ], []);
 
-  const { data: trending } = useQuery({
+  const { data: trending, isLoading: trendingLoading } = useQuery({
     queryKey: ["trending", trendingLang],
     queryFn: () => getTrendingPodcasts(20, trendingLang || undefined),
     staleTime: 10 * 60 * 1000,
@@ -98,29 +99,31 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
 
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
         {/* Trending */}
-        {trending && trending.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-[hsl(220,90%,60%)]" />
-              {t("home.trending")}
-            </h2>
-            <div className="mb-2">
-              <MultiSelectFilter
-                icon={<Globe className="w-3.5 h-3.5" />}
-                label={t("search.languages")}
-                options={langOptions}
-                selected={[trendingLang]}
-                onChange={(vals) => setTrendingLang(vals[vals.length - 1] || language)}
-                singleSelect
-              />
-            </div>
+        <section className="mb-6">
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[hsl(220,90%,60%)]" />
+            {t("home.trending")}
+          </h2>
+          <div className="mb-2">
+            <MultiSelectFilter
+              icon={<Globe className="w-3.5 h-3.5" />}
+              label={t("search.languages")}
+              options={langOptions}
+              selected={[trendingLang]}
+              onChange={(vals) => setTrendingLang(vals[vals.length - 1] || language)}
+              singleSelect
+            />
+          </div>
+          {trendingLoading ? (
+            <TrendingRowSkeleton />
+          ) : trending && trending.length > 0 ? (
             <ScrollableRow>
               {trending.map(p => (
                 <PodcastCard key={p.id} podcast={p} onClick={onPodcastClick} />
               ))}
             </ScrollableRow>
-          </section>
-        )}
+          ) : null}
+        </section>
 
         {/* Subscriptions */}
         <section className="mb-6">

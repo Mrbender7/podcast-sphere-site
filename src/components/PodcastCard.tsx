@@ -1,7 +1,9 @@
 import { Podcast } from "@/types/podcast";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Bookmark } from "lucide-react";
+import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 interface PodcastCardProps {
@@ -12,7 +14,16 @@ interface PodcastCardProps {
 
 export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
   const { isSubscribed, toggleSubscription } = useFavoritesContext();
+  const { t } = useTranslation();
   const subscribed = isSubscribed(podcast.id);
+
+  const handleToggleSub = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleSubscription(podcast);
+    if (!subscribed) {
+      toast.success(`${t("podcast.subscribed")} — ${podcast.title}`);
+    }
+  };
 
   if (compact) {
     return (
@@ -34,8 +45,9 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
           <p className="text-xs text-muted-foreground truncate">{podcast.author}</p>
         </div>
         <button
-          onClick={e => { e.stopPropagation(); toggleSubscription(podcast); }}
+          onClick={handleToggleSub}
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-accent transition-colors"
+          aria-label={subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
         >
           <Bookmark className={`w-4 h-4 ${subscribed ? "fill-primary text-primary" : "text-muted-foreground"}`} />
         </button>

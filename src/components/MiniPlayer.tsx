@@ -87,6 +87,7 @@ export function MiniPlayer() {
 
         <button
           onClick={e => { e.stopPropagation(); togglePlay(); }}
+          aria-label={isPlaying ? "Pause" : "Play"}
           className={`w-10 h-10 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all flex-shrink-0 ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
         >
           {isBuffering ? <Loader2 className="w-4 h-4 animate-spin" /> : isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
