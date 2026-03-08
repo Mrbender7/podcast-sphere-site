@@ -53,7 +53,7 @@ export async function getCachedImage(url: string): Promise<string | null> {
 export async function cacheImage(url: string): Promise<string | null> {
   if (!url) return null;
   try {
-    const response = await fetch(url, { mode: "cors" });
+    const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
     if (!blob.size) return null;
