@@ -171,8 +171,10 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
         </div>
 
         {isLoading && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <div className="space-y-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <EpisodeRowSkeleton key={i} />
+            ))}
           </div>
         )}
 
