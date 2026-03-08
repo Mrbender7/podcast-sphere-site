@@ -8,7 +8,7 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones } from "lucide-react";
-import radioSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/new-radio-logo.png";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
