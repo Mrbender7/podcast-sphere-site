@@ -204,9 +204,24 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
             {CATEGORIES.map(cat => (
               <div
                 key={cat}
-                className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10`}
+                className={`relative rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 overflow-hidden`}
                 onClick={() => onCategoryClick(cat)}
               >
+                {cat === "Comedy" && (
+                  <svg
+                    width="44" height="44" viewBox="0 0 120 120" fill="none"
+                    className="absolute top-1 right-1 animate-neon-pulse pointer-events-none"
+                  >
+                    <circle cx="60" cy="60" r="54" stroke="white" strokeWidth="1.5" opacity="0.6" />
+                    <path d="M40 38C38 32 44 26 52 28L60 30L68 28C76 26 82 32 80 38L78 52C77 62 74 72 68 78C64 82 56 82 52 78C46 72 43 62 42 52Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+                    <path d="M46 42C47 39 50 38 53 40" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+                    <path d="M67 40C70 38 73 39 74 42" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+                    <path d="M47 48C48 45 52 45 53 48" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
+                    <path d="M67 48C68 45 72 45 73 48" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
+                    <path d="M59 52L58 57L61 58" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+                    <path d="M48 62C50 72 56 76 60 76C64 76 70 72 72 62" stroke="white" strokeWidth="2.2" strokeLinecap="round" opacity="0.85" />
+                  </svg>
+                )}
                 <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{t(`category.${cat}`)}</span>
               </div>
             ))}
