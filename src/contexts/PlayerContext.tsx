@@ -190,18 +190,21 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
-    if (!state.currentEpisode) return;
-    if (state.isPlaying) {
+    if (!stateRef.current.currentEpisode) return;
+    if (stateRef.current.isPlaying) {
       audio.pause();
+      // Save progress on pause
+      saveEpisodeProgress(stateRef.current.currentEpisode.id, audio.currentTime, audio.duration || 0);
+      addToHistory(stateRef.current.currentEpisode, audio.currentTime, audio.duration || 0);
       setState(s => ({ ...s, isPlaying: false }));
-      updateMediaSession(state.currentEpisode, false);
+      updateMediaSession(stateRef.current.currentEpisode, false);
     } else {
       audio.play().then(() => {
         setState(s => ({ ...s, isPlaying: true }));
-        updateMediaSession(state.currentEpisode!, true);
+        updateMediaSession(stateRef.current.currentEpisode!, true);
       }).catch(() => {});
     }
-  }, [state.isPlaying, state.currentEpisode, updateMediaSession]);
+  }, [updateMediaSession]);
 
   const setVolume = useCallback((v: number) => {
     audioRef.current.volume = v;
