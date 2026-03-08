@@ -167,7 +167,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       </div>
 
       {/* Episodes */}
-      <div className="flex-1 overflow-y-auto px-4 pb-32 mt-4">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32 mt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
             {t("podcast.episodes")} {episodes.length > 0 && `(${episodes.length})`}
