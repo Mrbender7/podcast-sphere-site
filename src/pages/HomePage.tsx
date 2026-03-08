@@ -29,6 +29,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Music: "from-pink-600 to-rose-400",
   Society: "from-amber-700 to-yellow-500",
   History: "from-stone-700 to-amber-500",
+  Fiction: "from-violet-700 to-fuchsia-400",
+  Horror: "from-gray-900 to-red-700",
 };
 
 interface HomePageProps {
