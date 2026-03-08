@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Podcast } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
@@ -7,7 +7,7 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, ChevronDown } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
 const CATEGORIES = [
@@ -46,10 +46,7 @@ interface HomePageProps {
 export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: HomePageProps) {
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef<number | null>(null);
-  const scrollTriggerRef = useRef<HTMLElement | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
 
   const langOptions: FilterOption[] = useMemo(() => [
@@ -74,97 +71,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
-  const smoothScrollToTop = useCallback((triggerEl?: HTMLElement | null) => {
-    const findScrollableAncestor = (element: HTMLElement | null): HTMLElement | null => {
-      let current = element?.parentElement ?? null;
-      while (current) {
-        const style = window.getComputedStyle(current);
-        const isScrollableY = /(auto|scroll)/.test(style.overflowY);
-        if (isScrollableY && current.scrollHeight > current.clientHeight + 1) {
-          return current;
-        }
-        current = current.parentElement;
-      }
-      return null;
-    };
-
-    const targetSet = new Set<HTMLElement>();
-
-    const container = scrollContainerRef.current;
-    if (container) targetSet.add(container);
-
-    const ancestor = findScrollableAncestor(triggerEl ?? scrollTriggerRef.current);
-    if (ancestor) targetSet.add(ancestor);
-
-    const scrollingElement = document.scrollingElement as HTMLElement | null;
-    if (scrollingElement) targetSet.add(scrollingElement);
-
-    targetSet.add(document.documentElement);
-    targetSet.add(document.body);
-
-    const targets = Array.from(targetSet).filter((el) => el.scrollTop > 0);
-    if (targets.length === 0) return;
-
-    if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
-
-    const startTops = targets.map((el) => el.scrollTop);
-    const duration = 650;
-    const startTime = performance.now();
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const tick = (now: number) => {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const eased = easeOutCubic(progress);
-
-      targets.forEach((el, index) => {
-        el.scrollTop = Math.max(0, startTops[index] * (1 - eased));
-      });
-
-      if (progress < 1) {
-        autoScrollRef.current = requestAnimationFrame(tick);
-      } else {
-        autoScrollRef.current = null;
-      }
-    };
-
-    autoScrollRef.current = requestAnimationFrame(tick);
-  }, []);
-
-  const hardScrollToTop = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (container) container.scrollTop = 0;
-
-    const scrollingElement = document.scrollingElement as HTMLElement | null;
-    if (scrollingElement) scrollingElement.scrollTop = 0;
-
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!categoriesOpen) return;
-
-    smoothScrollToTop();
-    const t1 = window.setTimeout(() => smoothScrollToTop(), 220);
-    const t2 = window.setTimeout(() => smoothScrollToTop(), 460);
-    const t3 = window.setTimeout(() => hardScrollToTop(), 900);
-
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-      window.clearTimeout(t3);
-    };
-  }, [categoriesOpen, smoothScrollToTop, hardScrollToTop]);
-
   const scrollToTop = () => {
-    smoothScrollToTop();
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -178,12 +86,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         </div>
       </div>
 
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 pb-4"
-        style={{ overflowAnchor: "none" }}
-      >
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
         {/* Trending */}
         {trending && trending.length > 0 && (
           <section className="mb-6">
@@ -229,31 +132,13 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
           )}
         </section>
 
-        {/* Categories — collapsible */}
+        {/* Categories */}
         <section className="mb-6">
-          <button
-            type="button"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={(event) => {
-              scrollTriggerRef.current = event.currentTarget;
-              event.currentTarget.blur();
-              setCategoriesOpen((prev) => !prev);
-            }}
-            className="w-full flex items-center justify-between mb-3 group"
-          >
-            <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-              <Headphones className="w-4 h-4 text-[hsl(220,90%,60%)]" />
-              {t("home.exploreByCategory")}
-            </h2>
-            <ChevronDown className={cn(
-              "w-5 h-5 text-muted-foreground transition-transform duration-300",
-              categoriesOpen && "rotate-180"
-            )} />
-          </button>
-          <div className={cn(
-            "grid grid-cols-2 gap-3 overflow-hidden transition-all duration-500 ease-in-out",
-            categoriesOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-          )}>
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <Headphones className="w-4 h-4 text-[hsl(220,90%,60%)]" />
+            {t("home.exploreByCategory")}
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
             {CATEGORIES.map(cat => (
               <div
                 key={cat}
