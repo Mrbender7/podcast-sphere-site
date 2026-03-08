@@ -360,6 +360,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Música",
     "category.Society": "Sociedad",
     "category.History": "Historia",
+    "category.Fiction": "Ficción",
+    "category.Horror": "Terror",
   },
   de: {
     "nav.home": "Startseite",
