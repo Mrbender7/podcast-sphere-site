@@ -63,6 +63,9 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
         if (cancelled) return;
         setEpisodes(page.episodes);
         setHasMore(page.hasMore);
+        // Pre-cache episode artworks
+        const urls = page.episodes.map(e => e.image || e.feedImage).filter(Boolean);
+        if (urls.length) preCacheImages(urls.slice(0, 20));
       })
       .catch(() => {})
       .finally(() => {
