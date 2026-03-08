@@ -50,6 +50,7 @@ function AppContentInner() {
 
   const handleTabChange = useCallback((tab: TabId) => {
     if (tab !== "search") setSelectedCategory(undefined);
+    setDetailPodcast(null);
     setActiveTab(tab);
   }, []);
 
