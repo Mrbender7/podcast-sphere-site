@@ -7,7 +7,7 @@ import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 import { cn } from "@/lib/utils";
 
 const PLAYBACK_RATES = [1, 1.2, 1.5, 2];
@@ -77,7 +77,7 @@ export function FullScreenPlayer() {
     else toast.error(t("download.error"));
   };
 
-  const artwork = currentEpisode.image || currentEpisode.feedImage || stationPlaceholder;
+  const artwork = currentEpisode.image || currentEpisode.feedImage;
   const epDownloaded = currentEpisode ? isEpisodeDownloaded(currentEpisode.id) : false;
   const epDownloading = currentEpisode ? downloading[currentEpisode.id] !== undefined : false;
 
@@ -109,11 +109,11 @@ export function FullScreenPlayer() {
           className="aspect-square w-full max-w-[300px] rounded-2xl bg-accent shadow-2xl overflow-hidden"
           style={{ boxShadow: '0 20px 60px -10px hsla(250, 80%, 50%, 0.5), 0 10px 30px -5px hsla(220, 90%, 60%, 0.3)' }}
         >
-          <img
+          <CachedImage
             src={artwork}
             alt={currentEpisode.title}
             className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+            loading="eager"
           />
         </div>
       </div>

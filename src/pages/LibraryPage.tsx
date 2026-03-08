@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Podcast } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -9,7 +9,8 @@ import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, D
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
+import { preCacheImages } from "@/services/ImageCacheService";
 
 const INITIAL_VISIBLE = 3;
 
@@ -40,12 +41,10 @@ function HistoryRow({
         onClick={() => onPlay(entry)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
-          <img
-            src={entry.episode.image || entry.episode.feedImage || stationPlaceholder}
+          <CachedImage
+            src={entry.episode.image || entry.episode.feedImage}
             alt={entry.episode.title}
             className={`w-full h-full object-cover ${entry.completed ? "opacity-50" : ""}`}
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
           />
           {entry.completed && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/40">
@@ -111,6 +110,12 @@ export function LibraryPage() {
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
+
+  // Pre-cache artworks for subscriptions
+  useEffect(() => {
+    const urls = subscriptions.map(p => p.image).filter(Boolean);
+    if (urls.length) preCacheImages(urls);
+  }, [subscriptions]);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -203,12 +208,10 @@ export function LibraryPage() {
               <div key={dl.episode.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group">
                 <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => play(dl.episode)}>
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-                    <img
-                      src={dl.episode.image || dl.episode.feedImage || stationPlaceholder}
+                    <CachedImage
+                      src={dl.episode.image || dl.episode.feedImage}
                       alt={dl.episode.title}
                       className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">

@@ -2,7 +2,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useRef, useEffect, useState } from "react";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 
 const MARQUEE_SPEED = 40;
 
@@ -53,12 +53,11 @@ export function MiniPlayer() {
         <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center overflow-hidden flex-shrink-0"
           style={{ boxShadow: '0 4px 15px -3px hsla(250, 80%, 50%, 0.4)' }}
         >
-          <img
-            src={currentEpisode.image || currentEpisode.feedImage || stationPlaceholder}
+          <CachedImage
+            src={currentEpisode.image || currentEpisode.feedImage}
             alt={currentEpisode.title}
-            loading="lazy"
+            loading="eager"
             className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
           />
         </div>
 

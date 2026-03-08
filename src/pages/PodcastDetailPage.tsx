@@ -8,7 +8,8 @@ import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
+import { preCacheImages } from "@/services/ImageCacheService";
 
 interface PodcastDetailPageProps {
   podcast: Podcast;
@@ -62,6 +63,9 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
         if (cancelled) return;
         setEpisodes(page.episodes);
         setHasMore(page.hasMore);
+        // Pre-cache episode artworks
+        const urls = page.episodes.map(e => e.image || e.feedImage).filter(Boolean);
+        if (urls.length) preCacheImages(urls.slice(0, 20));
       })
       .catch(() => {})
       .finally(() => {
@@ -122,13 +126,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-accent shadow-lg"
             style={{ boxShadow: "0 8px 30px -5px hsla(250, 80%, 50%, 0.4)" }}
           >
-            <img
-              src={podcast.image || stationPlaceholder}
+            <CachedImage
+              src={podcast.image}
               alt={podcast.title}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = stationPlaceholder;
-              }}
+              loading="eager"
             />
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">

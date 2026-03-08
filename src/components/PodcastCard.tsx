@@ -1,10 +1,9 @@
 import { Podcast } from "@/types/podcast";
-import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Bookmark } from "lucide-react";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 
 interface PodcastCardProps {
   podcast: Podcast;
@@ -32,12 +31,10 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
         onClick={() => onClick?.(podcast)}
       >
         <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-          <img
-            src={podcast.image || stationPlaceholder}
+          <CachedImage
+            src={podcast.image}
             alt={podcast.title}
             className="w-full h-full object-cover"
-            loading="lazy"
-            onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -63,12 +60,10 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
       <div className="aspect-square rounded-xl overflow-hidden bg-accent mb-2 shadow-lg group-active:scale-95 transition-transform"
         style={{ boxShadow: '0 4px 15px -3px hsla(250, 80%, 50%, 0.3)' }}
       >
-        <img
-          src={podcast.image || stationPlaceholder}
+        <CachedImage
+          src={podcast.image}
           alt={podcast.title}
           className="w-full h-full object-cover"
-          loading="lazy"
-          onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
         />
       </div>
       <p className="text-sm font-semibold text-foreground truncate">{podcast.title}</p>
