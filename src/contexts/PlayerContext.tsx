@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { Episode } from "@/types/podcast";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
