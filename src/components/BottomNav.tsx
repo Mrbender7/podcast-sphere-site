@@ -1,11 +1,11 @@
-import { Home, Search, Heart, Settings } from "lucide-react";
+import { Home, Search, Bookmark, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 const tabConfig = [
   { id: "home", labelKey: "nav.home", icon: Home },
   { id: "search", labelKey: "nav.search", icon: Search },
-  { id: "library", labelKey: "nav.favorites", icon: Heart },
+  { id: "library", labelKey: "nav.library", icon: Bookmark },
   { id: "settings", labelKey: "nav.settings", icon: Settings },
 ] as const;
 
