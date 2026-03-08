@@ -134,15 +134,15 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         </section>
 
         {/* Categories — collapsible */}
-        <section className="mb-6">
+        <section className="mb-6" ref={categorySectionRef}>
           <button
             onClick={() => {
               const willOpen = !categoriesOpen;
               setCategoriesOpen(willOpen);
               if (willOpen) {
-                setTimeout(() => {
-                  scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: "smooth" });
-                }, 50);
+                requestAnimationFrame(() => {
+                  categorySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
               }
             }}
             className="w-full flex items-center justify-between mb-3 group"
