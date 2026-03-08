@@ -123,13 +123,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-accent shadow-lg"
             style={{ boxShadow: "0 8px 30px -5px hsla(250, 80%, 50%, 0.4)" }}
           >
-            <img
-              src={podcast.image || stationPlaceholder}
+            <CachedImage
+              src={podcast.image}
               alt={podcast.title}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = stationPlaceholder;
-              }}
+              loading="eager"
             />
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
