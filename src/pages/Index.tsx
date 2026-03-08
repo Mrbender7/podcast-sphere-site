@@ -37,12 +37,14 @@ function AppContentInner() {
   const [detailPodcast, setDetailPodcast] = useState<Podcast | null>(null);
   const { subscriptions } = useFavoritesContext();
   const { isFullScreen, closeFullScreen, currentEpisode } = usePlayer();
-  const { setLanguage } = useTranslation();
+  const { setLanguage, t } = useTranslation();
 
   const handleCategoryClick = useCallback((category: string) => {
-    setSelectedCategory(category);
+    // Translate the category key for the search query
+    const translated = t(`category.${category}`);
+    setSelectedCategory(translated);
     setActiveTab("search");
-  }, []);
+  }, [t]);
 
   const handlePodcastClick = useCallback((podcast: Podcast) => {
     setDetailPodcast(podcast);

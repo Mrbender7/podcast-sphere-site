@@ -4,11 +4,30 @@ import { searchPodcasts } from "@/services/PodcastService";
 import { Podcast } from "@/types/podcast";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
-import { LanguageFilter } from "@/components/LanguageFilter";
+import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, X, ArrowUp } from "lucide-react";
+import { Search, Loader2, X, ArrowUp, Globe, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
+
+const SEARCH_LANGUAGES: FilterOption[] = [
+  { value: "fr", label: "🇫🇷 Français" },
+  { value: "en", label: "🇬🇧 English" },
+  { value: "es", label: "🇪🇸 Español" },
+  { value: "de", label: "🇩🇪 Deutsch" },
+  { value: "ja", label: "🇯🇵 日本語" },
+  { value: "pt", label: "🇧🇷 Português" },
+  { value: "it", label: "🇮🇹 Italiano" },
+  { value: "ar", label: "🇸🇦 العربية" },
+];
+
+const SEARCH_CATEGORIES = [
+  "Technology", "Comedy", "News", "True Crime", "Health", "Business",
+  "Science", "Education", "Sports", "Music", "Society", "History",
+  "Fiction", "Horror", "Video Games", "Arts", "Food", "Travel",
+  "Religion", "Kids & Family", "Politics", "Nature", "Film & TV",
+  "Leisure", "Self-Improvement", "Relationships",
+];
 
 interface SearchPageProps {
   initialCategory?: string;
@@ -17,10 +36,19 @@ interface SearchPageProps {
 export function SearchPage({ initialCategory }: SearchPageProps) {
   const [query, setQuery] = useState("");
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
-  const [langFilter, setLangFilter] = useState("");
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Multi-select filters: default lang = app language
+  const [selectedLangs, setSelectedLangs] = useState<string[]>([language]);
+  const [selectedCats, setSelectedCats] = useState<string[]>([]);
+
+  // Build translated category options
+  const categoryOptions: FilterOption[] = useMemo(
+    () => SEARCH_CATEGORIES.map(cat => ({ value: cat, label: t(`category.${cat}`) })),
+    [t]
+  );
 
   useEffect(() => {
     if (initialCategory) {
@@ -31,7 +59,7 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
 
   const { data: results, isLoading, isError } = useQuery({
     queryKey: ["podcastSearch", query],
-    queryFn: () => searchPodcasts(query, 30),
+    queryFn: () => searchPodcasts(query, 60),
     enabled: query.length >= 2,
     staleTime: 2 * 60 * 1000,
   });
@@ -41,11 +69,28 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
+  // Client-side filtering: OR for langs, OR for cats, intersection of both
   const filteredResults = useMemo(() => {
     if (!results) return undefined;
-    if (!langFilter) return results;
-    return results.filter(p => p.language === langFilter);
-  }, [results, langFilter]);
+    let filtered = results;
+
+    // Filter by languages (OR)
+    if (selectedLangs.length > 0) {
+      filtered = filtered.filter(p => selectedLangs.includes(p.language));
+    }
+
+    // Filter by categories (OR) — match if podcast has any of the selected categories
+    if (selectedCats.length > 0) {
+      filtered = filtered.filter(p => {
+        if (!p.categories || p.categories.length === 0) return false;
+        return selectedCats.some(cat =>
+          p.categories.some(pc => pc.toLowerCase().includes(cat.toLowerCase()))
+        );
+      });
+    }
+
+    return filtered;
+  }, [results, selectedLangs, selectedCats]);
 
   if (selectedPodcast) {
     return <PodcastDetailPage podcast={selectedPodcast} onBack={() => setSelectedPodcast(null)} />;
@@ -57,7 +102,7 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         {t("search.title")}
       </h1>
 
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           value={query}
@@ -72,7 +117,23 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         )}
       </div>
 
-      <LanguageFilter selected={langFilter} onChange={setLangFilter} />
+      {/* Multi-select filters */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
+        <MultiSelectFilter
+          icon={<Globe className="w-3.5 h-3.5" />}
+          label={t("search.languages")}
+          options={SEARCH_LANGUAGES}
+          selected={selectedLangs}
+          onChange={setSelectedLangs}
+        />
+        <MultiSelectFilter
+          icon={<FolderOpen className="w-3.5 h-3.5" />}
+          label={t("search.categories")}
+          options={categoryOptions}
+          selected={selectedCats}
+          onChange={setSelectedCats}
+        />
+      </div>
 
       {!query && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
