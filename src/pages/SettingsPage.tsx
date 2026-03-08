@@ -115,6 +115,20 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </Select>
       </div>
 
+      {/* Download Destination */}
+      <CollapsibleSection icon={HardDrive} title={t("download.destination")}>
+        <p className="text-xs text-muted-foreground mb-3">{t("download.destinationDesc")}</p>
+        <Select value={dlDest} onValueChange={handleDestChange}>
+          <SelectTrigger className="w-full rounded-lg bg-secondary text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="internal">{t("download.internal")}</SelectItem>
+            <SelectItem value="sd">{t("download.external")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </CollapsibleSection>
+
       {/* Sleep Timer */}
       <CollapsibleSection
         icon={Moon}

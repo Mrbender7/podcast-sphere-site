@@ -137,6 +137,7 @@ export function LibraryPage() {
   const visibleSubs = showAllSubs ? subscriptions : subscriptions.slice(0, INITIAL_VISIBLE);
   const visibleInProgress = showAllInProgress ? inProgress : inProgress.slice(0, INITIAL_VISIBLE);
   const visibleHistory = showAllHistory ? completed : completed.slice(0, INITIAL_VISIBLE);
+  const visibleDownloads = showAllDownloads ? downloaded : downloaded.slice(0, INITIAL_VISIBLE);
 
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
