@@ -47,8 +47,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [trendingLang, setTrendingLang] = useState("");
 
   const { data: trending } = useQuery({
-    queryKey: ["trending"],
-    queryFn: () => getTrendingPodcasts(20),
+    queryKey: ["trending", trendingLang],
+    queryFn: () => getTrendingPodcasts(20, trendingLang || undefined),
     staleTime: 10 * 60 * 1000,
   });
 
