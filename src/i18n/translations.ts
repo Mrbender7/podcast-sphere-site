@@ -669,6 +669,7 @@ const translations: Record<Language, Record<string, string>> = {
     "search.resultsCount": "件のポッドキャスト",
     "search.languages": "言語",
     "search.categories": "カテゴリ",
+    "search.recentSearches": "最近の検索",
     "favorites.title": "ライブラリ",
     "favorites.empty": "登録なし",
     "favorites.emptyDesc": "ポッドキャストを登録するとここに表示されます",
