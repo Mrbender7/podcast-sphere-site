@@ -92,6 +92,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 8px hsla(225,90%,58%,0.25), 0 0 20px hsla(250,80%,60%,0.15)" },
           "50%": { boxShadow: "0 0 16px hsla(225,90%,58%,0.45), 0 0 36px hsla(250,80%,60%,0.25)" },
         },
+        "eq-bar": {
+          "0%, 100%": { height: "20%" },
+          "50%": { height: "100%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -100,6 +104,7 @@ export default {
         "logo-glow": "logo-glow 3s ease-in-out infinite",
         "play-breathe": "play-breathe 2.5s ease-in-out infinite",
         "card-glow": "card-glow 2.5s ease-in-out infinite",
+        "eq-bar": "eq-bar 0.8s ease-in-out infinite",
       },
     },
   },
