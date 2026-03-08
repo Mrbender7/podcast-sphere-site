@@ -7,7 +7,7 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, ChevronDown } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
 const CATEGORIES = [
