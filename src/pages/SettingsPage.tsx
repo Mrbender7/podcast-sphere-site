@@ -1,7 +1,7 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
-import podcastSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -181,7 +181,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       ))}
 
       {/* Privacy Policy */}
-      <a href="https://mrbender7.github.io/privacy-policy-radiosphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
+      <a href="https://mrbender7.github.io/privacy-policy-podcastsphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
       </a>
 

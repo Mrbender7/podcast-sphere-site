@@ -1,5 +1,5 @@
 import { useState } from "react";
-import podcastSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import { requestAllPermissions } from "@/utils/permissions";
 import type { Language } from "@/i18n/translations";
@@ -99,7 +99,7 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
       </button>
 
       <a
-        href="https://mrbender7.github.io/privacy-policy-radiosphere/"
+        href="https://mrbender7.github.io/privacy-policy-podcastsphere/"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:underline mt-4"

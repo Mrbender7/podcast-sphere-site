@@ -1,16 +1,16 @@
-// RadioAutoPlugin — Capacitor plugin for Android Auto (stub for podcast mode)
-// This plugin is not used in podcast mode but kept as a stub to avoid import errors.
+// PodcastAutoPlugin — Capacitor plugin stub for podcast mode
+// Kept as a stub to avoid import errors. No native radio functionality.
 
 import { registerPlugin } from '@capacitor/core';
 
-export interface RadioAutoPluginInterface {
-  syncFavorites(options: { stations: string }): Promise<void>;
-  syncRecents(options: { stations: string }): Promise<void>;
+export interface PodcastAutoPluginInterface {
+  syncFavorites(options: { podcasts: string }): Promise<void>;
+  syncRecents(options: { podcasts: string }): Promise<void>;
   notifyPlaybackState(options: Record<string, any>): Promise<void>;
   clearAppData(): Promise<void>;
 }
 
-export const RadioAutoPlugin = registerPlugin<RadioAutoPluginInterface>('RadioAutoPlugin');
+export const PodcastAutoPlugin = registerPlugin<PodcastAutoPluginInterface>('PodcastAutoPlugin');
 
 function isCapacitorAndroid(): boolean {
   try {
@@ -25,6 +25,6 @@ export async function syncFavoritesToNative(_items: any[]): Promise<void> {}
 export async function syncRecentsToNative(_items: any[]): Promise<void> {}
 export async function clearNativeAppData(): Promise<void> {
   if (!isCapacitorAndroid()) return;
-  try { await RadioAutoPlugin.clearAppData(); } catch {}
+  try { await PodcastAutoPlugin.clearAppData(); } catch {}
 }
 export async function notifyNativePlaybackState(_item: any, _isPlaying: boolean): Promise<void> {}

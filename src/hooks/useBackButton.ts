@@ -72,9 +72,9 @@ export function useBackButton({
           handleBackPress();
         });
         nativeListenerRemove = () => listener.remove();
-        console.log("[RadioSphere] Native backButton listener registered");
+        console.log("[PodcastSphere] Native backButton listener registered");
       } catch (e) {
-        console.log("[RadioSphere] @capacitor/app not available, using popstate fallback");
+        console.log("[PodcastSphere] @capacitor/app not available, using popstate fallback");
         // Web fallback: popstate
         window.history.pushState(null, "", window.location.href);
         const handlePopState = () => {
