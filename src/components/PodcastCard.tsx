@@ -45,7 +45,7 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
 
   return (
     <div
-      className="flex-shrink-0 w-[140px] cursor-pointer group"
+      className="flex-shrink-0 w-[105px] cursor-pointer group"
       onClick={() => onClick?.(podcast)}
     >
       <div className="aspect-square rounded-xl overflow-hidden bg-accent mb-2 shadow-lg group-active:scale-95 transition-transform"
