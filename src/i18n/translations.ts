@@ -478,6 +478,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Musik",
     "category.Society": "Gesellschaft",
     "category.History": "Geschichte",
+    "category.Fiction": "Fiktion",
+    "category.Horror": "Horror",
   },
   ja: {
     "nav.home": "ホーム",
