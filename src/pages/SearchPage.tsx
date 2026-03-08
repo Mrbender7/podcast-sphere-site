@@ -41,6 +41,27 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Search history
+  const HISTORY_KEY = "podcastsphere_search_history";
+  const MAX_HISTORY = 8;
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+  });
+
+  const saveToHistory = useCallback((term: string) => {
+    if (term.length < 2) return;
+    setSearchHistory(prev => {
+      const updated = [term, ...prev.filter(h => h !== term)].slice(0, MAX_HISTORY);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setSearchHistory([]);
+    try { localStorage.removeItem(HISTORY_KEY); } catch {}
+  }, []);
+
   // Multi-select filters: default lang = app language
   const [selectedLangs, setSelectedLangs] = useState<string[]>([language]);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
@@ -60,7 +81,10 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
 
   const { data: results, isLoading, isError } = useQuery({
     queryKey: ["podcastSearch", query],
-    queryFn: () => searchPodcasts(query, 60),
+    queryFn: () => {
+      saveToHistory(query);
+      return searchPodcasts(query, 60);
+    },
     enabled: query.length >= 2,
     staleTime: 2 * 60 * 1000,
   });
