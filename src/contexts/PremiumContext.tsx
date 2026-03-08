@@ -90,7 +90,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     } else {
       // Web: check localStorage
       try {
-        const stored = localStorage.getItem("radiosphere_premium");
+        const stored = localStorage.getItem("podcastsphere_premium");
         setIsPremium(stored === PREMIUM_HASH);
       } catch {}
     }
