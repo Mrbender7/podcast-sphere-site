@@ -1,5 +1,5 @@
 import { useState } from "react";
-import radioSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/new-radio-logo.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import { requestAllPermissions } from "@/utils/permissions";
 import type { Language } from "@/i18n/translations";
