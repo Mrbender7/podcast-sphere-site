@@ -72,6 +72,8 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         )}
       </div>
 
+      <LanguageFilter selected={langFilter} onChange={setLangFilter} />
+
       {!query && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
       )}
