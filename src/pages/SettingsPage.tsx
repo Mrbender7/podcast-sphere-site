@@ -1,7 +1,7 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
-import radioSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -82,7 +82,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center gap-3 mt-6 mb-6">
-        <img src={radioSphereLogo} alt="Podcast Sphere" className="w-10 h-10 rounded-xl mix-blend-screen animate-logo-glow" />
+        <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-10 h-10 rounded-xl mix-blend-screen animate-logo-glow" />
         <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">Podcast Sphere</h1>
       </div>
 

@@ -29,7 +29,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     if (isNative) return false;
     // On web, check localStorage (debug mode)
     try {
-      const stored = localStorage.getItem("radiosphere_premium");
+      const stored = localStorage.getItem("podcastsphere_premium");
       return stored === PREMIUM_HASH;
     } catch { return false; }
   });
@@ -41,12 +41,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     BillingPlugin.queryPurchases()
       .then(({ isPremium: purchased }) => {
         setIsPremium(purchased);
-        try { localStorage.setItem("radiosphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
+        try { localStorage.setItem("podcastsphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
       })
       .catch(() => {
         // Fallback to localStorage cache if billing unavailable
         try {
-          const stored = localStorage.getItem("radiosphere_premium");
+          const stored = localStorage.getItem("podcastsphere_premium");
           setIsPremium(stored === PREMIUM_HASH);
         } catch {}
       })
@@ -59,7 +59,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         const { purchased } = await BillingPlugin.purchasePremium();
         if (purchased) {
           setIsPremium(true);
-          try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+          try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
         }
       } catch (err) {
         console.error("BillingPlugin.purchasePremium error:", err);
@@ -68,7 +68,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     } else {
       // Web fallback: toggle for testing
       setIsPremium(true);
-      try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+      try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
     }
   }, []);
 
@@ -77,20 +77,20 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       try {
         const { isPremium: purchased } = await BillingPlugin.restorePurchases();
         setIsPremium(purchased);
-        try { localStorage.setItem("radiosphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
+        try { localStorage.setItem("podcastsphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
         return;
       } catch (err) {
         console.error("BillingPlugin.restorePurchases error:", err);
         // Fallback to cache
         try {
-          const stored = localStorage.getItem("radiosphere_premium");
+          const stored = localStorage.getItem("podcastsphere_premium");
           setIsPremium(stored === PREMIUM_HASH);
         } catch {}
       }
     } else {
       // Web: check localStorage
       try {
-        const stored = localStorage.getItem("radiosphere_premium");
+        const stored = localStorage.getItem("podcastsphere_premium");
         setIsPremium(stored === PREMIUM_HASH);
       } catch {}
     }
@@ -99,7 +99,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const unlockWithPassword = useCallback((password: string): boolean => {
     if (verifyPassword(password.trim())) {
       setIsPremium(true);
-      try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+      try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
       return true;
     }
     return false;
@@ -107,7 +107,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const lockPremium = useCallback(() => {
     setIsPremium(false);
-    try { localStorage.setItem("radiosphere_premium", "false"); } catch {}
+    try { localStorage.setItem("podcastsphere_premium", "false"); } catch {}
   }, []);
 
   return (

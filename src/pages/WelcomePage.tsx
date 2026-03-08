@@ -1,5 +1,5 @@
 import { useState } from "react";
-import radioSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/new-radio-logo.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import { requestAllPermissions } from "@/utils/permissions";
 import type { Language } from "@/i18n/translations";
@@ -35,15 +35,15 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
       <div className="relative mb-6">
         <div className="absolute inset-0 rounded-full bg-primary/20 blur-3xl scale-150 animate-pulse" />
         <img
-          src={radioSphereLogo}
-          alt="Radio Sphere"
+          src={podcastSphereLogo}
+          alt="Podcast Sphere"
           className="w-24 h-24 rounded-2xl relative z-10 mix-blend-screen animate-logo-glow"
         />
       </div>
 
       {/* Title */}
       <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent mb-2 drop-shadow-[0_0_16px_hsla(250,80%,60%,0.4)]">
-        Radio Sphere
+        Podcast Sphere
       </h1>
       <p className="text-sm text-muted-foreground mb-8">
         {t("welcome.subtitle")}
@@ -108,7 +108,7 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
         {t("settings.privacyPolicy")}
       </a>
 
-      <p className="text-[10px] text-muted-foreground mt-3 opacity-60">Radio Sphere v2.5.0</p>
+      <p className="text-[10px] text-muted-foreground mt-3 opacity-60">Podcast Sphere v1.0</p>
     </div>
   );
 }
