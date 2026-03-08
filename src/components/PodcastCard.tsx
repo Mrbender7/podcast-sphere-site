@@ -14,7 +14,16 @@ interface PodcastCardProps {
 
 export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
   const { isSubscribed, toggleSubscription } = useFavoritesContext();
+  const { t } = useTranslation();
   const subscribed = isSubscribed(podcast.id);
+
+  const handleToggleSub = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleSubscription(podcast);
+    if (!subscribed) {
+      toast.success(`${t("podcast.subscribed")} — ${podcast.title}`);
+    }
+  };
 
   if (compact) {
     return (
