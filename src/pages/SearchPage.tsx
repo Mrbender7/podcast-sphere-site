@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { searchPodcasts } from "@/services/PodcastService";
 import { Podcast } from "@/types/podcast";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
+import { LanguageFilter } from "@/components/LanguageFilter";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, X, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
