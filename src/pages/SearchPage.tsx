@@ -41,6 +41,12 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
+  const filteredResults = useMemo(() => {
+    if (!results) return undefined;
+    if (!langFilter) return results;
+    return results.filter(p => p.language === langFilter);
+  }, [results, langFilter]);
+
   if (selectedPodcast) {
     return <PodcastDetailPage podcast={selectedPodcast} onBack={() => setSelectedPodcast(null)} />;
   }
