@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
 import { FavoritesProvider, useFavoritesContext } from "@/contexts/FavoritesContext";
@@ -44,13 +45,12 @@ function AppContentInner() {
   }, []);
 
   const handlePodcastClick = useCallback((podcast: Podcast) => {
-    // Navigate to search tab with detail view
-    setActiveTab("search");
-    // The detail page is handled within SearchPage / HomePage inline
+    setDetailPodcast(podcast);
   }, []);
 
   const handleTabChange = useCallback((tab: TabId) => {
     if (tab !== "search") setSelectedCategory(undefined);
+    setDetailPodcast(null);
     setActiveTab(tab);
   }, []);
 
@@ -102,16 +102,22 @@ function AppContentInner() {
         <SleepTimerIndicator />
         <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
           <div className={`flex-1 flex flex-col overflow-hidden ${currentEpisode ? 'pb-28' : 'pb-14'}`}>
-            {activeTab === "home" && (
-              <HomePage
-                subscriptions={subscriptions}
-                onPodcastClick={handlePodcastClick}
-                onCategoryClick={handleCategoryClick}
-              />
+            {detailPodcast ? (
+              <PodcastDetailPage podcast={detailPodcast} onBack={() => setDetailPodcast(null)} />
+            ) : (
+              <>
+                {activeTab === "home" && (
+                  <HomePage
+                    subscriptions={subscriptions}
+                    onPodcastClick={handlePodcastClick}
+                    onCategoryClick={handleCategoryClick}
+                  />
+                )}
+                {activeTab === "search" && <SearchPage initialCategory={selectedCategory} />}
+                {activeTab === "library" && <LibraryPage />}
+                {activeTab === "settings" && <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />}
+              </>
             )}
-            {activeTab === "search" && <SearchPage initialCategory={selectedCategory} />}
-            {activeTab === "library" && <LibraryPage />}
-            {activeTab === "settings" && <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />}
           </div>
           <MiniPlayer />
           <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
