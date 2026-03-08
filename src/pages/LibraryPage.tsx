@@ -95,6 +95,7 @@ export function LibraryPage() {
   const { t } = useTranslation();
   const { subscriptions, hasNewEpisodes } = useFavoritesContext();
   const { play } = usePlayer();
+  const { downloaded, removeDownload } = useDownloads();
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -103,6 +104,7 @@ export function LibraryPage() {
   const [showAllSubs, setShowAllSubs] = useState(false);
   const [showAllInProgress, setShowAllInProgress] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showAllDownloads, setShowAllDownloads] = useState(false);
 
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
