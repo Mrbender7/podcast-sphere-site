@@ -119,6 +119,19 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     };
   }, []);
 
+  useEffect(() => {
+    if (!categoriesOpen) return;
+
+    smoothScrollToTop();
+    const t1 = window.setTimeout(() => smoothScrollToTop(), 220);
+    const t2 = window.setTimeout(() => smoothScrollToTop(), 460);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [categoriesOpen, smoothScrollToTop]);
+
   const scrollToTop = () => {
     smoothScrollToTop();
   };
