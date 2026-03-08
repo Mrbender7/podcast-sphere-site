@@ -83,8 +83,9 @@ export function FullScreenPlayer() {
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0 space-y-4">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2">
-                {currentEpisode.title}
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2 flex items-center gap-2">
+                {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
+                <span>{currentEpisode.title}</span>
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {currentEpisode.feedAuthor || currentEpisode.feedTitle}
