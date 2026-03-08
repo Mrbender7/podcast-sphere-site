@@ -72,8 +72,28 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
+  const smoothScrollToTop = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const startTop = container.scrollTop;
+    const duration = 480;
+    const startTime = performance.now();
+
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(progress);
+      container.scrollTop = Math.max(0, startTop * (1 - eased));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
+  }, []);
+
   const scrollToTop = () => {
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    smoothScrollToTop();
   };
 
   return (
