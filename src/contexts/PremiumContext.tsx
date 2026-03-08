@@ -83,7 +83,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         console.error("BillingPlugin.restorePurchases error:", err);
         // Fallback to cache
         try {
-          const stored = localStorage.getItem("radiosphere_premium");
+          const stored = localStorage.getItem("podcastsphere_premium");
           setIsPremium(stored === PREMIUM_HASH);
         } catch {}
       }
