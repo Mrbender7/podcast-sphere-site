@@ -1,7 +1,7 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
-import podcastSphereLogo from "@/assets/new-radio-logo.png";
+import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
