@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Podcast } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
