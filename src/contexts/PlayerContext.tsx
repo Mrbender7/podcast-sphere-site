@@ -159,6 +159,24 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     };
   }, []);
 
+  const hydrateEpisodeMetadata = useCallback(async (episode: Episode): Promise<Episode> => {
+    if (episode.feedTitle || episode.feedAuthor || !episode.feedId) return episode;
+
+    try {
+      const feed = await getPodcastById(episode.feedId);
+      if (!feed) return episode;
+
+      return {
+        ...episode,
+        feedTitle: feed.title || episode.feedTitle,
+        feedAuthor: feed.author || episode.feedAuthor,
+        feedImage: episode.feedImage || feed.image || episode.image,
+      };
+    } catch {
+      return episode;
+    }
+  }, []);
+
   const play = useCallback(async (episode: Episode) => {
     if (!episode.enclosureUrl) {
       toast({ title: t("player.error"), description: t("player.streamUnavailable"), variant: "destructive" });
