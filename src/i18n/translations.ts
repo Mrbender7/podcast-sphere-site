@@ -576,6 +576,18 @@ const translations: Record<Language, Record<string, string>> = {
     "welcome.search": "高度な検索",
     "welcome.favExport": "登録",
     "welcome.genres": "さまざまなカテゴリ",
+    "category.Technology": "テクノロジー",
+    "category.Comedy": "コメディ",
+    "category.News": "ニュース",
+    "category.True Crime": "トゥルークライム",
+    "category.Health": "健康",
+    "category.Business": "ビジネス",
+    "category.Science": "科学",
+    "category.Education": "教育",
+    "category.Sports": "スポーツ",
+    "category.Music": "音楽",
+    "category.Society": "社会",
+    "category.History": "歴史",
   },
 };
 

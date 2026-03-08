@@ -116,7 +116,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                 className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10`}
                 onClick={() => onCategoryClick(cat)}
               >
-                <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{cat}</span>
+                <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{t(`category.${cat}`)}</span>
               </div>
             ))}
           </div>
