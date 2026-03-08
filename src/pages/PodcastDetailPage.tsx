@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
 import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
-import { ArrowLeft, Bookmark, Loader2, ArrowDownUp } from "lucide-react";
+import { ArrowLeft, Bookmark, Loader2, ArrowDownUp, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { CachedImage } from "@/components/CachedImage";
@@ -50,6 +51,13 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) setShowScrollTop(el.scrollTop > 300);
+  }, []);
 
   // Initial fetch
   useEffect(() => {
@@ -159,7 +167,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       </div>
 
       {/* Episodes */}
-      <div className="flex-1 overflow-y-auto px-4 pb-32 mt-4">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32 mt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
             {t("podcast.episodes")} {episodes.length > 0 && `(${episodes.length})`}
@@ -207,6 +215,16 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
           <p className="text-sm text-muted-foreground text-center py-8">{t("podcast.noEpisodes")}</p>
         )}
       </div>
+
+      <button
+        onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+        className={cn(
+          "fixed bottom-32 right-4 z-50 w-10 h-10 rounded-full bg-primary/70 backdrop-blur-sm text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
+          showScrollTop ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none",
+        )}
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
     </div>
   );
 }
