@@ -85,11 +85,13 @@ export function FullScreenPlayer() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2 flex items-center gap-2">
                 {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
-                <span>{currentEpisode.title}</span>
+                <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor}</span>
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {currentEpisode.feedAuthor || currentEpisode.feedTitle}
-              </p>
+              <div className="mt-1 overflow-hidden">
+                <p className="text-sm text-muted-foreground whitespace-nowrap animate-marquee-full w-fit">
+                  {currentEpisode.title}
+                </p>
+              </div>
             </div>
 
             {/* Seekbar */}

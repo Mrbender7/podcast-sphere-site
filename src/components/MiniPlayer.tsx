@@ -63,23 +63,23 @@ export function MiniPlayer() {
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {isPlaying && <EqBars size="sm" className="flex-shrink-0" />}
           <div className="min-w-0 flex-1">
-            <span ref={measureRef} className="text-sm font-heading font-bold whitespace-nowrap absolute invisible pointer-events-none">
-              {currentEpisode.title}
+            <p className="text-sm font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent truncate">
+              {displayTitle}
+            </p>
+            <span ref={measureRef} className="text-xs whitespace-nowrap absolute invisible pointer-events-none">
+              {displayEpisode}
             </span>
             <div ref={textContainerRef} className="overflow-hidden">
               <p
-                className={`text-sm font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : ""}`}
+                className={`text-xs text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : ""}`}
                 style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
               >
                 {needsMarquee
-                  ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
-                  : currentEpisode.title
+                  ? <>{displayEpisode}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{displayEpisode}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
+                  : displayEpisode
                 }
               </p>
             </div>
-            <p className="text-xs text-muted-foreground truncate">
-              {currentEpisode.feedAuthor || currentEpisode.feedTitle}
-            </p>
           </div>
         </div>
 
