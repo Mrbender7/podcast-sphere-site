@@ -46,6 +46,7 @@ interface HomePageProps {
 export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: HomePageProps) {
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<number | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
@@ -76,20 +77,32 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const startTop = container.scrollTop;
-    const duration = 480;
-    const startTime = performance.now();
+    if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
 
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const startTime = performance.now();
+    const duration = 700;
 
     const tick = (now: number) => {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const eased = easeOutCubic(progress);
-      container.scrollTop = Math.max(0, startTop * (1 - eased));
-      if (progress < 1) requestAnimationFrame(tick);
+      const elapsed = now - startTime;
+      const currentTop = container.scrollTop;
+
+      if (elapsed >= duration || currentTop <= 1) {
+        container.scrollTop = 0;
+        autoScrollRef.current = null;
+        return;
+      }
+
+      container.scrollTop = Math.max(0, currentTop - Math.max(currentTop * 0.2, 2));
+      autoScrollRef.current = requestAnimationFrame(tick);
     };
 
-    requestAnimationFrame(tick);
+    autoScrollRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
+    };
   }, []);
 
   const scrollToTop = () => {
