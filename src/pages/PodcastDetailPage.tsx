@@ -51,6 +51,13 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) setShowScrollTop(el.scrollTop > 300);
+  }, []);
 
   // Initial fetch
   useEffect(() => {
