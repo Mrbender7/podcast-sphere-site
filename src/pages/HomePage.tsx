@@ -211,12 +211,14 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                   onClick={() => onCategoryClick(cat)}
                 >
                   {catImage && (
-                    <img
-                      src={catImage}
-                      alt={cat}
-                      className={`absolute -top-2 -right-2 w-24 h-24 object-contain opacity-85 pointer-events-none drop-shadow-lg ${cat === "Travel" ? "animate-slow-spin" : ""}`}
-                      loading="lazy"
-                    />
+                    <div className={`absolute -top-2 -right-2 w-24 h-24 ${cat === "Travel" ? "travel-logo-wrapper" : ""}`}>
+                      <img
+                        src={catImage}
+                        alt={cat}
+                        className="w-full h-full object-contain opacity-85 pointer-events-none drop-shadow-lg relative z-10"
+                        loading="lazy"
+                      />
+                    </div>
                   )}
                   <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md relative z-10">{t(`category.${cat}`)}</span>
                 </div>
