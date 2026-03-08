@@ -102,7 +102,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
         {sortedEpisodes && (
           <div className="space-y-1">
             {sortedEpisodes.map(ep => (
-              <EpisodeRow key={ep.id} episode={ep} />
+              <EpisodeRow key={ep.id} episode={ep} podcastTitle={podcast.title} podcastAuthor={podcast.author} />
             ))}
           </div>
         )}

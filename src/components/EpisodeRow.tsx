@@ -20,9 +20,11 @@ function formatDate(timestamp: number): string {
 
 interface EpisodeRowProps {
   episode: Episode;
+  podcastTitle?: string;
+  podcastAuthor?: string;
 }
 
-export function EpisodeRow({ episode }: EpisodeRowProps) {
+export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowProps) {
   const { currentEpisode, isPlaying, isBuffering, play, togglePlay } = usePlayer();
   const isCurrent = currentEpisode?.id === episode.id;
 
