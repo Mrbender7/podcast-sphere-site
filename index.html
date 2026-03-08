@@ -18,7 +18,7 @@
       // Cast SDK bridge — captures early availability before React mounts
       window.__castSdkReady = false;
       window['__onGCastApiAvailable'] = function(isAvailable) {
-        console.log('[RadioSphere][Cast] Bridge: SDK available =', isAvailable);
+        console.log('[PodcastSphere][Cast] Bridge: SDK available =', isAvailable);
         if (isAvailable) {
           window.__castSdkReady = true;
           window.dispatchEvent(new Event('castSdkReady'));
