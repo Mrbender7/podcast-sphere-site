@@ -319,6 +319,8 @@ const translations: Record<Language, Record<string, string>> = {
     "history.completed": "Completado",
     "history.clear": "Borrar historial",
     "history.inProgress": "En curso",
+    "library.showMore": "Ver más",
+    "library.showLess": "Ver menos",
     "podcast.subscribe": "Suscribirse",
     "podcast.subscribed": "Suscrito",
     "podcast.episodes": "Episodios",
