@@ -29,7 +29,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    try { localStorage.setItem("radiosphere_language", lang); } catch {}
+    try { localStorage.setItem("podcastsphere_language", lang); } catch {}
   }, []);
 
   const t = useCallback((key: string): string => {
