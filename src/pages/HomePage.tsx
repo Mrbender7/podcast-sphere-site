@@ -74,26 +74,40 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   }, []);
 
   const smoothScrollToTop = useCallback(() => {
+    const targetSet = new Set<HTMLElement>();
+
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (container) targetSet.add(container);
+
+    const scrollingElement = document.scrollingElement as HTMLElement | null;
+    if (scrollingElement) targetSet.add(scrollingElement);
+
+    targetSet.add(document.documentElement);
+    targetSet.add(document.body);
+
+    const targets = Array.from(targetSet).filter((el) => el.scrollTop > 0);
+    if (targets.length === 0) return;
 
     if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
 
+    const startTops = targets.map((el) => el.scrollTop);
+    const duration = 650;
     const startTime = performance.now();
-    const duration = 700;
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
     const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const currentTop = container.scrollTop;
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(progress);
 
-      if (elapsed >= duration || currentTop <= 1) {
-        container.scrollTop = 0;
+      targets.forEach((el, index) => {
+        el.scrollTop = Math.max(0, startTops[index] * (1 - eased));
+      });
+
+      if (progress < 1) {
+        autoScrollRef.current = requestAnimationFrame(tick);
+      } else {
         autoScrollRef.current = null;
-        return;
       }
-
-      container.scrollTop = Math.max(0, currentTop - Math.max(currentTop * 0.2, 2));
-      autoScrollRef.current = requestAnimationFrame(tick);
     };
 
     autoScrollRef.current = requestAnimationFrame(tick);
