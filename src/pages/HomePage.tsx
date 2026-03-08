@@ -162,12 +162,10 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                   onClick={() => play(entry.episode)}
                 >
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-                    <img
-                      src={entry.episode.image || entry.episode.feedImage || stationPlaceholder}
+                    <CachedImage
+                      src={entry.episode.image || entry.episode.feedImage}
                       alt={entry.episode.title}
                       className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">

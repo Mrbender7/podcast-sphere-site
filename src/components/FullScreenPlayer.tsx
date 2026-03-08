@@ -109,11 +109,11 @@ export function FullScreenPlayer() {
           className="aspect-square w-full max-w-[300px] rounded-2xl bg-accent shadow-2xl overflow-hidden"
           style={{ boxShadow: '0 20px 60px -10px hsla(250, 80%, 50%, 0.5), 0 10px 30px -5px hsla(220, 90%, 60%, 0.3)' }}
         >
-          <img
+          <CachedImage
             src={artwork}
             alt={currentEpisode.title}
             className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+            loading="eager"
           />
         </div>
       </div>

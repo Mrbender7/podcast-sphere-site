@@ -202,12 +202,10 @@ export function LibraryPage() {
               <div key={dl.episode.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group">
                 <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => play(dl.episode)}>
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-                    <img
-                      src={dl.episode.image || dl.episode.feedImage || stationPlaceholder}
+                    <CachedImage
+                      src={dl.episode.image || dl.episode.feedImage}
                       alt={dl.episode.title}
                       className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
