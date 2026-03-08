@@ -14,7 +14,7 @@ import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
   "Science", "Education", "Sports", "Music", "Society", "History",
-  "Fiction", "Horror",
+  "Fiction", "Horror", "Video Games", "Arts", "Food", "Travel",
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -32,6 +32,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   History: "from-stone-700 to-amber-500",
   Fiction: "from-violet-700 to-fuchsia-400",
   Horror: "from-gray-900 to-red-700",
+  "Video Games": "from-emerald-600 to-lime-400",
+  Arts: "from-fuchsia-700 to-pink-400",
+  Food: "from-orange-700 to-amber-400",
+  Travel: "from-sky-600 to-teal-400",
 };
 
 interface HomePageProps {
@@ -41,10 +45,10 @@ interface HomePageProps {
 }
 
 export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: HomePageProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [trendingLang, setTrendingLang] = useState("");
+  const [trendingLang, setTrendingLang] = useState<string>(language);
 
   const { data: trending } = useQuery({
     queryKey: ["trending", trendingLang],
