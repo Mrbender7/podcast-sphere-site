@@ -123,6 +123,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             </button>
           </div>
         </div>
+
+        {/* Description */}
+        {podcast.description && (
+          <PodcastDescription description={podcast.description} t={t} />
+        )}
       </div>
 
       {/* Episodes */}
