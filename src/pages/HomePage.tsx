@@ -60,7 +60,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="bg-background px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <img src={radioSphereLogo} alt="Podcast Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
+          <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
           <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">
             Podcast Sphere
           </h1>

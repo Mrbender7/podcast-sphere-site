@@ -10,7 +10,7 @@ export function PodcastSphereLogo({ size = 32 }: { size?: number }) {
       {/* Sphere */}
       <circle cx="32" cy="32" r="18" fill="url(#sphere-grad)" opacity="0.9" />
       <ellipse cx="32" cy="32" rx="18" ry="18" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.3" />
-      {/* Radio waves */}
+      {/* Sound waves */}
       <path d="M50 20 A24 24 0 0 1 50 44" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.7" />
       <path d="M55 14 A32 32 0 0 1 55 50" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4" />
       <path d="M60 9 A40 40 0 0 1 60 55" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.2" />
