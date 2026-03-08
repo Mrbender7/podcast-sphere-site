@@ -120,7 +120,12 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         </div>
       </div>
 
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 pb-4"
+        style={{ overflowAnchor: "none" }}
+      >
         {/* Trending */}
         {trending && trending.length > 0 && (
           <section className="mb-6">
