@@ -94,7 +94,16 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               <TrendingUp className="w-4 h-4 text-[hsl(220,90%,60%)]" />
               {t("home.trending")}
             </h2>
-            <LanguageFilter selected={trendingLang} onChange={setTrendingLang} />
+            <div className="mb-2">
+              <MultiSelectFilter
+                icon={<Globe className="w-3.5 h-3.5" />}
+                label={t("search.languages")}
+                options={langOptions}
+                selected={[trendingLang]}
+                onChange={(vals) => setTrendingLang(vals[vals.length - 1] || language)}
+                singleSelect
+              />
+            </div>
             <ScrollableRow>
               {trending.map(p => (
                 <PodcastCard key={p.id} podcast={p} onClick={onPodcastClick} />
