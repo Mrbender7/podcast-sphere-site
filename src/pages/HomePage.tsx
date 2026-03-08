@@ -50,7 +50,12 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showAllResume, setShowAllResume] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
+  const { play } = usePlayer();
+
+  const history = getListenHistory();
+  const resumeEntries = history.filter(h => !h.completed && h.progress > 0);
 
   const langOptions: FilterOption[] = useMemo(() => [
     { value: "fr", label: "🇫🇷 Français" },
