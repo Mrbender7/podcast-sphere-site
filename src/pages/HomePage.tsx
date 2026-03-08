@@ -6,9 +6,12 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { getListenHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
+import stationPlaceholder from "@/assets/station-placeholder.png";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
