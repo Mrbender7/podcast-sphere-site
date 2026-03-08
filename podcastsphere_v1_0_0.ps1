@@ -124,6 +124,15 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$PermsToAdd"
     }
 
+    # Inject storage permissions (with maxSdkVersion attributes)
+    foreach ($storagePerm in $StoragePerms) {
+        $permName = [regex]::Match($storagePerm, 'android:name="([^"]+)"').Groups[1].Value
+        if ($ManifestContent -notmatch [regex]::Escape($permName)) {
+            $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n    $storagePerm"
+            Write-Host "    + Permission: $permName" -ForegroundColor DarkGray
+        }
+    }
+
     # usesCleartextTraffic
     if ($ManifestContent -notmatch 'usesCleartextTraffic') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
