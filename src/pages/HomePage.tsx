@@ -6,9 +6,12 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { getListenHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
+import stationPlaceholder from "@/assets/station-placeholder.png";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
@@ -47,7 +50,12 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showAllResume, setShowAllResume] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
+  const { play } = usePlayer();
+
+  const history = getListenHistory();
+  const resumeEntries = history.filter(h => !h.completed && h.progress > 0);
 
   const langOptions: FilterOption[] = useMemo(() => [
     { value: "fr", label: "🇫🇷 Français" },
@@ -132,6 +140,60 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
           )}
         </section>
 
+        {/* Resume Listening */}
+        {resumeEntries.length > 0 && (
+          <section className="mb-6">
+            <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+              <Play className="w-4 h-4 text-[hsl(220,90%,60%)]" />
+              {t("home.resumeListening")}
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(220,90%,60%)] text-white leading-none">{resumeEntries.length}</span>
+            </h2>
+            <div className="space-y-1">
+              {(showAllResume ? resumeEntries : resumeEntries.slice(0, 3)).map(entry => (
+                <div
+                  key={entry.episode.id}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer"
+                  onClick={() => play(entry.episode)}
+                >
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                    <img
+                      src={entry.episode.image || entry.episode.feedImage || stationPlaceholder}
+                      alt={entry.episode.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate text-foreground">{entry.episode.title}</p>
+                    <span className="text-xs text-muted-foreground truncate block">{entry.episode.feedTitle}</span>
+                    <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)]"
+                        style={{ width: `${Math.min(entry.progress * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="text-[10px] text-primary font-semibold">{Math.round(entry.progress * 100)}%</span>
+                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                      <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {resumeEntries.length > 3 && (
+              <button
+                onClick={() => setShowAllResume(v => !v)}
+                className="mt-2 w-full flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium text-primary hover:bg-accent/50 transition-colors"
+              >
+                {showAllResume ? t("library.showLess") : t("library.showMore")}
+                <ChevronDown className={cn("w-4 h-4 transition-transform", showAllResume && "rotate-180")} />
+              </button>
+            )}
+          </section>
+        )}
         {/* Categories */}
         <section className="mb-6">
           <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
