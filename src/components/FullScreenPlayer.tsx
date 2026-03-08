@@ -1,4 +1,5 @@
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw } from "lucide-react";
