@@ -9,7 +9,8 @@ import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, D
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
+import { preCacheImages } from "@/services/ImageCacheService";
 
 const INITIAL_VISIBLE = 3;
 
