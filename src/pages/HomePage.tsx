@@ -130,6 +130,18 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     autoScrollRef.current = requestAnimationFrame(tick);
   }, []);
 
+  const hardScrollToTop = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = 0;
+
+    const scrollingElement = document.scrollingElement as HTMLElement | null;
+    if (scrollingElement) scrollingElement.scrollTop = 0;
+
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
+
   useEffect(() => {
     return () => {
       if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
@@ -142,12 +154,14 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     smoothScrollToTop();
     const t1 = window.setTimeout(() => smoothScrollToTop(), 220);
     const t2 = window.setTimeout(() => smoothScrollToTop(), 460);
+    const t3 = window.setTimeout(() => hardScrollToTop(), 900);
 
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
-  }, [categoriesOpen, smoothScrollToTop]);
+  }, [categoriesOpen, smoothScrollToTop, hardScrollToTop]);
 
   const scrollToTop = () => {
     smoothScrollToTop();
