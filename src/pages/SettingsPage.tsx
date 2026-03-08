@@ -180,6 +180,29 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         <CollapsibleDisclaimer key={key} icon={Icon} iconSize={iconSize} title={title} desc={desc} />
       ))}
 
+      {/* Podcast Index Credits */}
+      <div className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Heart className="w-5 h-5 text-pink-500" />
+          <h3 className="text-sm font-semibold text-foreground">{t("settings.podcastIndexTitle")}</h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{t("settings.podcastIndexDesc")}</p>
+        <div className="flex flex-col gap-2">
+          <a href="https://podcastindex.org/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+            <ExternalLink className="w-3 h-3" /> podcastindex.org
+          </a>
+          <a href="https://podcastindex-org.github.io/docs-api/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+            <ExternalLink className="w-3 h-3" /> API Documentation
+          </a>
+          <a href="https://github.com/Podcastindex-org" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+            <ExternalLink className="w-3 h-3" /> GitHub
+          </a>
+          <a href="https://podcastindex.social/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+            <ExternalLink className="w-3 h-3" /> Mastodon / Social
+          </a>
+        </div>
+      </div>
+
       {/* Privacy Policy */}
       <a href="https://mrbender7.github.io/privacy-policy-podcastsphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
