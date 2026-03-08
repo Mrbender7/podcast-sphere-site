@@ -3,7 +3,7 @@ import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink } from "lucide-react";
+import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -16,6 +16,7 @@ import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { getDownloadDest, setDownloadDest, DownloadDest } from "@/services/DownloadService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +75,13 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   const [premiumCode, setPremiumCode] = useState("");
   const [codeError, setCodeError] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
+  const [dlDest, setDlDest] = useState<DownloadDest>(getDownloadDest);
+
+  const handleDestChange = (v: string) => {
+    const dest = v as DownloadDest;
+    setDlDest(dest);
+    setDownloadDest(dest);
+  };
 
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
@@ -105,6 +113,20 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
           </SelectContent>
         </Select>
       </div>
+
+      {/* Download Destination */}
+      <CollapsibleSection icon={HardDrive} title={t("download.destination")}>
+        <p className="text-xs text-muted-foreground mb-3">{t("download.destinationDesc")}</p>
+        <Select value={dlDest} onValueChange={handleDestChange}>
+          <SelectTrigger className="w-full rounded-lg bg-secondary text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="internal">{t("download.internal")}</SelectItem>
+            <SelectItem value="sd">{t("download.external")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </CollapsibleSection>
 
       {/* Sleep Timer */}
       <CollapsibleSection

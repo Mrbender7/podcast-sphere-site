@@ -1,8 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 
 /**
- * Re-requests app permissions (notifications only).
- * Storage permission is NOT needed — recordings use Cache + Share sheet.
+ * Re-requests app permissions (notifications + storage for downloads).
  * Location is handled by Cast plugin natively.
  */
 export async function requestAllPermissions() {
@@ -26,7 +25,19 @@ export async function requestAllPermissions() {
     console.log("[Permissions] Notification permission request failed");
   }
 
-  // Storage permission removed — Cache + Share flow doesn't need it
+  // Storage — Filesystem plugin handles runtime permissions automatically on Android 13+
+  // On Android ≤12, it requests READ/WRITE_EXTERNAL_STORAGE
+  // On Android 13+, it requests READ_MEDIA_AUDIO
+  try {
+    if (isNativePlatform()) {
+      total++;
+      const { Filesystem } = await import("@capacitor/filesystem");
+      const result = await Filesystem.requestPermissions();
+      if (result.publicStorage === "granted") granted++;
+    }
+  } catch {
+    console.log("[Permissions] Storage permission request failed");
+  }
 
   try {
     toast({
@@ -36,4 +47,13 @@ export async function requestAllPermissions() {
         : "⚠️ Some permissions were denied. You can enable them in your device settings.",
     });
   } catch {}
+}
+
+/** Check if running inside Capacitor native shell */
+export function isNativePlatform(): boolean {
+  try {
+    return !!(window as any).Capacitor?.isNativePlatform();
+  } catch {
+    return false;
+  }
 }

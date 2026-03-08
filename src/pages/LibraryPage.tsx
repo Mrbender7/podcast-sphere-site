@@ -5,7 +5,8 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X } from "lucide-react";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download } from "lucide-react";
+import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import stationPlaceholder from "@/assets/station-placeholder.png";
@@ -94,6 +95,7 @@ export function LibraryPage() {
   const { t } = useTranslation();
   const { subscriptions, hasNewEpisodes } = useFavoritesContext();
   const { play } = usePlayer();
+  const { downloaded, removeDownload } = useDownloads();
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -102,6 +104,7 @@ export function LibraryPage() {
   const [showAllSubs, setShowAllSubs] = useState(false);
   const [showAllInProgress, setShowAllInProgress] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showAllDownloads, setShowAllDownloads] = useState(false);
 
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
@@ -134,6 +137,7 @@ export function LibraryPage() {
   const visibleSubs = showAllSubs ? subscriptions : subscriptions.slice(0, INITIAL_VISIBLE);
   const visibleInProgress = showAllInProgress ? inProgress : inProgress.slice(0, INITIAL_VISIBLE);
   const visibleHistory = showAllHistory ? completed : completed.slice(0, INITIAL_VISIBLE);
+  const visibleDownloads = showAllDownloads ? downloaded : downloaded.slice(0, INITIAL_VISIBLE);
 
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
@@ -181,6 +185,58 @@ export function LibraryPage() {
           </>
         )}
       </section>
+
+      {/* ── Téléchargements ── */}
+      {downloaded.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <Download className="w-4 h-4 text-[hsl(220,90%,60%)]" />
+            {t("download.downloads")}
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(220,90%,60%)] text-white leading-none">
+              {downloaded.length}
+            </span>
+          </h2>
+          <div className="space-y-1">
+            {visibleDownloads.map((dl) => (
+              <div key={dl.episode.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group">
+                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => play(dl.episode)}>
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                    <img
+                      src={dl.episode.image || dl.episode.feedImage || stationPlaceholder}
+                      alt={dl.episode.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate text-foreground">{dl.episode.title}</p>
+                    <span className="text-xs text-muted-foreground truncate">{dl.episode.feedTitle}</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeDownload(dl.episode.id)}
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+          {downloaded.length > INITIAL_VISIBLE && (
+            <button
+              onClick={() => setShowAllDownloads((v) => !v)}
+              className="mt-2 w-full flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium text-primary hover:bg-accent/50 transition-colors"
+            >
+              {showAllDownloads ? t("library.showLess") : t("library.showMore")}
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showAllDownloads && "rotate-180")} />
+            </button>
+          )}
+        </section>
+      )}
 
       {/* ── En cours ── */}
       {inProgress.length > 0 && (

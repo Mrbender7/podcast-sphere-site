@@ -1,7 +1,10 @@
 import { Episode } from "@/types/podcast";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { Play, Pause, Loader2, CheckCircle2 } from "lucide-react";
+import { useDownloads } from "@/contexts/DownloadContext";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { Play, Pause, Loader2, CheckCircle2, Download, CheckCircle } from "lucide-react";
 import { getEpisodeProgress } from "@/services/PlaybackHistoryService";
+import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 function formatDuration(seconds: number): string {
@@ -26,11 +29,17 @@ interface EpisodeRowProps {
 
 export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowProps) {
   const { currentEpisode, isPlaying, isBuffering, play, togglePlay } = usePlayer();
+  const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
+  const { t } = useTranslation();
   const isCurrent = currentEpisode?.id === episode.id;
 
   const saved = getEpisodeProgress(episode.id);
   const progressRatio = saved && saved.duration > 0 ? saved.currentTime / saved.duration : 0;
   const isCompleted = saved?.completed || false;
+
+  const dlProgress = downloading[episode.id];
+  const isDownloading = dlProgress !== undefined;
+  const downloaded = isEpisodeDownloaded(episode.id);
 
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -44,6 +53,17 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
       togglePlay();
     } else {
       play(episodeForPlayback);
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (downloaded || isDownloading) return;
+    const ok = await startDownload(episode);
+    if (ok) {
+      toast.success(t("download.success"));
+    } else {
+      toast.error(t("download.error"));
     }
   };
 
@@ -75,9 +95,24 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
               <span className="text-xs text-muted-foreground">{formatDuration(episode.duration)}</span>
             </>
           )}
+          {downloaded && (
+            <>
+              <span className="text-xs text-muted-foreground">•</span>
+              <CheckCircle className="w-3 h-3 text-primary" />
+            </>
+          )}
         </div>
-        {/* Progress bar */}
-        {progressRatio > 0 && !isCompleted && !isCurrent && (
+        {/* Download progress bar */}
+        {isDownloading && (
+          <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all"
+              style={{ width: `${Math.min((dlProgress || 0) * 100, 100)}%` }}
+            />
+          </div>
+        )}
+        {/* Playback progress bar */}
+        {!isDownloading && progressRatio > 0 && !isCompleted && !isCurrent && (
           <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)]"
@@ -86,6 +121,28 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
           </div>
         )}
       </div>
+      {/* Download button */}
+      <button
+        onClick={handleDownload}
+        disabled={downloaded || isDownloading}
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+          downloaded
+            ? "text-primary"
+            : isDownloading
+            ? "text-muted-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        }`}
+        title={downloaded ? t("download.downloaded") : t("download.download")}
+      >
+        {isDownloading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : downloaded ? (
+          <CheckCircle className="w-4 h-4" />
+        ) : (
+          <Download className="w-4 h-4" />
+        )}
+      </button>
+      {/* Play button */}
       <button
         onClick={handlePlay}
         className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${

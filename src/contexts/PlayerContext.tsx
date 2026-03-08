@@ -184,7 +184,20 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     }
     const audio = audioRef.current;
     audio.pause();
-    audio.src = episode.enclosureUrl;
+
+    // Check for local downloaded file first
+    let audioSrc = episode.enclosureUrl;
+    try {
+      const { isDownloaded, getLocalFileUri } = await import("@/services/DownloadService");
+      if (isDownloaded(episode.id)) {
+        const localUri = await getLocalFileUri(episode.id);
+        if (localUri) audioSrc = localUri;
+      }
+    } catch {
+      // fallback to stream
+    }
+
+    audio.src = audioSrc;
     audio.playbackRate = stateRef.current.playbackRate;
     audio.load();
 
