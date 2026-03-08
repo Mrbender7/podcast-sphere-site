@@ -47,6 +47,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef<number | null>(null);
+  const scrollTriggerRef = useRef<HTMLElement | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
@@ -73,30 +74,72 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
-  const smoothScrollToTop = useCallback(() => {
+  const smoothScrollToTop = useCallback((triggerEl?: HTMLElement | null) => {
+    const findScrollableAncestor = (element: HTMLElement | null): HTMLElement | null => {
+      let current = element?.parentElement ?? null;
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const isScrollableY = /(auto|scroll)/.test(style.overflowY);
+        if (isScrollableY && current.scrollHeight > current.clientHeight + 1) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
+    const targetSet = new Set<HTMLElement>();
+
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (container) targetSet.add(container);
+
+    const ancestor = findScrollableAncestor(triggerEl ?? scrollTriggerRef.current);
+    if (ancestor) targetSet.add(ancestor);
+
+    const scrollingElement = document.scrollingElement as HTMLElement | null;
+    if (scrollingElement) targetSet.add(scrollingElement);
+
+    targetSet.add(document.documentElement);
+    targetSet.add(document.body);
+
+    const targets = Array.from(targetSet).filter((el) => el.scrollTop > 0);
+    if (targets.length === 0) return;
 
     if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
 
+    const startTops = targets.map((el) => el.scrollTop);
+    const duration = 650;
     const startTime = performance.now();
-    const duration = 700;
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
     const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const currentTop = container.scrollTop;
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(progress);
 
-      if (elapsed >= duration || currentTop <= 1) {
-        container.scrollTop = 0;
+      targets.forEach((el, index) => {
+        el.scrollTop = Math.max(0, startTops[index] * (1 - eased));
+      });
+
+      if (progress < 1) {
+        autoScrollRef.current = requestAnimationFrame(tick);
+      } else {
         autoScrollRef.current = null;
-        return;
       }
-
-      container.scrollTop = Math.max(0, currentTop - Math.max(currentTop * 0.2, 2));
-      autoScrollRef.current = requestAnimationFrame(tick);
     };
 
     autoScrollRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const hardScrollToTop = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = 0;
+
+    const scrollingElement = document.scrollingElement as HTMLElement | null;
+    if (scrollingElement) scrollingElement.scrollTop = 0;
+
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
 
   useEffect(() => {
@@ -104,6 +147,21 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
       if (autoScrollRef.current !== null) cancelAnimationFrame(autoScrollRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!categoriesOpen) return;
+
+    smoothScrollToTop();
+    const t1 = window.setTimeout(() => smoothScrollToTop(), 220);
+    const t2 = window.setTimeout(() => smoothScrollToTop(), 460);
+    const t3 = window.setTimeout(() => hardScrollToTop(), 900);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [categoriesOpen, smoothScrollToTop, hardScrollToTop]);
 
   const scrollToTop = () => {
     smoothScrollToTop();
@@ -174,15 +232,12 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         {/* Categories — collapsible */}
         <section className="mb-6">
           <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
-              const willOpen = !categoriesOpen;
-              setCategoriesOpen(willOpen);
-              if (willOpen) {
-                event.currentTarget.blur();
-                smoothScrollToTop();
-                setTimeout(() => smoothScrollToTop(), 280);
-                setTimeout(() => smoothScrollToTop(), 560);
-              }
+              scrollTriggerRef.current = event.currentTarget;
+              event.currentTarget.blur();
+              setCategoriesOpen((prev) => !prev);
             }}
             className="w-full flex items-center justify-between mb-3 group"
           >
