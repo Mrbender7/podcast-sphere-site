@@ -45,9 +45,7 @@ function AppContentInner() {
   }, []);
 
   const handlePodcastClick = useCallback((podcast: Podcast) => {
-    // Navigate to search tab with detail view
-    setActiveTab("search");
-    // The detail page is handled within SearchPage / HomePage inline
+    setDetailPodcast(podcast);
   }, []);
 
   const handleTabChange = useCallback((tab: TabId) => {
