@@ -177,6 +177,8 @@ const translations: Record<Language, Record<string, string>> = {
     "history.completed": "Completed",
     "history.clear": "Clear history",
     "history.inProgress": "In progress",
+    "library.showMore": "Show more",
+    "library.showLess": "Show less",
     "podcast.subscribe": "Subscribe",
     "podcast.subscribed": "Subscribed",
     "podcast.episodes": "Episodes",
