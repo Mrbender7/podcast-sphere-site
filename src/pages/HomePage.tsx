@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { CategoryAnimation } from "@/components/CategoryAnimations";
 import { useQuery } from "@tanstack/react-query";
+import { TrendingRowSkeleton } from "@/components/SkeletonLoaders";
 import { Podcast } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
 import { PodcastCard } from "@/components/PodcastCard";
