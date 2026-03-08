@@ -152,6 +152,8 @@ const translations: Record<Language, Record<string, string>> = {
     "podcast.episodes": "Episodes",
     "podcast.noEpisodes": "No episodes available",
     "podcast.newEpisodes": "New episodes",
+    "podcast.newest": "Newest",
+    "podcast.oldest": "Oldest",
     "player.nowPlaying": "Now playing",
     "player.streamError": "Playback error",
     "player.streamErrorDesc": "Unable to play this episode. Try another one.",
