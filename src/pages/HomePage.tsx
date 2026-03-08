@@ -7,7 +7,7 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, ChevronDown } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
 const CATEGORIES = [
@@ -47,6 +47,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
 
   const langOptions: FilterOption[] = useMemo(() => [
@@ -132,13 +133,33 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
           )}
         </section>
 
-        {/* Categories */}
+        {/* Categories — collapsible */}
         <section className="mb-6">
-          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-            <Headphones className="w-4 h-4 text-[hsl(220,90%,60%)]" />
-            {t("home.exploreByCategory")}
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => {
+              const willOpen = !categoriesOpen;
+              setCategoriesOpen(willOpen);
+              if (willOpen) {
+                setTimeout(() => {
+                  scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: "smooth" });
+                }, 50);
+              }
+            }}
+            className="w-full flex items-center justify-between mb-3 group"
+          >
+            <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+              <Headphones className="w-4 h-4 text-[hsl(220,90%,60%)]" />
+              {t("home.exploreByCategory")}
+            </h2>
+            <ChevronDown className={cn(
+              "w-5 h-5 text-muted-foreground transition-transform duration-300",
+              categoriesOpen && "rotate-180"
+            )} />
+          </button>
+          <div className={cn(
+            "grid grid-cols-2 gap-3 overflow-hidden transition-all duration-500 ease-in-out",
+            categoriesOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+          )}>
             {CATEGORIES.map(cat => (
               <div
                 key={cat}
