@@ -47,6 +47,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef<number | null>(null);
+  const scrollTriggerRef = useRef<HTMLElement | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
