@@ -180,7 +180,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               if (willOpen) {
                 event.currentTarget.blur();
                 smoothScrollToTop();
-                setTimeout(() => smoothScrollToTop(), 160);
+                setTimeout(() => smoothScrollToTop(), 280);
+                setTimeout(() => smoothScrollToTop(), 560);
               }
             }}
             className="w-full flex items-center justify-between mb-3 group"
