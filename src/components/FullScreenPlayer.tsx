@@ -107,20 +107,24 @@ export function FullScreenPlayer() {
                 {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
                 <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor || currentEpisode.title}</span>
               </h2>
-              <span ref={epMeasureRef} className="text-sm whitespace-nowrap absolute invisible pointer-events-none">
-                {currentEpisode.title}
-              </span>
-              <div ref={epTitleRef} className="mt-1 overflow-hidden">
-                <p
-                  className={`text-sm text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : "truncate"}`}
-                  style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
-                >
-                  {needsMarquee
-                    ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
-                    : currentEpisode.title
-                  }
-                </p>
-              </div>
+              {(currentEpisode.feedTitle || currentEpisode.feedAuthor) && (
+                <>
+                  <span ref={epMeasureRef} className="text-sm whitespace-nowrap absolute invisible pointer-events-none">
+                    {currentEpisode.title}
+                  </span>
+                  <div ref={epTitleRef} className="mt-1 overflow-hidden">
+                    <p
+                      className={`text-sm text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : "truncate"}`}
+                      style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
+                    >
+                      {needsMarquee
+                        ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
+                        : currentEpisode.title
+                      }
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Seekbar */}
