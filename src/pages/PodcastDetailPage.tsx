@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
