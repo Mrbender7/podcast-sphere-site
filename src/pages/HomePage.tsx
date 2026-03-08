@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import stationPlaceholder from "@/assets/station-placeholder.png";
-import { CATEGORY_ICON_MAP } from "@/components/CategoryIcons";
+import { CATEGORY_IMAGES } from "@/components/CategoryImages";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
