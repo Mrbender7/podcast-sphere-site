@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
 import { FavoritesProvider, useFavoritesContext } from "@/contexts/FavoritesContext";
