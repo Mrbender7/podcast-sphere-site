@@ -1,20 +1,41 @@
 import { Podcast, Episode } from "@/types/podcast";
 
 // ============================================================
-// 🔑 PODCAST INDEX API CREDENTIALS
-// Replace these with your own keys from https://api.podcastindex.org
+// 🔐 OBFUSCATED PODCAST INDEX API CREDENTIALS
+// Keys are XOR-obfuscated to prevent casual extraction from APK.
+// Not military-grade, but deters grep/strings attacks.
 // ============================================================
-const API_KEY = "YOUR_API_KEY_HERE";
-const API_SECRET = "YOUR_API_SECRET_HERE";
+
+// Obfuscation utilities
+const _xorKey = "P0dc4stSph3r3K3y"; // XOR cipher key
+
+function _deobfuscate(encoded: string): string {
+  try {
+    const decoded = atob(encoded);
+    let result = "";
+    for (let i = 0; i < decoded.length; i++) {
+      result += String.fromCharCode(
+        decoded.charCodeAt(i) ^ _xorKey.charCodeAt(i % _xorKey.length)
+      );
+    }
+    return result;
+  } catch {
+    return "";
+  }
+}
+
+// Obfuscated credentials (XOR + Base64)
+// To generate: XOR each char with _xorKey, then Base64 encode
+const _k = "FQILNA4bBQEWDkcUAAcMBQ=="; // API Key obfuscated
+const _s = "eCdyHHQpZiMmEjw9LDIaIh0jPFMeOCUoKygcOik="; // API Secret obfuscated
+
+const API_KEY = _deobfuscate(_k);
+const API_SECRET = _deobfuscate(_s);
 const BASE_URL = "https://api.podcastindex.org/api/1.0";
 
 /**
  * Generate the authentication headers required by the Podcast Index API.
  * Uses native Web Crypto API to compute SHA-1 hash of (apiKey + apiSecret + timestamp).
- *
- * ⚠️ Note: The API secret is visible in client-side code. This is acceptable for
- * a Capacitor mobile app (bundled code), but for a public web app, consider
- * proxying through an Edge Function for better security.
  */
 async function generateAuthHeaders(): Promise<Record<string, string>> {
   const ts = Math.floor(Date.now() / 1000);
