@@ -683,6 +683,7 @@ const translations: Record<Language, Record<string, string>> = {
     "podcast.newEpisodes": "新しいエピソード",
     "podcast.newest": "新しい順",
     "podcast.oldest": "古い順",
+    "podcast.loadMore": "もっと読み込む",
     "player.nowPlaying": "再生中",
     "player.streamError": "再生エラー",
     "player.streamErrorDesc": "再生できません。",
