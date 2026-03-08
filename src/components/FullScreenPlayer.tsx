@@ -69,7 +69,17 @@ export function FullScreenPlayer() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!currentEpisode) return;
+    if (isEpisodeDownloaded(currentEpisode.id) || downloading[currentEpisode.id] !== undefined) return;
+    const ok = await startDownload(currentEpisode);
+    if (ok) toast.success(t("download.success"));
+    else toast.error(t("download.error"));
+  };
+
   const artwork = currentEpisode.image || currentEpisode.feedImage || stationPlaceholder;
+  const epDownloaded = currentEpisode ? isEpisodeDownloaded(currentEpisode.id) : false;
+  const epDownloading = currentEpisode ? downloading[currentEpisode.id] !== undefined : false;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-300">
