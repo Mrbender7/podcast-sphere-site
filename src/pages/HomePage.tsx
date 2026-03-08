@@ -5,6 +5,7 @@ import { Episode } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
 import { PodcastCard } from "@/components/PodcastCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
+import { LanguageFilter } from "@/components/LanguageFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones } from "lucide-react";
@@ -43,10 +44,11 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [trendingLang, setTrendingLang] = useState("");
 
   const { data: trending } = useQuery({
-    queryKey: ["trending"],
-    queryFn: () => getTrendingPodcasts(20),
+    queryKey: ["trending", trendingLang],
+    queryFn: () => getTrendingPodcasts(20, trendingLang || undefined),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -78,6 +80,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               <TrendingUp className="w-4 h-4 text-[hsl(220,90%,60%)]" />
               {t("home.trending")}
             </h2>
+            <LanguageFilter selected={trendingLang} onChange={setTrendingLang} />
             <ScrollableRow>
               {trending.map(p => (
                 <PodcastCard key={p.id} podcast={p} onClick={onPodcastClick} />

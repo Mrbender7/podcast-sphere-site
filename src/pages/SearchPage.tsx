@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { searchPodcasts } from "@/services/PodcastService";
 import { Podcast } from "@/types/podcast";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
+import { LanguageFilter } from "@/components/LanguageFilter";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, X, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ interface SearchPageProps {
 export function SearchPage({ initialCategory }: SearchPageProps) {
   const [query, setQuery] = useState("");
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
+  const [langFilter, setLangFilter] = useState("");
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -38,6 +40,12 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
     const el = scrollContainerRef.current;
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
+
+  const filteredResults = useMemo(() => {
+    if (!results) return undefined;
+    if (!langFilter) return results;
+    return results.filter(p => p.language === langFilter);
+  }, [results, langFilter]);
 
   if (selectedPodcast) {
     return <PodcastDetailPage podcast={selectedPodcast} onBack={() => setSelectedPodcast(null)} />;
@@ -64,6 +72,8 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         )}
       </div>
 
+      <LanguageFilter selected={langFilter} onChange={setLangFilter} />
+
       {!query && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
       )}
@@ -76,16 +86,16 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         <p className="text-sm text-destructive text-center py-12">{t("search.networkError")}</p>
       )}
 
-      {results && results.length > 0 && (
+      {filteredResults && filteredResults.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground mb-3">{results.length} {t("search.resultsCount")}</p>
-          {results.map(p => (
+          <p className="text-xs text-muted-foreground mb-3">{filteredResults.length} {t("search.resultsCount")}</p>
+          {filteredResults.map(p => (
             <PodcastCard key={p.id} podcast={p} compact onClick={setSelectedPodcast} />
           ))}
         </div>
       )}
 
-      {results && results.length === 0 && query.length >= 2 && (
+      {filteredResults && filteredResults.length === 0 && query.length >= 2 && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
       )}
 
