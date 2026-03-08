@@ -7,7 +7,7 @@ import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 import { cn } from "@/lib/utils";
 
 const PLAYBACK_RATES = [1, 1.2, 1.5, 2];
