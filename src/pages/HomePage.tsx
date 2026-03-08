@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CATEGORY_ICON_MAP } from "@/components/CategoryIcons";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
@@ -20,24 +21,24 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Technology: "from-cyan-700 to-blue-400",
-  Comedy: "from-yellow-600 to-amber-400",
-  News: "from-slate-700 to-gray-400",
-  "True Crime": "from-red-800 to-rose-500",
-  Health: "from-green-700 to-emerald-400",
-  Business: "from-indigo-700 to-blue-400",
-  Science: "from-purple-700 to-violet-400",
-  Education: "from-teal-700 to-cyan-400",
-  Sports: "from-orange-600 to-yellow-400",
-  Music: "from-pink-600 to-rose-400",
-  Society: "from-amber-700 to-yellow-500",
-  History: "from-stone-700 to-amber-500",
-  Fiction: "from-violet-700 to-fuchsia-400",
-  Horror: "from-gray-900 to-red-700",
-  "Video Games": "from-emerald-600 to-lime-400",
-  Arts: "from-fuchsia-700 to-pink-400",
-  Food: "from-orange-700 to-amber-400",
-  Travel: "from-sky-600 to-teal-400",
+  Technology: "from-cyan-800/90 to-blue-500/80",
+  Comedy: "from-amber-800/90 to-yellow-600/80",
+  News: "from-slate-700/90 to-gray-500/80",
+  "True Crime": "from-red-900/90 to-rose-600/80",
+  Health: "from-teal-800/90 to-emerald-500/80",
+  Business: "from-amber-900/90 to-yellow-700/80",
+  Science: "from-indigo-900/90 to-violet-500/80",
+  Education: "from-cyan-800/90 to-sky-500/80",
+  Sports: "from-amber-800/90 to-orange-500/80",
+  Music: "from-purple-900/90 to-fuchsia-500/80",
+  Society: "from-amber-800/90 to-yellow-600/80",
+  History: "from-stone-800/90 to-amber-600/80",
+  Fiction: "from-violet-900/90 to-purple-500/80",
+  Horror: "from-gray-950/90 to-red-900/80",
+  "Video Games": "from-emerald-800/90 to-lime-500/80",
+  Arts: "from-fuchsia-800/90 to-pink-500/80",
+  Food: "from-orange-800/90 to-amber-500/80",
+  Travel: "from-sky-800/90 to-teal-500/80",
 };
 
 interface HomePageProps {
@@ -201,30 +202,23 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
             {t("home.exploreByCategory")}
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {CATEGORIES.map(cat => (
-              <div
-                key={cat}
-                className={`relative rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 overflow-hidden`}
-                onClick={() => onCategoryClick(cat)}
-              >
-                {cat === "Comedy" && (
-                  <svg
-                    width="44" height="44" viewBox="0 0 120 120" fill="none"
-                    className="absolute top-1 right-1 animate-neon-pulse pointer-events-none"
-                  >
-                    <circle cx="60" cy="60" r="54" stroke="white" strokeWidth="1.5" opacity="0.6" />
-                    <path d="M40 38C38 32 44 26 52 28L60 30L68 28C76 26 82 32 80 38L78 52C77 62 74 72 68 78C64 82 56 82 52 78C46 72 43 62 42 52Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
-                    <path d="M46 42C47 39 50 38 53 40" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-                    <path d="M67 40C70 38 73 39 74 42" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-                    <path d="M47 48C48 45 52 45 53 48" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
-                    <path d="M67 48C68 45 72 45 73 48" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
-                    <path d="M59 52L58 57L61 58" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                    <path d="M48 62C50 72 56 76 60 76C64 76 70 72 72 62" stroke="white" strokeWidth="2.2" strokeLinecap="round" opacity="0.85" />
-                  </svg>
-                )}
-                <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{t(`category.${cat}`)}</span>
-              </div>
-            ))}
+            {CATEGORIES.map(cat => {
+              const IconComponent = CATEGORY_ICON_MAP[cat];
+              return (
+                <div
+                  key={cat}
+                  className={`relative rounded-xl p-4 h-24 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 overflow-hidden`}
+                  onClick={() => onCategoryClick(cat)}
+                >
+                  {IconComponent && (
+                    <div className="absolute top-0 right-0">
+                      <IconComponent size={48} className="animate-neon-pulse" />
+                    </div>
+                  )}
+                  <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{t(`category.${cat}`)}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
 
