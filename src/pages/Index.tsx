@@ -128,6 +128,7 @@ function AppContentInner() {
           <FullScreenPlayer />
           <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
         </div>
+        </DownloadProvider>
       </SleepTimerProvider>
     </PremiumProvider>
   );
