@@ -1,37 +1,23 @@
 import { Podcast, Episode } from "@/types/podcast";
 
 // ============================================================
-// 🔐 OBFUSCATED PODCAST INDEX API CREDENTIALS
-// Keys are XOR-obfuscated to prevent casual extraction from APK.
-// Not military-grade, but deters grep/strings attacks.
+// 🔐 PODCAST INDEX API CREDENTIALS
+// Obfuscated with simple encoding to prevent casual extraction.
 // ============================================================
 
-// Obfuscation utilities
-const _xorKey = "P0dc4stSph3r3K3y"; // XOR cipher key
+const BASE_URL = "https://api.podcastindex.org/api/1.0";
 
-function _deobfuscate(encoded: string): string {
-  try {
-    const decoded = atob(encoded);
-    let result = "";
-    for (let i = 0; i < decoded.length; i++) {
-      result += String.fromCharCode(
-        decoded.charCodeAt(i) ^ _xorKey.charCodeAt(i % _xorKey.length)
-      );
-    }
-    return result;
-  } catch {
-    return "";
-  }
+// Simple decode function
+function _d(s: string): string {
+  return atob(s);
 }
 
-// Obfuscated credentials (XOR + Base64)
-// To generate: XOR each char with _xorKey, then Base64 encode
-const _k = "FQILNA4bBQEWDkcUAAcMBQ=="; // API Key obfuscated
-const _s = "eCdyHHQpZiMmEjw9LDIaIh0jPFMeOCUoKygcOik="; // API Secret obfuscated
+// Encoded credentials (Base64)
+const _k = "RUdDSkRGTjRSRkJQUllMUE1QTlQ=";
+const _s = "OSNiTWVUeTl2cWREUWY1aGhVTjc0VnJmVmdkY0toU1JHXmprU3Zycw==";
 
-const API_KEY = _deobfuscate(_k);
-const API_SECRET = _deobfuscate(_s);
-const BASE_URL = "https://api.podcastindex.org/api/1.0";
+const API_KEY = _d(_k);
+const API_SECRET = _d(_s);
 
 /**
  * Generate the authentication headers required by the Podcast Index API.
@@ -121,6 +107,5 @@ export async function getEpisodesByFeedId(feedId: number, max = 50): Promise<Epi
 }
 
 export async function searchPodcastsByCategory(category: string, max = 20): Promise<Podcast[]> {
-  // Podcast Index doesn't have a direct category search, use term search
   return searchPodcasts(category, max);
 }
