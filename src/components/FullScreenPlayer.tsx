@@ -85,10 +85,19 @@ export function FullScreenPlayer() {
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pb-2" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 1.5rem)" }}>
-        <button onClick={closeFullScreen} className="p-2 -ml-2">
-          <ChevronDown className="w-6 h-6 text-muted-foreground" />
+        <button onClick={handleDownload} className="p-2" disabled={epDownloaded || epDownloading}>
+          {epDownloading ? (
+            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+          ) : epDownloaded ? (
+            <CheckCircle className="w-5 h-5 text-primary" />
+          ) : (
+            <Download className="w-5 h-5 text-muted-foreground" />
+          )}
         </button>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
+        <button onClick={handleShare} className="p-2 -mr-2">
+          <Share2 className="w-5 h-5 text-muted-foreground" />
+        </button>
         <button onClick={handleShare} className="p-2 -mr-2">
           <Share2 className="w-5 h-5 text-muted-foreground" />
         </button>
