@@ -14,17 +14,22 @@
     
     <meta property="og:type" content="website" />
     <script>
-      // Cast SDK bridge — captures early availability before React mounts
-      window.__castSdkReady = false;
-      window['__onGCastApiAvailable'] = function(isAvailable) {
-        console.log('[PodcastSphere][Cast] Bridge: SDK available =', isAvailable);
-        if (isAvailable) {
-          window.__castSdkReady = true;
-          window.dispatchEvent(new Event('castSdkReady'));
-        }
-      };
+      // Cast SDK bridge — only load on web browsers, not in Capacitor WebView
+      if (!window.Capacitor) {
+        window.__castSdkReady = false;
+        window['__onGCastApiAvailable'] = function(isAvailable) {
+          console.log('[PodcastSphere][Cast] Bridge: SDK available =', isAvailable);
+          if (isAvailable) {
+            window.__castSdkReady = true;
+            window.dispatchEvent(new Event('castSdkReady'));
+          }
+        };
+        var castScript = document.createElement('script');
+        castScript.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+        castScript.async = true;
+        document.head.appendChild(castScript);
+      }
     </script>
-    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1" async></script>
     <meta property="og:title" content="Podcast Sphere — Podcasts">
   <meta name="twitter:title" content="Podcast Sphere — Podcasts">
   <meta property="og:description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier.">
