@@ -124,6 +124,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Musique",
     "category.Society": "Société",
     "category.History": "Histoire",
+    "category.Fiction": "Fiction",
+    "category.Horror": "Horreur",
   },
   en: {
     "nav.home": "Home",
@@ -240,6 +242,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Music",
     "category.Society": "Society",
     "category.History": "History",
+    "category.Fiction": "Fiction",
+    "category.Horror": "Horror",
   },
   es: {
     "nav.home": "Inicio",
@@ -356,6 +360,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Música",
     "category.Society": "Sociedad",
     "category.History": "Historia",
+    "category.Fiction": "Ficción",
+    "category.Horror": "Terror",
   },
   de: {
     "nav.home": "Startseite",
@@ -472,6 +478,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Musik",
     "category.Society": "Gesellschaft",
     "category.History": "Geschichte",
+    "category.Fiction": "Fiktion",
+    "category.Horror": "Horror",
   },
   ja: {
     "nav.home": "ホーム",
@@ -588,6 +596,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "音楽",
     "category.Society": "社会",
     "category.History": "歴史",
+    "category.Fiction": "フィクション",
+    "category.Horror": "ホラー",
   },
 };
 
