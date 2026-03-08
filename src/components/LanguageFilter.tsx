@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
 
 const LANGUAGES = [
-  { code: "", label: "All" },
   { code: "fr", label: "🇫🇷 FR" },
   { code: "en", label: "🇬🇧 EN" },
   { code: "es", label: "🇪🇸 ES" },
