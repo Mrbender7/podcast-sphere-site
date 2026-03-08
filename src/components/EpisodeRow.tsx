@@ -87,7 +87,12 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
         <p className={`text-sm font-semibold truncate ${isCompleted && !isCurrent ? "text-muted-foreground" : isCurrent ? "text-primary" : "text-foreground"}`}>
           {episode.title}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
+        {episode.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+            {episode.description.replace(/<[^>]*>/g, "").slice(0, 200)}
+          </p>
+        )}
+        <div className="flex items-center gap-2 mt-1">
           <span className="text-xs text-muted-foreground">{formatDate(episode.datePublished)}</span>
           {episode.duration > 0 && (
             <>
