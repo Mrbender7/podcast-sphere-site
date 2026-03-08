@@ -201,15 +201,11 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         {/* Categories — collapsible */}
         <section className="mb-6">
           <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
-              const willOpen = !categoriesOpen;
-              setCategoriesOpen(willOpen);
-              if (willOpen) {
-                event.currentTarget.blur();
-                smoothScrollToTop();
-                setTimeout(() => smoothScrollToTop(), 280);
-                setTimeout(() => smoothScrollToTop(), 560);
-              }
+              event.currentTarget.blur();
+              setCategoriesOpen((prev) => !prev);
             }}
             className="w-full flex items-center justify-between mb-3 group"
           >
