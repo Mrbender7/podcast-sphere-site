@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Podcast } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
