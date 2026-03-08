@@ -214,7 +214,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                     <img
                       src={catImage}
                       alt={cat}
-                      className="absolute -top-1 -right-1 w-16 h-16 object-contain opacity-85 pointer-events-none drop-shadow-lg"
+                      className="absolute -top-2 -right-2 w-24 h-24 object-contain opacity-85 pointer-events-none drop-shadow-lg"
                       loading="lazy"
                     />
                   )}
