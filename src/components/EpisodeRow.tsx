@@ -34,10 +34,16 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
 
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const episodeForPlayback: Episode = {
+      ...episode,
+      feedTitle: episode.feedTitle || podcastTitle || "",
+      feedAuthor: episode.feedAuthor || podcastAuthor || "",
+    };
+
     if (isCurrent) {
       togglePlay();
     } else {
-      play(episode);
+      play(episodeForPlayback);
     }
   };
 
