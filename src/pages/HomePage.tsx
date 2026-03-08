@@ -211,11 +211,17 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                   onClick={() => onCategoryClick(cat)}
                 >
                   {catImage && (
-                    <div className={`absolute -top-2 -right-2 w-24 h-24 pointer-events-none ${cat === "Travel" ? "travel-logo-wrapper" : ""}`}>
+                    <div className="absolute -top-2 -right-2 w-24 h-24 pointer-events-none">
+                      {cat === "Travel" && (
+                        <div className="absolute inset-0 z-20 animate-orbit-clouds">
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-2 rounded-full bg-white/60 blur-[2px] shadow-[0_0_6px_3px_rgba(255,255,255,0.3)]" />
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-1.5 rounded-full bg-sky-200/50 blur-[2px] shadow-[0_0_5px_2px_rgba(200,230,255,0.25)]" />
+                        </div>
+                      )}
                       <img
                         src={catImage}
                         alt={cat}
-                        className="w-full h-full object-contain opacity-85 pointer-events-none drop-shadow-lg relative z-10"
+                        className="w-full h-full object-contain opacity-85 drop-shadow-lg relative z-10"
                         loading="lazy"
                       />
                     </div>

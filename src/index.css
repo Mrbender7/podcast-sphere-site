@@ -129,45 +129,6 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.travel-logo-wrapper {
-  position: relative;
-}
-.travel-logo-wrapper::before,
-.travel-logo-wrapper::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  z-index: 20;
-  pointer-events: none;
+.animate-orbit-clouds {
   animation: orbit-clouds 12s linear infinite;
-}
-.travel-logo-wrapper::before {
-  width: 10px;
-  height: 8px;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%);
-  box-shadow: 0 0 6px 3px rgba(255,255,255,0.3);
-  top: 50%;
-  left: 50%;
-  offset-path: ellipse(46px 40px at 48px 48px);
-  offset-distance: 0%;
-  animation: orbit-cloud-1 10s linear infinite;
-}
-.travel-logo-wrapper::after {
-  width: 8px;
-  height: 6px;
-  background: radial-gradient(ellipse, rgba(200,230,255,0.6) 0%, rgba(255,255,255,0) 70%);
-  box-shadow: 0 0 5px 2px rgba(200,230,255,0.25);
-  top: 50%;
-  left: 50%;
-  offset-path: ellipse(42px 36px at 48px 48px);
-  offset-distance: 50%;
-  animation: orbit-cloud-2 14s linear infinite;
-}
-@keyframes orbit-cloud-1 {
-  from { offset-distance: 0%; }
-  to { offset-distance: 100%; }
-}
-@keyframes orbit-cloud-2 {
-  from { offset-distance: 50%; }
-  to { offset-distance: 150%; }
 }
