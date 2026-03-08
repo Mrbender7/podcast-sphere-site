@@ -221,6 +221,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
+              scrollTriggerRef.current = event.currentTarget;
               event.currentTarget.blur();
               setCategoriesOpen((prev) => !prev);
             }}
