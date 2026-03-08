@@ -77,7 +77,7 @@ export function FullScreenPlayer() {
     else toast.error(t("download.error"));
   };
 
-  const artwork = currentEpisode.image || currentEpisode.feedImage || stationPlaceholder;
+  const artwork = currentEpisode.image || currentEpisode.feedImage;
   const epDownloaded = currentEpisode ? isEpisodeDownloaded(currentEpisode.id) : false;
   const epDownloading = currentEpisode ? downloading[currentEpisode.id] !== undefined : false;
 
