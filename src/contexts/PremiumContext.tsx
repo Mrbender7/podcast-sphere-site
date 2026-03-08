@@ -68,7 +68,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     } else {
       // Web fallback: toggle for testing
       setIsPremium(true);
-      try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+      try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
     }
   }, []);
 
