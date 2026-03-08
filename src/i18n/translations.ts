@@ -596,6 +596,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "音楽",
     "category.Society": "社会",
     "category.History": "歴史",
+    "category.Fiction": "フィクション",
+    "category.Horror": "ホラー",
   },
 };
 
