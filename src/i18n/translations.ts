@@ -365,6 +365,7 @@ const translations: Record<Language, Record<string, string>> = {
     "podcast.newEpisodes": "Nuevos episodios",
     "podcast.newest": "Recientes",
     "podcast.oldest": "Antiguos",
+    "podcast.loadMore": "Cargar más episodios",
     "player.nowPlaying": "Reproduciendo",
     "player.streamError": "Error de reproducción",
     "player.streamErrorDesc": "No se pudo reproducir este episodio.",
