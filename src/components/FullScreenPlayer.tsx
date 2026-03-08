@@ -1,4 +1,5 @@
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw } from "lucide-react";
@@ -27,6 +28,25 @@ export function FullScreenPlayer() {
     playbackRate, setPlaybackRate,
   } = usePlayer();
   const { t } = useTranslation();
+  const epTitleRef = useRef<HTMLDivElement>(null);
+  const epMeasureRef = useRef<HTMLSpanElement>(null);
+  const [needsMarquee, setNeedsMarquee] = useState(false);
+  const [marqueeDuration, setMarqueeDuration] = useState(10);
+
+  useEffect(() => {
+    const check = () => {
+      if (epMeasureRef.current && epTitleRef.current) {
+        const textW = epMeasureRef.current.scrollWidth;
+        const containerW = epTitleRef.current.clientWidth;
+        const overflow = textW > containerW;
+        setNeedsMarquee(overflow);
+        if (overflow) setMarqueeDuration(textW / 40);
+      }
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [currentEpisode?.title, isFullScreen]);
 
   if (!isFullScreen || !currentEpisode) return null;
 
@@ -85,11 +105,22 @@ export function FullScreenPlayer() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2 flex items-center gap-2">
                 {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
-                <span>{currentEpisode.title}</span>
+                <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor}</span>
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {currentEpisode.feedAuthor || currentEpisode.feedTitle}
-              </p>
+              <span ref={epMeasureRef} className="text-sm whitespace-nowrap absolute invisible pointer-events-none">
+                {currentEpisode.title}
+              </span>
+              <div ref={epTitleRef} className="mt-1 overflow-hidden">
+                <p
+                  className={`text-sm text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : "truncate"}`}
+                  style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
+                >
+                  {needsMarquee
+                    ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
+                    : currentEpisode.title
+                  }
+                </p>
+              </div>
             </div>
 
             {/* Seekbar */}
