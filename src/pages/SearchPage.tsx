@@ -161,12 +161,40 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
       </div>
 
       {!query && (
-        <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
+        <div className="py-8">
+          {searchHistory.length > 0 ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">{t("search.recentSearches") || "Recherches récentes"}</span>
+                </div>
+                <button onClick={clearHistory} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchHistory.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => setQuery(term)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-foreground hover:bg-primary/20 transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center text-center gap-2">
+              <Search className="w-10 h-10 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">{t("search.useFilters")}</p>
+            </div>
+          )}
+        </div>
       )}
 
-      {isLoading && (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      )}
+      {isLoading && <SearchResultsSkeleton />}
 
       {isError && (
         <p className="text-sm text-destructive text-center py-12">{t("search.networkError")}</p>
