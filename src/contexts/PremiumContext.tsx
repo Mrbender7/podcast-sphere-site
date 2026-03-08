@@ -59,7 +59,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         const { purchased } = await BillingPlugin.purchasePremium();
         if (purchased) {
           setIsPremium(true);
-          try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+          try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
         }
       } catch (err) {
         console.error("BillingPlugin.purchasePremium error:", err);
