@@ -45,8 +45,9 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
           <p className="text-xs text-muted-foreground truncate">{podcast.author}</p>
         </div>
         <button
-          onClick={e => { e.stopPropagation(); toggleSubscription(podcast); }}
+          onClick={handleToggleSub}
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-accent transition-colors"
+          aria-label={subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
         >
           <Bookmark className={`w-4 h-4 ${subscribed ? "fill-primary text-primary" : "text-muted-foreground"}`} />
         </button>
