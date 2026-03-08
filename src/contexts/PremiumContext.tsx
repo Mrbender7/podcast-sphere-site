@@ -99,7 +99,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const unlockWithPassword = useCallback((password: string): boolean => {
     if (verifyPassword(password.trim())) {
       setIsPremium(true);
-      try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+      try { localStorage.setItem("podcastsphere_premium", PREMIUM_HASH); } catch {}
       return true;
     }
     return false;
