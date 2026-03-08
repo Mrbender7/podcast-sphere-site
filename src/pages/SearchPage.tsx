@@ -5,8 +5,9 @@ import { Podcast } from "@/types/podcast";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
+import { SearchResultsSkeleton } from "@/components/SkeletonLoaders";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, X, ArrowUp, Globe, FolderOpen } from "lucide-react";
+import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
