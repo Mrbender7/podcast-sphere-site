@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import stationPlaceholder from "@/assets/station-placeholder.png";
-import { CATEGORY_ICON_MAP } from "@/components/CategoryIcons";
+import { CATEGORY_IMAGES } from "@/components/CategoryImages";
 
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
@@ -203,19 +203,22 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {CATEGORIES.map(cat => {
-              const IconComponent = CATEGORY_ICON_MAP[cat];
+              const catImage = CATEGORY_IMAGES[cat];
               return (
                 <div
                   key={cat}
                   className={`relative rounded-xl p-4 h-24 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 overflow-hidden`}
                   onClick={() => onCategoryClick(cat)}
                 >
-                  {IconComponent && (
-                    <div className="absolute top-0 right-0">
-                      <IconComponent size={48} className="animate-neon-pulse" />
-                    </div>
+                  {catImage && (
+                    <img
+                      src={catImage}
+                      alt={cat}
+                      className="absolute -top-1 -right-1 w-16 h-16 object-contain opacity-85 pointer-events-none drop-shadow-lg"
+                      loading="lazy"
+                    />
                   )}
-                  <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{t(`category.${cat}`)}</span>
+                  <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md relative z-10">{t(`category.${cat}`)}</span>
                 </div>
               );
             })}
