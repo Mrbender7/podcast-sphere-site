@@ -242,6 +242,8 @@ const translations: Record<Language, Record<string, string>> = {
     "category.Music": "Music",
     "category.Society": "Society",
     "category.History": "History",
+    "category.Fiction": "Fiction",
+    "category.Horror": "Horror",
   },
   es: {
     "nav.home": "Inicio",
