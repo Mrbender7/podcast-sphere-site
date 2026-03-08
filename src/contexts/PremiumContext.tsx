@@ -46,7 +46,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Fallback to localStorage cache if billing unavailable
         try {
-          const stored = localStorage.getItem("radiosphere_premium");
+          const stored = localStorage.getItem("podcastsphere_premium");
           setIsPremium(stored === PREMIUM_HASH);
         } catch {}
       })
