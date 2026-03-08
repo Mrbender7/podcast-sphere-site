@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
