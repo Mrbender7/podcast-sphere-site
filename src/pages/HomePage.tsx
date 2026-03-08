@@ -13,7 +13,8 @@ import { getListenHistory, HistoryEntry } from "@/services/PlaybackHistoryServic
 import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, CheckCircle2 } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
+import { preCacheImages } from "@/services/ImageCacheService";
 import { CATEGORY_IMAGES } from "@/components/CategoryImages";
 
 const CATEGORIES = [
