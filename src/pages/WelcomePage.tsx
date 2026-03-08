@@ -35,8 +35,8 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
       <div className="relative mb-6">
         <div className="absolute inset-0 rounded-full bg-primary/20 blur-3xl scale-150 animate-pulse" />
         <img
-          src={radioSphereLogo}
-          alt="Radio Sphere"
+          src={podcastSphereLogo}
+          alt="Podcast Sphere"
           className="w-24 h-24 rounded-2xl relative z-10 mix-blend-screen animate-logo-glow"
         />
       </div>
