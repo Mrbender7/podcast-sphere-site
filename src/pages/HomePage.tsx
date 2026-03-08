@@ -234,7 +234,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
         <button
           onClick={scrollToTop}
           className={cn(
-            "fixed bottom-32 right-4 z-50 w-10 h-10 rounded-full bg-primary/70 backdrop-blur-sm text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
+            "fixed bottom-32 left-1/2 -translate-x-1/2 z-50 w-10 h-10 rounded-full bg-primary/70 backdrop-blur-sm text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
             showScrollTop ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
           )}
         >
