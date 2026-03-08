@@ -106,6 +106,13 @@ if (Test-Path $ManifestPath) {
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_NETWORK_STATE"
     )
+
+    # Storage permissions for episode downloads
+    $StoragePerms = @(
+        '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+        '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+        '<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />'
+    )
     $PermsToAdd = ""
     foreach ($perm in $PermsList) {
         if ($ManifestContent -notmatch [regex]::Escape($perm)) {
