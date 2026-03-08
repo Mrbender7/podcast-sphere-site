@@ -17,6 +17,7 @@ interface SearchPageProps {
 export function SearchPage({ initialCategory }: SearchPageProps) {
   const [query, setQuery] = useState("");
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
+  const [langFilter, setLangFilter] = useState("");
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
