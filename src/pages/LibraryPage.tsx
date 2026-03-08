@@ -41,12 +41,10 @@ function HistoryRow({
         onClick={() => onPlay(entry)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
-          <img
-            src={entry.episode.image || entry.episode.feedImage || stationPlaceholder}
+          <CachedImage
+            src={entry.episode.image || entry.episode.feedImage}
             alt={entry.episode.title}
             className={`w-full h-full object-cover ${entry.completed ? "opacity-50" : ""}`}
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
           />
           {entry.completed && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/40">
