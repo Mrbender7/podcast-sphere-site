@@ -166,21 +166,27 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     const audio = audioRef.current;
     audio.pause();
     audio.src = episode.enclosureUrl;
-    audio.playbackRate = state.playbackRate;
+    audio.playbackRate = stateRef.current.playbackRate;
     audio.load();
 
-    setState(s => ({ ...s, currentEpisode: episode, isBuffering: true, isPlaying: false, currentTime: 0, duration: 0 }));
+    // Resume from saved position if not completed
+    const saved = getEpisodeProgress(episode.id);
+    const resumeTime = saved && !saved.completed && saved.currentTime > 5 ? saved.currentTime - 2 : 0;
+
+    setState(s => ({ ...s, currentEpisode: episode, isBuffering: true, isPlaying: false, currentTime: resumeTime, duration: 0 }));
     updateMediaSession(episode, true);
 
     try {
       await audio.play();
+      if (resumeTime > 0) audio.currentTime = resumeTime;
       setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
       onEpisodePlay?.(episode);
+      addToHistory(episode, resumeTime, saved?.duration || 0);
     } catch {
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
-  }, [state.playbackRate, updateMediaSession, onEpisodePlay, t]);
+  }, [updateMediaSession, onEpisodePlay, t]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
