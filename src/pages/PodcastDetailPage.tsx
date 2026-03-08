@@ -80,9 +80,18 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
 
       {/* Episodes */}
       <div className="flex-1 overflow-y-auto px-4 pb-32 mt-4">
-        <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
-          {t("podcast.episodes")} {episodes && `(${episodes.length})`}
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
+            {t("podcast.episodes")} {sortedEpisodes && `(${sortedEpisodes.length})`}
+          </h2>
+          <button
+            onClick={() => setSortNewestFirst(prev => !prev)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-accent/50 text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <ArrowDownUp className="w-3.5 h-3.5" />
+            {sortNewestFirst ? t("podcast.newest") : t("podcast.oldest")}
+          </button>
+        </div>
 
         {isLoading && (
           <div className="flex justify-center py-12">
@@ -90,15 +99,15 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
           </div>
         )}
 
-        {episodes && (
+        {sortedEpisodes && (
           <div className="space-y-1">
-            {episodes.map(ep => (
+            {sortedEpisodes.map(ep => (
               <EpisodeRow key={ep.id} episode={ep} />
             ))}
           </div>
         )}
 
-        {episodes && episodes.length === 0 && (
+        {sortedEpisodes && sortedEpisodes.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">{t("podcast.noEpisodes")}</p>
         )}
       </div>
