@@ -1,35 +1,26 @@
-import { createContext, useContext, ReactNode, useEffect } from "react";
-import { useFavorites, useRecentStations } from "@/hooks/useFavorites";
-import { RadioStation } from "@/types/radio";
-import { syncFavoritesToNative, syncRecentsToNative } from "@/plugins/RadioAutoPlugin";
+import { createContext, useContext, ReactNode } from "react";
+import { useSubscriptions, useRecentEpisodes } from "@/hooks/useFavorites";
+import { Podcast } from "@/types/podcast";
+import { Episode } from "@/types/podcast";
 
 interface FavoritesContextType {
-  favorites: RadioStation[];
-  toggleFavorite: (station: RadioStation) => void;
-  isFavorite: (id: string) => boolean;
-  importFavorites: (stations: RadioStation[]) => number;
-  recent: RadioStation[];
-  addRecent: (station: RadioStation) => void;
+  subscriptions: Podcast[];
+  toggleSubscription: (podcast: Podcast) => void;
+  isSubscribed: (id: number) => boolean;
+  markAsSeen: (podcastId: number, episodeDate: number) => void;
+  hasNewEpisodes: (podcast: Podcast) => boolean;
+  recent: Episode[];
+  addRecent: (episode: Episode) => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const { favorites, toggleFavorite, isFavorite, importFavorites } = useFavorites();
-  const { recent, addRecent } = useRecentStations();
-
-  // Sync favorites to native Android Auto SharedPreferences
-  useEffect(() => {
-    syncFavoritesToNative(favorites);
-  }, [favorites]);
-
-  // Sync recents to native Android Auto SharedPreferences
-  useEffect(() => {
-    syncRecentsToNative(recent);
-  }, [recent]);
+  const { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes } = useSubscriptions();
+  const { recent, addRecent } = useRecentEpisodes();
 
   return (
-    <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorite, importFavorites, recent, addRecent }}>
+    <FavoritesContext.Provider value={{ subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, recent, addRecent }}>
       {children}
     </FavoritesContext.Provider>
   );

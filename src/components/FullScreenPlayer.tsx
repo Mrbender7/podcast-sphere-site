@@ -1,146 +1,52 @@
-import { useState } from "react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { usePremium } from "@/contexts/PremiumContext";
-import { useStreamBuffer } from "@/contexts/StreamBufferContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, Share2, Cast, Circle, Square, Radio, Download } from "lucide-react";
-import { CastButton } from "@/components/CastButton";
-import { AudioVisualizer } from "@/components/AudioVisualizer";
-import { CassetteAnimation } from "@/components/CassetteAnimation";
+import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
+import { cn } from "@/lib/utils";
 
-export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) => void }) {
-  const { currentStation, isPlaying, isBuffering, togglePlay, volume, setVolume, isFullScreen, closeFullScreen, isCasting, castDeviceName } = usePlayer();
-  const { isFavorite, toggleFavorite } = useFavoritesContext();
+const PLAYBACK_RATES = [1, 1.2, 1.5, 2];
+
+function formatTime(seconds: number): string {
+  if (!seconds || !isFinite(seconds)) return "0:00";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export function FullScreenPlayer() {
+  const {
+    currentEpisode, isPlaying, isBuffering, togglePlay,
+    volume, setVolume, isFullScreen, closeFullScreen,
+    currentTime, duration, seek, skipForward, skipBackward,
+    playbackRate, setPlaybackRate,
+  } = usePlayer();
   const { t } = useTranslation();
-  const { isPremium } = usePremium();
-  const { bufferSeconds, isRecording, recordingDuration, isLive, canSeekBack, bufferAvailable, recordingAvailable, currentSeekOffsetSeconds, startRecording, stopRecording, seekBack, returnToLive } = useStreamBuffer();
-  const [seekDraft, setSeekDraft] = useState<number | null>(null);
 
-  const [showSaveSheet, setShowSaveSheet] = useState(false);
-  const [lastRecording, setLastRecording] = useState<{ blob: Blob; fileName: string } | null>(null);
-
-  if (!isFullScreen || !currentStation) return null;
-
-  const fav = isFavorite(currentStation.id);
+  if (!isFullScreen || !currentEpisode) return null;
 
   const handleShare = async () => {
-    const text = currentStation.homepage
-      ? `${t("player.nowPlaying")}: ${currentStation.name} — ${currentStation.homepage}`
-      : `${t("player.nowPlaying")}: ${currentStation.name}`;
-    const shareData = {
-      title: currentStation.name,
-      text,
-      ...(currentStation.homepage ? { url: currentStation.homepage } : {}),
-    };
+    const text = `🎧 ${currentEpisode.title} — ${currentEpisode.feedTitle}`;
     try {
       if (navigator.share) {
-        await navigator.share(shareData);
+        await navigator.share({ title: currentEpisode.title, text });
       } else {
         await navigator.clipboard.writeText(text);
-        toast.success("Lien copié !");
+        toast.success("Copied!");
       }
     } catch {
       try {
         await navigator.clipboard.writeText(text);
-        toast.success("Lien copié !");
-      } catch { /* silent */ }
+        toast.success("Copied!");
+      } catch {}
     }
   };
 
-  const handleOpenWebsite = async () => {
-    if (!currentStation.homepage) return;
-    try {
-      const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url: currentStation.homepage });
-    } catch {
-      window.open(currentStation.homepage, "_blank");
-    }
-  };
-
-  const handleRecToggle = async () => {
-    if (!isPremium) {
-      toast.error(t("player.recordPremiumOnly"));
-      return;
-    }
-    if (isRecording) {
-      const result = await stopRecording();
-      if (result) {
-        setLastRecording(result);
-        setShowSaveSheet(true);
-      }
-    } else {
-      startRecording();
-    }
-  };
-
-  // Unified export: save to cache, then open share sheet
-  const handleExportRecording = async () => {
-    if (!lastRecording) return;
-    try {
-      const { Share } = await import("@capacitor/share");
-      const { Filesystem, Directory } = await import("@capacitor/filesystem");
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(",")[1];
-          const saved = await Filesystem.writeFile({
-            path: lastRecording.fileName,
-            data: base64,
-            directory: Directory.Cache,
-          });
-          await Share.share({
-            title: lastRecording.fileName,
-            url: saved.uri,
-          });
-          setShowSaveSheet(false);
-          setLastRecording(null);
-        } catch (e) {
-          console.error("[Export] failed:", e);
-          toast.error(t("player.unexpectedError"));
-        }
-      };
-      reader.onerror = () => {
-        toast.error(t("player.unexpectedError"));
-      };
-      reader.readAsDataURL(lastRecording.blob);
-    } catch {
-      // Fallback: browser download
-      const url = URL.createObjectURL(lastRecording.blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = lastRecording.fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(t("player.fileSaved"));
-      setShowSaveSheet(false);
-      setLastRecording(null);
-    }
-  };
-
-  const handleSeekDrag = ([val]: number[]) => {
-    // UI only — just update the draft position while dragging
-    setSeekDraft(val);
-  };
-
-  const handleSeekCommit = ([val]: number[]) => {
-    setSeekDraft(null);
-    if (val >= 0) {
-      returnToLive();
-    } else {
-      seekBack(Math.abs(val));
-    }
-  };
-
-  const formatSeekTime = (s: number) => {
-    const abs = Math.abs(Math.round(s));
-    const m = Math.floor(abs / 60);
-    const sec = abs % 60;
-    return `-${m}:${String(sec).padStart(2, "0")}`;
-  };
+  const artwork = currentEpisode.image || currentEpisode.feedImage || stationPlaceholder;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-300">
@@ -150,242 +56,109 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
-        <div className="flex items-center gap-1 -mr-2">
-          {currentStation.homepage && (
-            <button onClick={handleOpenWebsite} className="w-9 h-9 rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] flex items-center justify-center text-[10px] font-extrabold text-white shadow-md shadow-primary/30 hover:opacity-90 transition-opacity">
-              www
-            </button>
-          )}
-          <CastButton />
-          <button onClick={handleShare} className="p-2">
-            <Share2 className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+        <button onClick={handleShare} className="p-2 -mr-2">
+          <Share2 className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Artwork */}
       <div className="flex-1 flex items-center justify-center px-10">
         <div
-          className={`aspect-square rounded-2xl bg-accent shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-700 ease-in-out ${
-            isRecording ? "w-full max-w-[150px]" : "w-full max-w-[300px]"
-          }`}
+          className="aspect-square w-full max-w-[300px] rounded-2xl bg-accent shadow-2xl overflow-hidden"
           style={{ boxShadow: '0 20px 60px -10px hsla(250, 80%, 50%, 0.5), 0 10px 30px -5px hsla(220, 90%, 60%, 0.3)' }}
         >
-          {currentStation.logo ? (
-            <img src={currentStation.logo.replace('http://', 'https://')} alt={currentStation.name} loading="lazy" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }} />
-          ) : (
-            <img src={stationPlaceholder} alt={currentStation.name} className="w-full h-full object-cover" />
-          )}
+          <img
+            src={artwork}
+            alt={currentEpisode.title}
+            className="w-full h-full object-cover"
+            onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
+          />
         </div>
       </div>
 
-      {/* Cast indicator */}
-      {isCasting && castDeviceName && (
-        <div className="flex items-center justify-center gap-2 py-2">
-          <Cast className="w-4 h-4 text-primary" />
-          <span className="text-sm text-primary font-medium">{castDeviceName}</span>
-        </div>
-      )}
+      {/* Info & Controls */}
+      <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+6rem)] space-y-4">
+        {/* Title + Volume */}
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0 space-y-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2">
+                {currentEpisode.title}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {currentEpisode.feedAuthor || currentEpisode.feedTitle}
+              </p>
+            </div>
 
-      {/* Audio Visualizer or Cassette Animation */}
-      {isPlaying && (
-        <div className={`flex justify-center py-3 ${isRecording ? "animate-fade-in" : ""}`}>
-          {isRecording ? (
-            <CassetteAnimation duration={recordingDuration} maxDuration={600} />
-          ) : (
-            <AudioVisualizer size="large" />
-          )}
-        </div>
-      )}
+            {/* Seekbar */}
+            <div className="space-y-1">
+              <Slider
+                value={[currentTime]}
+                min={0}
+                max={duration || 1}
+                step={1}
+                onValueChange={([v]) => seek(v)}
+                className="[&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
+              />
+              <div className="flex justify-between">
+                <span className="text-[10px] text-muted-foreground font-mono">{formatTime(currentTime)}</span>
+                <span className="text-[10px] text-muted-foreground font-mono">-{formatTime(Math.max(0, duration - currentTime))}</span>
+              </div>
+            </div>
 
-       {/* Info & Controls — with vertical volume on the right */}
-       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+6rem)] space-y-4">
-         {/* Title + Volume right layout */}
-         <div className="flex items-start gap-3">
-           {/* Left: title + tags + controls */}
-           <div className="flex-1 min-w-0 space-y-4">
-             <div className="flex items-start justify-between gap-3">
-               <div className="min-w-0">
-                 <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
-                 <p className="text-sm text-muted-foreground">
-                   {currentStation.tags.length > 0 ? currentStation.tags.slice(0, 2).join(' • ') : currentStation.country}
-                 </p>
-               </div>
-               <button
-                 onClick={() => toggleFavorite(currentStation)}
-                 className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
-               >
-                 <Heart className={`w-6 h-6 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : "text-muted-foreground"}`} />
-               </button>
-             </div>
-
-             {/* Tags */}
-             {currentStation.tags.length > 0 && (
-               <div className="flex flex-wrap gap-2">
-                 {currentStation.tags.slice(0, 4).map((tag, i) => (
-                   <button
-                     key={i}
-                     onClick={() => {
-                       if (onTagClick) {
-                         closeFullScreen();
-                         onTagClick(tag);
-                       }
-                     }}
-                     className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium hover:bg-primary/20 active:bg-primary/30 transition-colors"
-                   >
-                     {tag}
-                   </button>
-                 ))}
-               </div>
-             )}
-
-             {/* Play + REC buttons */}
-             <div className="flex items-center justify-center gap-6">
-               {/* REC button */}
-               {recordingAvailable && (
-                 <button
-                   onClick={handleRecToggle}
-                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                     isRecording
-                       ? "bg-red-600 shadow-lg shadow-red-500/40"
-                       : "bg-accent hover:bg-red-600/20 border border-red-500/30"
-                   }`}
-                   title={isRecording ? t("player.recording") : "REC"}
-                 >
-                   {isRecording ? (
-                     <Square className="w-5 h-5 text-white" />
-                   ) : (
-                     <Circle className="w-5 h-5 text-red-500 fill-red-500" />
-                   )}
-                 </button>
-               )}
-
-               {/* Play button */}
-               <button
-                 onClick={togglePlay}
-                 className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
-               >
-                 {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
-               </button>
-
-               {/* Recording duration counter */}
-               {isRecording && (
-                 <div className="flex items-center gap-1.5">
-                   <div className="w-2 h-2 rounded-full bg-red-500 rec-blink" />
-                   <span className="text-sm font-mono text-red-400 font-semibold">
-                     {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, "0")}
-                   </span>
-                 </div>
-               )}
-             </div>
-           </div>
-
-           {/* Right: vertical volume slider */}
-           <div className="flex flex-col items-center gap-2 pt-2 flex-shrink-0" style={{ height: '160px' }}>
-             <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-             <Slider
-               value={[volume * 100]}
-               onValueChange={([v]) => setVolume(v / 100)}
-               max={100}
-               step={1}
-               orientation="vertical"
-               className="h-full [&_[role=slider]]:bg-gradient-to-b [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-b [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
-             />
-           </div>
-         </div>
-
-         {/* Scrub / Timeline bar */}
-         {bufferAvailable && canSeekBack && (
-           <div className="space-y-1">
-           <div className="relative">
-             <Slider
-               value={[seekDraft ?? (isLive ? 0 : -currentSeekOffsetSeconds)]}
-               min={-Math.floor(bufferSeconds)}
-               max={0}
-               step={1}
-               onValueChange={handleSeekDrag}
-               onValueCommit={handleSeekCommit}
-               className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
-             />
-             {seekDraft !== null && (
-               <div
-                 className="absolute -top-7 pointer-events-none"
-                 style={{
-                   left: `${((seekDraft - (-Math.floor(bufferSeconds))) / (0 - (-Math.floor(bufferSeconds)))) * 100}%`,
-                   transform: 'translateX(-50%)',
-                 }}
-               >
-                 <span className="px-1.5 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-mono font-bold shadow-lg">
-                   {formatSeekTime(Math.abs(seekDraft))}
-                 </span>
-               </div>
-             )}
-           </div>
-             <div className="flex items-center justify-between">
-               <span className="text-[10px] text-muted-foreground">{formatSeekTime(bufferSeconds)}</span>
-               <button
-                 onClick={returnToLive}
-                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                   isLive
-                     ? "text-green-400 live-pulse"
-                     : "text-muted-foreground bg-accent hover:text-green-400"
-                 }`}
-               >
-                 <Radio className="w-3 h-3" />
-                 {t("player.live")}
-               </button>
-             </div>
-           </div>
-         )}
-
-         {/* Codec / Bitrate / Language info */}
-         <div className="grid grid-cols-3 gap-3 py-4 px-4 rounded-xl bg-accent/50">
-           {currentStation.codec && (
-             <div className="text-center">
-               <p className="text-xs text-muted-foreground">Codec</p>
-               <p className="text-sm font-semibold text-foreground">{currentStation.codec}</p>
-             </div>
-           )}
-           {currentStation.bitrate > 0 && (
-             <div className="text-center">
-               <p className="text-xs text-muted-foreground">Bitrate</p>
-               <p className="text-sm font-semibold text-foreground">{currentStation.bitrate} kbps</p>
-             </div>
-           )}
-           {currentStation.language && (
-             <div className="text-center">
-               <p className="text-xs text-muted-foreground">Langue</p>
-               <p className="text-sm font-semibold text-foreground">{currentStation.language}</p>
-             </div>
-           )}
-         </div>
-
-        </div>
-
-      {/* Export Sheet (unified save/share) */}
-      {showSaveSheet && lastRecording && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-start justify-center" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 2rem)" }} onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}>
-          <div className="w-full max-w-md mx-4 bg-card rounded-2xl p-6 space-y-4 animate-in slide-in-from-top" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-foreground text-center">{t("player.recordingStopped")}</h3>
-            <p className="text-sm text-muted-foreground text-center">{lastRecording.fileName}</p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleExportRecording}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-white font-semibold flex items-center justify-center gap-2"
-              >
-                <Download className="w-5 h-5" />
-                {t("player.saveRecording")}
+            {/* Transport controls */}
+            <div className="flex items-center justify-center gap-6">
+              <button onClick={skipBackward} className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-foreground hover:bg-accent/80 transition-colors relative">
+                <RotateCcw className="w-5 h-5" />
+                <span className="absolute text-[8px] font-bold mt-0.5">15</span>
               </button>
+
               <button
-                onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}
-                className="w-full py-3 text-muted-foreground text-sm"
+                onClick={togglePlay}
+                className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
               >
-                {t("common.cancel")}
+                {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
+              </button>
+
+              <button onClick={skipForward} className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-foreground hover:bg-accent/80 transition-colors relative">
+                <RotateCw className="w-5 h-5" />
+                <span className="absolute text-[8px] font-bold mt-0.5">30</span>
               </button>
             </div>
+
+            {/* Playback speed selector */}
+            <div className="flex items-center justify-center gap-2">
+              {PLAYBACK_RATES.map(rate => (
+                <button
+                  key={rate}
+                  onClick={() => setPlaybackRate(rate)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+                    playbackRate === rate
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-accent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {rate}x
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Vertical volume */}
+          <div className="flex flex-col items-center gap-2 pt-2 flex-shrink-0" style={{ height: '160px' }}>
+            <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <Slider
+              value={[volume * 100]}
+              onValueChange={([v]) => setVolume(v / 100)}
+              max={100}
+              step={1}
+              orientation="vertical"
+              className="h-full [&_[role=slider]]:bg-gradient-to-b [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-b [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
+            />
           </div>
         </div>
-      )}
       </div>
-    );
-  }
+    </div>
+  );
+}

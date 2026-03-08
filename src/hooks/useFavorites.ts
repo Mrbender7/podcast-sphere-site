@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
-import { RadioStation } from "@/types/radio";
+import { Podcast } from "@/types/podcast";
+import { Episode } from "@/types/podcast";
 
-const FAVORITES_KEY = "radioflow_favorites";
-const RECENT_KEY = "radioflow_recent";
+const SUBSCRIPTIONS_KEY = "podcastsphere_subscriptions";
+const RECENT_KEY = "podcastsphere_recent_episodes";
+const LAST_SEEN_KEY = "podcastsphere_last_seen";
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -13,62 +15,56 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-export function useFavorites() {
-  const [favorites, setFavorites] = useState<RadioStation[]>(() =>
-    loadFromStorage<RadioStation[]>(FAVORITES_KEY, []).sort((a, b) => a.name.localeCompare(b.name))
+export function useSubscriptions() {
+  const [subscriptions, setSubscriptions] = useState<Podcast[]>(() =>
+    loadFromStorage<Podcast[]>(SUBSCRIPTIONS_KEY, []).sort((a, b) => a.title.localeCompare(b.title))
+  );
+  const [lastSeen, setLastSeen] = useState<Record<number, number>>(() =>
+    loadFromStorage<Record<number, number>>(LAST_SEEN_KEY, {})
   );
 
   useEffect(() => {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-  }, [favorites]);
+    localStorage.setItem(SUBSCRIPTIONS_KEY, JSON.stringify(subscriptions));
+  }, [subscriptions]);
 
-  const toggleFavorite = useCallback((station: RadioStation) => {
-    setFavorites(prev => {
-      const exists = prev.some(s => s.id === station.id);
-      const next = exists ? prev.filter(s => s.id !== station.id) : [...prev, station];
-      return next.sort((a, b) => a.name.localeCompare(b.name));
+  useEffect(() => {
+    localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(lastSeen));
+  }, [lastSeen]);
+
+  const toggleSubscription = useCallback((podcast: Podcast) => {
+    setSubscriptions(prev => {
+      const exists = prev.some(p => p.id === podcast.id);
+      const next = exists ? prev.filter(p => p.id !== podcast.id) : [...prev, podcast];
+      return next.sort((a, b) => a.title.localeCompare(b.title));
     });
   }, []);
 
-  const isFavorite = useCallback((id: string) => favorites.some(s => s.id === id), [favorites]);
+  const isSubscribed = useCallback((id: number) => subscriptions.some(p => p.id === id), [subscriptions]);
 
-  const importFavorites = useCallback((stations: RadioStation[]) => {
-    let addedCount = 0;
-    setFavorites(prev => {
-      const existingUrls = new Map(prev.map(s => [s.streamUrl, s]));
-      const newStations: RadioStation[] = [];
-      for (const s of stations) {
-        const existing = existingUrls.get(s.streamUrl);
-        if (existing) {
-          // Update metadata if the incoming station has richer data (e.g. logo)
-          if (s.logo && !existing.logo) {
-            existingUrls.set(s.streamUrl, { ...existing, ...s, id: s.id || existing.id });
-          }
-        } else {
-          newStations.push(s);
-          addedCount++;
-        }
-      }
-      const updated = Array.from(existingUrls.values());
-      return [...updated, ...newStations].sort((a, b) => a.name.localeCompare(b.name));
-    });
-    return addedCount;
+  const markAsSeen = useCallback((podcastId: number, episodeDate: number) => {
+    setLastSeen(prev => ({ ...prev, [podcastId]: episodeDate }));
   }, []);
 
-  return { favorites, toggleFavorite, isFavorite, importFavorites };
+  const hasNewEpisodes = useCallback((podcast: Podcast) => {
+    const seen = lastSeen[podcast.id];
+    if (!seen) return podcast.lastEpisodeDate > 0;
+    return podcast.lastEpisodeDate > seen;
+  }, [lastSeen]);
+
+  return { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes };
 }
 
-export function useRecentStations() {
-  const [recent, setRecent] = useState<RadioStation[]>(() => loadFromStorage(RECENT_KEY, []));
+export function useRecentEpisodes() {
+  const [recent, setRecent] = useState<Episode[]>(() => loadFromStorage(RECENT_KEY, []));
 
   useEffect(() => {
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   }, [recent]);
 
-  const addRecent = useCallback((station: RadioStation) => {
+  const addRecent = useCallback((episode: Episode) => {
     setRecent(prev => {
-      const filtered = prev.filter(s => s.id !== station.id);
-      return [station, ...filtered].slice(0, 20);
+      const filtered = prev.filter(e => e.id !== episode.id);
+      return [episode, ...filtered].slice(0, 20);
     });
   }, []);
 
