@@ -107,7 +107,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const lockPremium = useCallback(() => {
     setIsPremium(false);
-    try { localStorage.setItem("radiosphere_premium", "false"); } catch {}
+    try { localStorage.setItem("podcastsphere_premium", "false"); } catch {}
   }, []);
 
   return (
