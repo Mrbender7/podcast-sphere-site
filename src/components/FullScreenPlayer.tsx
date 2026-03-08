@@ -28,6 +28,25 @@ export function FullScreenPlayer() {
     playbackRate, setPlaybackRate,
   } = usePlayer();
   const { t } = useTranslation();
+  const epTitleRef = useRef<HTMLDivElement>(null);
+  const epMeasureRef = useRef<HTMLSpanElement>(null);
+  const [needsMarquee, setNeedsMarquee] = useState(false);
+  const [marqueeDuration, setMarqueeDuration] = useState(10);
+
+  useEffect(() => {
+    const check = () => {
+      if (epMeasureRef.current && epTitleRef.current) {
+        const textW = epMeasureRef.current.scrollWidth;
+        const containerW = epTitleRef.current.clientWidth;
+        const overflow = textW > containerW;
+        setNeedsMarquee(overflow);
+        if (overflow) setMarqueeDuration(textW / 40);
+      }
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [currentEpisode?.title, isFullScreen]);
 
   if (!isFullScreen || !currentEpisode) return null;
 
