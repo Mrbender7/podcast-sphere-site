@@ -46,6 +46,7 @@ interface HomePageProps {
 export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: HomePageProps) {
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const categorySectionRef = useRef<HTMLElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
