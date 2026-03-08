@@ -1,7 +1,9 @@
 import { Podcast } from "@/types/podcast";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Bookmark } from "lucide-react";
+import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 interface PodcastCardProps {
