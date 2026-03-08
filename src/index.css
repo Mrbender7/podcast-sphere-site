@@ -108,3 +108,18 @@
 .live-pulse {
   animation: live-pulse 2s ease-in-out infinite;
 }
+
+/* Neon pulse for comedy mask */
+@keyframes neon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.45)) drop-shadow(0 0 12px rgba(255,255,255,0.25));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.7)) drop-shadow(0 0 24px rgba(255,255,255,0.4));
+    opacity: 0.75;
+  }
+}
+.animate-neon-pulse {
+  animation: neon-pulse 2.5s ease-in-out infinite;
+}
