@@ -13,6 +13,7 @@ import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 const CATEGORIES = [
   "Technology", "Comedy", "News", "True Crime", "Health", "Business",
   "Science", "Education", "Sports", "Music", "Society", "History",
+  "Fiction", "Horror",
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
