@@ -111,6 +111,12 @@ export function LibraryPage() {
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
 
+  // Pre-cache artworks for subscriptions
+  useEffect(() => {
+    const urls = subscriptions.map(p => p.image).filter(Boolean);
+    if (urls.length) preCacheImages(urls);
+  }, [subscriptions]);
+
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (el) setShowScrollTop(el.scrollTop > 300);
