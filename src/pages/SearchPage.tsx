@@ -86,16 +86,16 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         <p className="text-sm text-destructive text-center py-12">{t("search.networkError")}</p>
       )}
 
-      {results && results.length > 0 && (
+      {filteredResults && filteredResults.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground mb-3">{results.length} {t("search.resultsCount")}</p>
-          {results.map(p => (
+          <p className="text-xs text-muted-foreground mb-3">{filteredResults.length} {t("search.resultsCount")}</p>
+          {filteredResults.map(p => (
             <PodcastCard key={p.id} podcast={p} compact onClick={setSelectedPodcast} />
           ))}
         </div>
       )}
 
-      {results && results.length === 0 && query.length >= 2 && (
+      {filteredResults && filteredResults.length === 0 && query.length >= 2 && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.noResults")}</p>
       )}
 
