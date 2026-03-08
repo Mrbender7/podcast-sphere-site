@@ -603,6 +603,8 @@ const translations: Record<Language, Record<string, string>> = {
     "history.completed": "完了",
     "history.clear": "履歴を消去",
     "history.inProgress": "再生中",
+    "library.showMore": "もっと見る",
+    "library.showLess": "折りたたむ",
     "podcast.subscribe": "登録",
     "podcast.subscribed": "登録済み",
     "podcast.episodes": "エピソード",
