@@ -13,6 +13,9 @@ export function MiniPlayer() {
   const [needsMarquee, setNeedsMarquee] = useState(false);
   const [marqueeDuration, setMarqueeDuration] = useState(10);
 
+  const displayTitle = currentEpisode?.feedTitle || currentEpisode?.feedAuthor || "";
+  const displayEpisode = currentEpisode?.title || "";
+
   useEffect(() => {
     const check = () => {
       if (measureRef.current && textContainerRef.current) {
@@ -26,7 +29,7 @@ export function MiniPlayer() {
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
-  }, [currentEpisode?.title]);
+  }, [displayEpisode]);
 
   if (!currentEpisode) return null;
 
