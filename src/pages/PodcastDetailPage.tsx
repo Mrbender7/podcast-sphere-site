@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
+import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp } from "lucide-react";
