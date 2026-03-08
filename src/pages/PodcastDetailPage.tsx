@@ -13,6 +13,30 @@ interface PodcastDetailPageProps {
   onBack: () => void;
 }
 
+function PodcastDescription({ description, t }: { description: string; t: (k: string) => string }) {
+  const [expanded, setExpanded] = useState(false);
+  // Strip HTML tags for display
+  const clean = description.replace(/<[^>]*>/g, "").trim();
+  if (!clean) return null;
+
+  return (
+    <div className="mt-4">
+      <p className={`text-sm text-muted-foreground leading-relaxed ${expanded ? "" : "line-clamp-3"}`}>
+        {clean}
+      </p>
+      {clean.length > 150 && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-1 mt-1 text-xs text-primary font-medium"
+        >
+          {expanded ? t("library.showLess") : t("library.showMore")}
+          <ChevronDownDesc className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const { t } = useTranslation();
   const { isSubscribed, toggleSubscription, markAsSeen } = useFavoritesContext();
