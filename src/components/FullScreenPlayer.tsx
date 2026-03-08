@@ -1,8 +1,9 @@
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useDownloads } from "@/contexts/DownloadContext";
 import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
