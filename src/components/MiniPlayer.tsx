@@ -13,8 +13,10 @@ export function MiniPlayer() {
   const [needsMarquee, setNeedsMarquee] = useState(false);
   const [marqueeDuration, setMarqueeDuration] = useState(10);
 
-  const displayTitle = currentEpisode?.feedTitle || currentEpisode?.feedAuthor || "";
-  const displayEpisode = currentEpisode?.title || "";
+  const podcastName = currentEpisode?.feedTitle || currentEpisode?.feedAuthor || "";
+  const episodeName = currentEpisode?.title || "";
+  const displayTitle = podcastName || episodeName;
+  const displayEpisode = podcastName ? episodeName : "";
 
   useEffect(() => {
     const check = () => {

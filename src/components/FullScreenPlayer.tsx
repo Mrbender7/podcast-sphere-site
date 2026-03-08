@@ -105,22 +105,26 @@ export function FullScreenPlayer() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2 flex items-center gap-2">
                 {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
-                <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor}</span>
+                <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor || currentEpisode.title}</span>
               </h2>
-              <span ref={epMeasureRef} className="text-sm whitespace-nowrap absolute invisible pointer-events-none">
-                {currentEpisode.title}
-              </span>
-              <div ref={epTitleRef} className="mt-1 overflow-hidden">
-                <p
-                  className={`text-sm text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : "truncate"}`}
-                  style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
-                >
-                  {needsMarquee
-                    ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
-                    : currentEpisode.title
-                  }
-                </p>
-              </div>
+              {(currentEpisode.feedTitle || currentEpisode.feedAuthor) && (
+                <>
+                  <span ref={epMeasureRef} className="text-sm whitespace-nowrap absolute invisible pointer-events-none">
+                    {currentEpisode.title}
+                  </span>
+                  <div ref={epTitleRef} className="mt-1 overflow-hidden">
+                    <p
+                      className={`text-sm text-muted-foreground whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : "truncate"}`}
+                      style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
+                    >
+                      {needsMarquee
+                        ? <>{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentEpisode.title}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
+                        : currentEpisode.title
+                      }
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Seekbar */}
