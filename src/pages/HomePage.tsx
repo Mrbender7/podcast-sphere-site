@@ -5,6 +5,7 @@ import { Episode } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
 import { PodcastCard } from "@/components/PodcastCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
+import { LanguageFilter } from "@/components/LanguageFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { Bookmark, TrendingUp, ArrowUp, Headphones } from "lucide-react";
