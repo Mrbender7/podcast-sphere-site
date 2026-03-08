@@ -2,7 +2,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useRef, useEffect, useState } from "react";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 
 const MARQUEE_SPEED = 40;
 
