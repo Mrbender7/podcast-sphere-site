@@ -74,11 +74,27 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
-  const smoothScrollToTop = useCallback(() => {
+  const smoothScrollToTop = useCallback((triggerEl?: HTMLElement | null) => {
+    const findScrollableAncestor = (element: HTMLElement | null): HTMLElement | null => {
+      let current = element?.parentElement ?? null;
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const isScrollableY = /(auto|scroll)/.test(style.overflowY);
+        if (isScrollableY && current.scrollHeight > current.clientHeight + 1) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
     const targetSet = new Set<HTMLElement>();
 
     const container = scrollContainerRef.current;
     if (container) targetSet.add(container);
+
+    const ancestor = findScrollableAncestor(triggerEl ?? scrollTriggerRef.current);
+    if (ancestor) targetSet.add(ancestor);
 
     const scrollingElement = document.scrollingElement as HTMLElement | null;
     if (scrollingElement) targetSet.add(scrollingElement);
