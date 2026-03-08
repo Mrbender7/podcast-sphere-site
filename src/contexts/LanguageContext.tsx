@@ -11,7 +11,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 function detectInitialLanguage(): Language {
   try {
-    const stored = localStorage.getItem("radiosphere_language");
+    const stored = localStorage.getItem("podcastsphere_language");
     if (stored === "fr" || stored === "en" || stored === "es" || stored === "de" || stored === "ja") return stored;
     const nav = navigator.language?.toLowerCase();
     if (nav?.startsWith("fr")) return "fr";
