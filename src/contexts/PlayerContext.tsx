@@ -54,17 +54,24 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     playbackRate: 1,
   });
 
-  // Time update listener
+  // Time update listener + auto-save progress
+  const saveCounterRef = useRef(0);
+
   useEffect(() => {
     const audio = audioRef.current;
     audio.volume = state.volume;
 
     const onTimeUpdate = () => {
-      setState(s => ({
-        ...s,
-        currentTime: audio.currentTime,
-        duration: audio.duration || 0,
-      }));
+      const ct = audio.currentTime;
+      const dur = audio.duration || 0;
+      setState(s => ({ ...s, currentTime: ct, duration: dur }));
+
+      // Save progress every ~5 seconds
+      saveCounterRef.current++;
+      if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
+        saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
+        addToHistory(stateRef.current.currentEpisode, ct, dur);
+      }
     };
 
     const onLoadedMetadata = () => {
@@ -73,6 +80,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
     const onEnded = () => {
       setState(s => ({ ...s, isPlaying: false }));
+      if (stateRef.current.currentEpisode) {
+        markEpisodeCompleted(stateRef.current.currentEpisode.id);
+        addToHistory(stateRef.current.currentEpisode, audio.duration || 0, audio.duration || 0);
+      }
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     };
 
