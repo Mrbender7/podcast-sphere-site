@@ -8,7 +8,8 @@ import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
+import { preCacheImages } from "@/services/ImageCacheService";
 
 interface PodcastDetailPageProps {
   podcast: Podcast;

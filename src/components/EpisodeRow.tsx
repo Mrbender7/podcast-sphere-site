@@ -5,7 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, Loader2, CheckCircle2, Download, CheckCircle } from "lucide-react";
 import { getEpisodeProgress } from "@/services/PlaybackHistoryService";
 import { toast } from "sonner";
-import stationPlaceholder from "@/assets/station-placeholder.png";
+import { CachedImage } from "@/components/CachedImage";
 
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "";
@@ -70,12 +70,10 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
   return (
     <div className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${isCurrent ? "bg-primary/10" : "hover:bg-accent/50"}`}>
       <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
-        <img
-          src={episode.image || episode.feedImage || stationPlaceholder}
+        <CachedImage
+          src={episode.image || episode.feedImage}
           alt={episode.title}
           className={`w-full h-full object-cover ${isCompleted && !isCurrent ? "opacity-50" : ""}`}
-          loading="lazy"
-          onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
         />
         {isCompleted && !isCurrent && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/40">
@@ -107,7 +105,6 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
             </>
           )}
         </div>
-        {/* Download progress bar */}
         {isDownloading && (
           <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
             <div
@@ -116,7 +113,6 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
             />
           </div>
         )}
-        {/* Playback progress bar */}
         {!isDownloading && progressRatio > 0 && !isCompleted && !isCurrent && (
           <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
             <div
@@ -126,7 +122,6 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
           </div>
         )}
       </div>
-      {/* Download button */}
       <button
         onClick={handleDownload}
         disabled={downloaded || isDownloading}
@@ -147,7 +142,6 @@ export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowP
           <Download className="w-4 h-4" />
         )}
       </button>
-      {/* Play button */}
       <button
         onClick={handlePlay}
         className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
