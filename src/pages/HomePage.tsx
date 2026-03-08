@@ -81,6 +81,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               {t("home.trending")}
             </h2>
             <LanguageFilter selected={trendingLang} onChange={setTrendingLang} />
+            <ScrollableRow>
               {trending.map(p => (
                 <PodcastCard key={p.id} podcast={p} onClick={onPodcastClick} />
               ))}
