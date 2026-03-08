@@ -44,6 +44,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [trendingLang, setTrendingLang] = useState("");
 
   const { data: trending } = useQuery({
     queryKey: ["trending"],
