@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from "react";
+import { CategoryAnimation } from "@/components/CategoryAnimations";
 import { useQuery } from "@tanstack/react-query";
 import { Podcast } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
