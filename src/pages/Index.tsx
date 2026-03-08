@@ -102,6 +102,7 @@ function AppContentInner() {
   return (
     <PremiumProvider>
       <SleepTimerProvider>
+        <DownloadProvider>
         <SleepTimerIndicator />
         <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
           <div className={`flex-1 flex flex-col overflow-hidden ${currentEpisode ? 'pb-28' : 'pb-14'}`}>
