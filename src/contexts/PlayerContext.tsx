@@ -3,6 +3,7 @@ import { Episode } from "@/types/podcast";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
+import { getPodcastById } from "@/services/PodcastService";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -158,6 +159,24 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     };
   }, []);
 
+  const hydrateEpisodeMetadata = useCallback(async (episode: Episode): Promise<Episode> => {
+    if (episode.feedTitle || episode.feedAuthor || !episode.feedId) return episode;
+
+    try {
+      const feed = await getPodcastById(episode.feedId);
+      if (!feed) return episode;
+
+      return {
+        ...episode,
+        feedTitle: feed.title || episode.feedTitle,
+        feedAuthor: feed.author || episode.feedAuthor,
+        feedImage: episode.feedImage || feed.image || episode.image,
+      };
+    } catch {
+      return episode;
+    }
+  }, []);
+
   const play = useCallback(async (episode: Episode) => {
     if (!episode.enclosureUrl) {
       toast({ title: t("player.error"), description: t("player.streamUnavailable"), variant: "destructive" });
@@ -176,6 +195,16 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     setState(s => ({ ...s, currentEpisode: episode, isBuffering: true, isPlaying: false, currentTime: resumeTime, duration: 0 }));
     updateMediaSession(episode, true);
 
+    void hydrateEpisodeMetadata(episode).then((hydratedEpisode) => {
+      if (hydratedEpisode === episode) return;
+      setState(s => {
+        if (s.currentEpisode?.id !== episode.id) return s;
+        return { ...s, currentEpisode: hydratedEpisode };
+      });
+      updateMediaSession(hydratedEpisode, stateRef.current.isPlaying);
+      addToHistory(hydratedEpisode, audio.currentTime || resumeTime, audio.duration || saved?.duration || 0);
+    });
+
     try {
       await audio.play();
       if (resumeTime > 0) audio.currentTime = resumeTime;
@@ -186,7 +215,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
-  }, [updateMediaSession, onEpisodePlay, t]);
+  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, t]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;

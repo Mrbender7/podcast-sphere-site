@@ -20,9 +20,11 @@ function formatDate(timestamp: number): string {
 
 interface EpisodeRowProps {
   episode: Episode;
+  podcastTitle?: string;
+  podcastAuthor?: string;
 }
 
-export function EpisodeRow({ episode }: EpisodeRowProps) {
+export function EpisodeRow({ episode, podcastTitle, podcastAuthor }: EpisodeRowProps) {
   const { currentEpisode, isPlaying, isBuffering, play, togglePlay } = usePlayer();
   const isCurrent = currentEpisode?.id === episode.id;
 
@@ -32,10 +34,16 @@ export function EpisodeRow({ episode }: EpisodeRowProps) {
 
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const episodeForPlayback: Episode = {
+      ...episode,
+      feedTitle: episode.feedTitle || podcastTitle || "",
+      feedAuthor: episode.feedAuthor || podcastAuthor || "",
+    };
+
     if (isCurrent) {
       togglePlay();
     } else {
-      play(episode);
+      play(episodeForPlayback);
     }
   };
 
