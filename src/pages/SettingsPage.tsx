@@ -82,7 +82,6 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
     setDlDest(dest);
     setDownloadDest(dest);
   };
-  const [customMinutes, setCustomMinutes] = useState("");
 
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
