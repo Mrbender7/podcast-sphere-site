@@ -29,7 +29,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     if (isNative) return false;
     // On web, check localStorage (debug mode)
     try {
-      const stored = localStorage.getItem("radiosphere_premium");
+      const stored = localStorage.getItem("podcastsphere_premium");
       return stored === PREMIUM_HASH;
     } catch { return false; }
   });
