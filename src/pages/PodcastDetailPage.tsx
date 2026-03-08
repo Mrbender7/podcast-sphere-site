@@ -17,12 +17,20 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const { t } = useTranslation();
   const { isSubscribed, toggleSubscription, markAsSeen } = useFavoritesContext();
   const subscribed = isSubscribed(podcast.id);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
   const { data: episodes, isLoading } = useQuery({
     queryKey: ["episodes", podcast.id],
     queryFn: () => getEpisodesByFeedId(podcast.id),
     staleTime: 5 * 60 * 1000,
   });
+
+  const sortedEpisodes = useMemo(() => {
+    if (!episodes) return undefined;
+    return [...episodes].sort((a, b) =>
+      sortNewestFirst ? b.datePublished - a.datePublished : a.datePublished - b.datePublished
+    );
+  }, [episodes, sortNewestFirst]);
 
   // Mark as seen when viewing episodes
   useEffect(() => {
