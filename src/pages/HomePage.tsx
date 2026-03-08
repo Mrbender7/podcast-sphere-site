@@ -49,6 +49,17 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
 
+  const langOptions: FilterOption[] = useMemo(() => [
+    { value: "fr", label: "🇫🇷 Français" },
+    { value: "en", label: "🇬🇧 English" },
+    { value: "es", label: "🇪🇸 Español" },
+    { value: "de", label: "🇩🇪 Deutsch" },
+    { value: "ja", label: "🇯🇵 日本語" },
+    { value: "pt", label: "🇧🇷 Português" },
+    { value: "it", label: "🇮🇹 Italiano" },
+    { value: "ar", label: "🇸🇦 العربية" },
+  ], []);
+
   const { data: trending } = useQuery({
     queryKey: ["trending", trendingLang],
     queryFn: () => getTrendingPodcasts(20, trendingLang || undefined),
