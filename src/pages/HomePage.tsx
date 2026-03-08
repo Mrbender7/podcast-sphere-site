@@ -141,9 +141,16 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               const willOpen = !categoriesOpen;
               setCategoriesOpen(willOpen);
               if (willOpen) {
-                requestAnimationFrame(() => {
-                  categorySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                });
+                setTimeout(() => {
+                  const container = scrollContainerRef.current;
+                  const section = categorySectionRef.current;
+                  if (container && section) {
+                    container.scrollTo({
+                      top: section.offsetTop - container.offsetTop,
+                      behavior: "smooth",
+                    });
+                  }
+                }, 80);
               }
             }}
             className="w-full flex items-center justify-between mb-3 group"
