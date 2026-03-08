@@ -189,6 +189,7 @@ const translations: Record<Language, Record<string, string>> = {
     "search.resultsCount": "podcasts found",
     "search.languages": "Languages",
     "search.categories": "Categories",
+    "search.recentSearches": "Recent searches",
     "favorites.title": "Library",
     "favorites.empty": "No subscriptions",
     "favorites.emptyDesc": "Subscribe to a podcast to see it here",
