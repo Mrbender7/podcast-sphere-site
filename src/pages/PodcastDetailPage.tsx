@@ -137,7 +137,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">{podcast.author}</p>
             <button
-              onClick={() => toggleSubscription(podcast)}
+              onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
               className={`mt-3 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
                 subscribed
                   ? "bg-primary text-primary-foreground"
