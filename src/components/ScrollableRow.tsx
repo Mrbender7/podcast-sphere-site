@@ -38,13 +38,13 @@ export function ScrollableRow({ children }: { children: ReactNode }) {
         <button
           onClick={() => scroll(-1)}
           className={cn(
-            "absolute left-0 top-1/2 -translate-y-1/2 z-10",
-            "w-7 h-7 rounded-full bg-background/80 border border-border backdrop-blur-sm",
-            "flex items-center justify-center text-muted-foreground hover:text-foreground",
-            "opacity-70 hover:opacity-100 transition-opacity shadow-sm"
+            "absolute left-1 top-[40%] -translate-y-1/2 z-10",
+            "w-8 h-14 rounded-lg bg-background/60 backdrop-blur-md border border-white/10",
+            "flex items-center justify-center text-foreground shadow-lg",
+            "transition-opacity duration-200"
           )}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
       )}
 
@@ -52,13 +52,13 @@ export function ScrollableRow({ children }: { children: ReactNode }) {
         <button
           onClick={() => scroll(1)}
           className={cn(
-            "absolute right-0 top-1/2 -translate-y-1/2 z-10",
-            "w-7 h-7 rounded-full bg-background/80 border border-border backdrop-blur-sm",
-            "flex items-center justify-center text-muted-foreground hover:text-foreground",
-            "opacity-70 hover:opacity-100 transition-opacity shadow-sm"
+            "absolute right-1 top-[40%] -translate-y-1/2 z-10",
+            "w-8 h-14 rounded-lg bg-background/60 backdrop-blur-md border border-white/10",
+            "flex items-center justify-center text-foreground shadow-lg",
+            "transition-opacity duration-200"
           )}
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5" />
         </button>
       )}
     </div>

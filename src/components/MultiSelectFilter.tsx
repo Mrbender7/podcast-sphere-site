@@ -16,19 +16,25 @@ interface MultiSelectFilterProps {
   options: FilterOption[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  singleSelect?: boolean;
 }
 
-export function MultiSelectFilter({ icon, label, options, selected, onChange }: MultiSelectFilterProps) {
+export function MultiSelectFilter({ icon, label, options, selected, onChange, singleSelect }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
   const toggle = (value: string) => {
-    onChange(
-      selected.includes(value)
-        ? selected.filter(v => v !== value)
-        : [...selected, value]
-    );
+    if (singleSelect) {
+      onChange([value]);
+      setOpen(false);
+    } else {
+      onChange(
+        selected.includes(value)
+          ? selected.filter(v => v !== value)
+          : [...selected, value]
+      );
+    }
   };
 
   const count = selected.length;

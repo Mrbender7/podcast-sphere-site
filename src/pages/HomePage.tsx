@@ -1,14 +1,13 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Podcast } from "@/types/podcast";
-import { Episode } from "@/types/podcast";
 import { getTrendingPodcasts } from "@/services/PodcastService";
 import { PodcastCard } from "@/components/PodcastCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
-import { LanguageFilter } from "@/components/LanguageFilter";
+import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
 const CATEGORIES = [
@@ -50,6 +49,17 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
 
+  const langOptions: FilterOption[] = useMemo(() => [
+    { value: "fr", label: "🇫🇷 Français" },
+    { value: "en", label: "🇬🇧 English" },
+    { value: "es", label: "🇪🇸 Español" },
+    { value: "de", label: "🇩🇪 Deutsch" },
+    { value: "ja", label: "🇯🇵 日本語" },
+    { value: "pt", label: "🇧🇷 Português" },
+    { value: "it", label: "🇮🇹 Italiano" },
+    { value: "ar", label: "🇸🇦 العربية" },
+  ], []);
+
   const { data: trending } = useQuery({
     queryKey: ["trending", trendingLang],
     queryFn: () => getTrendingPodcasts(20, trendingLang || undefined),
@@ -84,7 +94,16 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               <TrendingUp className="w-4 h-4 text-[hsl(220,90%,60%)]" />
               {t("home.trending")}
             </h2>
-            <LanguageFilter selected={trendingLang} onChange={setTrendingLang} />
+            <div className="mb-2">
+              <MultiSelectFilter
+                icon={<Globe className="w-3.5 h-3.5" />}
+                label={t("search.languages")}
+                options={langOptions}
+                selected={[trendingLang]}
+                onChange={(vals) => setTrendingLang(vals[vals.length - 1] || language)}
+                singleSelect
+              />
+            </div>
             <ScrollableRow>
               {trending.map(p => (
                 <PodcastCard key={p.id} podcast={p} onClick={onPodcastClick} />
