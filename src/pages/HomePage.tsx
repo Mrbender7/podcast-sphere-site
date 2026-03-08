@@ -214,7 +214,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                     <img
                       src={catImage}
                       alt={cat}
-                      className="absolute -top-2 -right-2 w-24 h-24 object-contain opacity-85 pointer-events-none drop-shadow-lg"
+                      className={`absolute -top-2 -right-2 w-24 h-24 object-contain opacity-85 pointer-events-none drop-shadow-lg ${cat === "Travel" ? "animate-slow-spin" : ""}`}
                       loading="lazy"
                     />
                   )}
