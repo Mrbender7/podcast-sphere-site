@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { Episode } from "@/types/podcast";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -53,17 +54,27 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     playbackRate: 1,
   });
 
-  // Time update listener
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // Time update listener + auto-save progress
+  const saveCounterRef = useRef(0);
+
   useEffect(() => {
     const audio = audioRef.current;
     audio.volume = state.volume;
 
     const onTimeUpdate = () => {
-      setState(s => ({
-        ...s,
-        currentTime: audio.currentTime,
-        duration: audio.duration || 0,
-      }));
+      const ct = audio.currentTime;
+      const dur = audio.duration || 0;
+      setState(s => ({ ...s, currentTime: ct, duration: dur }));
+
+      // Save progress every ~5 seconds
+      saveCounterRef.current++;
+      if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
+        saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
+        addToHistory(stateRef.current.currentEpisode, ct, dur);
+      }
     };
 
     const onLoadedMetadata = () => {
@@ -72,6 +83,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
     const onEnded = () => {
       setState(s => ({ ...s, isPlaying: false }));
+      if (stateRef.current.currentEpisode) {
+        markEpisodeCompleted(stateRef.current.currentEpisode.id);
+        addToHistory(stateRef.current.currentEpisode, audio.duration || 0, audio.duration || 0);
+      }
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     };
 
@@ -151,36 +166,45 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     const audio = audioRef.current;
     audio.pause();
     audio.src = episode.enclosureUrl;
-    audio.playbackRate = state.playbackRate;
+    audio.playbackRate = stateRef.current.playbackRate;
     audio.load();
 
-    setState(s => ({ ...s, currentEpisode: episode, isBuffering: true, isPlaying: false, currentTime: 0, duration: 0 }));
+    // Resume from saved position if not completed
+    const saved = getEpisodeProgress(episode.id);
+    const resumeTime = saved && !saved.completed && saved.currentTime > 5 ? saved.currentTime - 2 : 0;
+
+    setState(s => ({ ...s, currentEpisode: episode, isBuffering: true, isPlaying: false, currentTime: resumeTime, duration: 0 }));
     updateMediaSession(episode, true);
 
     try {
       await audio.play();
+      if (resumeTime > 0) audio.currentTime = resumeTime;
       setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
       onEpisodePlay?.(episode);
+      addToHistory(episode, resumeTime, saved?.duration || 0);
     } catch {
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
-  }, [state.playbackRate, updateMediaSession, onEpisodePlay, t]);
+  }, [updateMediaSession, onEpisodePlay, t]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
-    if (!state.currentEpisode) return;
-    if (state.isPlaying) {
+    if (!stateRef.current.currentEpisode) return;
+    if (stateRef.current.isPlaying) {
       audio.pause();
+      // Save progress on pause
+      saveEpisodeProgress(stateRef.current.currentEpisode.id, audio.currentTime, audio.duration || 0);
+      addToHistory(stateRef.current.currentEpisode, audio.currentTime, audio.duration || 0);
       setState(s => ({ ...s, isPlaying: false }));
-      updateMediaSession(state.currentEpisode, false);
+      updateMediaSession(stateRef.current.currentEpisode, false);
     } else {
       audio.play().then(() => {
         setState(s => ({ ...s, isPlaying: true }));
-        updateMediaSession(state.currentEpisode!, true);
+        updateMediaSession(stateRef.current.currentEpisode!, true);
       }).catch(() => {});
     }
-  }, [state.isPlaying, state.currentEpisode, updateMediaSession]);
+  }, [updateMediaSession]);
 
   const setVolume = useCallback((v: number) => {
     audioRef.current.volume = v;

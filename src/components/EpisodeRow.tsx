@@ -1,6 +1,7 @@
 import { Episode } from "@/types/podcast";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { Play, Pause, Loader2 } from "lucide-react";
+import { Play, Pause, Loader2, CheckCircle2 } from "lucide-react";
+import { getEpisodeProgress } from "@/services/PlaybackHistoryService";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 function formatDuration(seconds: number): string {
@@ -25,6 +26,10 @@ export function EpisodeRow({ episode }: EpisodeRowProps) {
   const { currentEpisode, isPlaying, isBuffering, play, togglePlay } = usePlayer();
   const isCurrent = currentEpisode?.id === episode.id;
 
+  const saved = getEpisodeProgress(episode.id);
+  const progressRatio = saved && saved.duration > 0 ? saved.currentTime / saved.duration : 0;
+  const isCompleted = saved?.completed || false;
+
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCurrent) {
@@ -36,17 +41,24 @@ export function EpisodeRow({ episode }: EpisodeRowProps) {
 
   return (
     <div className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${isCurrent ? "bg-primary/10" : "hover:bg-accent/50"}`}>
-      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
         <img
           src={episode.image || episode.feedImage || stationPlaceholder}
           alt={episode.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${isCompleted && !isCurrent ? "opacity-50" : ""}`}
           loading="lazy"
           onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }}
         />
+        {isCompleted && !isCurrent && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/40">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
+          </div>
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>{episode.title}</p>
+        <p className={`text-sm font-semibold truncate ${isCompleted && !isCurrent ? "text-muted-foreground" : isCurrent ? "text-primary" : "text-foreground"}`}>
+          {episode.title}
+        </p>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-muted-foreground">{formatDate(episode.datePublished)}</span>
           {episode.duration > 0 && (
@@ -56,6 +68,15 @@ export function EpisodeRow({ episode }: EpisodeRowProps) {
             </>
           )}
         </div>
+        {/* Progress bar */}
+        {progressRatio > 0 && !isCompleted && !isCurrent && (
+          <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)]"
+              style={{ width: `${Math.min(progressRatio * 100, 100)}%` }}
+            />
+          </div>
+        )}
       </div>
       <button
         onClick={handlePlay}
