@@ -107,3 +107,9 @@ export function addToHistory(episode: Episode, currentTime: number, duration: nu
 export function clearHistory() {
   saveJSON(HISTORY_KEY, []);
 }
+
+export function removeFromHistory(episodeId: number) {
+  let history = loadJSON<HistoryEntry[]>(HISTORY_KEY, []);
+  history = history.filter(h => h.episode.id !== episodeId);
+  saveJSON(HISTORY_KEY, history);
+}
