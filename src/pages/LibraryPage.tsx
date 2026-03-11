@@ -286,6 +286,68 @@ export function LibraryPage() {
         </section>
       )}
 
+      {/* ── Nouveaux épisodes ── */}
+      {newEpisodes.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[hsl(280,80%,60%)]" />
+            {t("home.latestReleases")}
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">
+              {newEpisodes.length}
+            </span>
+          </h2>
+          <div className="space-y-1">
+            {visibleNewEpisodes.map((ep) => (
+              <div
+                key={ep.id}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group"
+                onClick={() => {
+                  play(ep);
+                  NewEpisodesService.markAsSeen(ep.id);
+                  setNewEpisodes(prev => prev.filter(e => e.id !== ep.id));
+                }}
+              >
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                  <CachedImage
+                    src={ep.image || ep.feedImage}
+                    alt={ep.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate text-foreground">{ep.title}</p>
+                  <span className="text-xs text-muted-foreground truncate block">{ep.feedTitle}</span>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      NewEpisodesService.markAsSeen(ep.id);
+                      setNewEpisodes(prev => prev.filter(item => item.id !== ep.id));
+                    }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {newEpisodes.length > INITIAL_VISIBLE && (
+            <button
+              onClick={() => setShowAllNewEpisodes((v) => !v)}
+              className="mt-2 w-full flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium text-primary hover:bg-accent/50 transition-colors"
+            >
+              {showAllNewEpisodes ? t("library.showLess") : t("library.showMore")}
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showAllNewEpisodes && "rotate-180")} />
+            </button>
+          )}
+        </section>
+      )}
+
       {/* ── Historique d'écoute ── */}
       <section className="mb-6">
         <h2 className="text-lg font-heading font-semibold mb-1 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
