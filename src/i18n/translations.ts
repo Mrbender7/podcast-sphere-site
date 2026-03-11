@@ -505,6 +505,8 @@ const translations: Record<Language, Record<string, string>> = {
     "home.noSubscriptions": "Abonniere Podcasts, um sie hier zu sehen",
     "home.exploreByCategory": "Nach Kategorie entdecken",
     "home.resumeListening": "Weiterhören",
+    "home.latestReleases": "Neueste Folgen",
+    "home.pullToRefresh": "Zum Aktualisieren ziehen",
     "settings.podcastIndexTitle": "Unterstützt von Podcast Index",
     "settings.podcastIndexDesc": "Podcast-Daten werden von Podcast Index bereitgestellt, einem freien und offenen Podcast-Verzeichnis. Vielen Dank für ihre großartige Arbeit!",
     "search.title": "Suche",
