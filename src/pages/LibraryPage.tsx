@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Podcast } from "@/types/podcast";
+import { Podcast, Episode } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download } from "lucide-react";
+import { NewEpisodesService } from "@/services/NewEpisodesService";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download, Sparkles } from "lucide-react";
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
