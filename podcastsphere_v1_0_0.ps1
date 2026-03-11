@@ -318,8 +318,14 @@ Write-Host ">>> Synchronisation Capacitor..." -ForegroundColor Yellow
 npx cap sync android
 if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: npx cap sync a echoue" -ForegroundColor Red; exit 1 }
 
+# ===================================================================
+# 8. Ouverture Android Studio
+# ===================================================================
+Write-Host ">>> Ouverture Android Studio..." -ForegroundColor Yellow
+npx cap open android
+
 Write-Host ""
 Write-Host "=================================================" -ForegroundColor Green
-Write-Host " Succes ! Ton projet est pret pour Android Studio." -ForegroundColor Green
+Write-Host " Succes ! Android Studio demarre automatiquement." -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green
 Write-Host ""
