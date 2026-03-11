@@ -105,12 +105,25 @@ export function LibraryPage() {
 
   const [showAllSubs, setShowAllSubs] = useState(false);
   const [showAllInProgress, setShowAllInProgress] = useState(false);
+  const [showAllNewEpisodes, setShowAllNewEpisodes] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [showAllDownloads, setShowAllDownloads] = useState(false);
+
+  const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
 
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
+
+  // Sync new episodes
+  useEffect(() => {
+    if (subscriptions.length === 0) return;
+    let cancelled = false;
+    NewEpisodesService.syncNewEpisodes(subscriptions).then((eps) => {
+      if (!cancelled) setNewEpisodes(eps);
+    });
+    return () => { cancelled = true; };
+  }, [subscriptions]);
 
   // Pre-cache artworks for subscriptions
   useEffect(() => {
