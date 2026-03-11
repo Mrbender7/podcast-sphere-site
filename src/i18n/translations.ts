@@ -667,6 +667,8 @@ const translations: Record<Language, Record<string, string>> = {
     "home.noSubscriptions": "ポッドキャストを登録するとここに表示されます",
     "home.exploreByCategory": "カテゴリで探す",
     "home.resumeListening": "再生を再開",
+    "home.latestReleases": "最新リリース",
+    "home.pullToRefresh": "引っ張って更新",
     "settings.podcastIndexTitle": "Podcast Index 提供",
     "settings.podcastIndexDesc": "ポッドキャストデータはPodcast Indexによって提供されています。無料でオープンなポッドキャストインデックスです。素晴らしい活動に感謝します！",
     "search.title": "検索",
