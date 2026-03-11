@@ -181,6 +181,8 @@ const translations: Record<Language, Record<string, string>> = {
     "home.noSubscriptions": "Subscribe to podcasts to see them here",
     "home.exploreByCategory": "Explore by category",
     "home.resumeListening": "Resume listening",
+    "home.latestReleases": "Latest Releases",
+    "home.pullToRefresh": "Pull to refresh",
     "settings.podcastIndexTitle": "Powered by Podcast Index",
     "settings.podcastIndexDesc": "Podcast data is provided by Podcast Index, a free and open podcast index. Thanks to them for their incredible work!",
     "search.title": "Search",
