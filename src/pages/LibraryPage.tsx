@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Podcast } from "@/types/podcast";
+import { Podcast, Episode } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download } from "lucide-react";
+import { NewEpisodesService } from "@/services/NewEpisodesService";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download, Sparkles } from "lucide-react";
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -104,12 +105,25 @@ export function LibraryPage() {
 
   const [showAllSubs, setShowAllSubs] = useState(false);
   const [showAllInProgress, setShowAllInProgress] = useState(false);
+  const [showAllNewEpisodes, setShowAllNewEpisodes] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [showAllDownloads, setShowAllDownloads] = useState(false);
+
+  const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
 
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
+
+  // Sync new episodes
+  useEffect(() => {
+    if (subscriptions.length === 0) return;
+    let cancelled = false;
+    NewEpisodesService.syncNewEpisodes(subscriptions).then((eps) => {
+      if (!cancelled) setNewEpisodes(eps);
+    });
+    return () => { cancelled = true; };
+  }, [subscriptions]);
 
   // Pre-cache artworks for subscriptions
   useEffect(() => {
@@ -143,6 +157,7 @@ export function LibraryPage() {
 
   const visibleSubs = showAllSubs ? subscriptions : subscriptions.slice(0, INITIAL_VISIBLE);
   const visibleInProgress = showAllInProgress ? inProgress : inProgress.slice(0, INITIAL_VISIBLE);
+  const visibleNewEpisodes = showAllNewEpisodes ? newEpisodes : newEpisodes.slice(0, INITIAL_VISIBLE);
   const visibleHistory = showAllHistory ? completed : completed.slice(0, INITIAL_VISIBLE);
   const visibleDownloads = showAllDownloads ? downloaded : downloaded.slice(0, INITIAL_VISIBLE);
 
@@ -266,6 +281,68 @@ export function LibraryPage() {
             >
               {showAllInProgress ? t("library.showLess") : t("library.showMore")}
               <ChevronDown className={cn("w-4 h-4 transition-transform", showAllInProgress && "rotate-180")} />
+            </button>
+          )}
+        </section>
+      )}
+
+      {/* ── Nouveaux épisodes ── */}
+      {newEpisodes.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[hsl(280,80%,60%)]" />
+            {t("home.latestReleases")}
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">
+              {newEpisodes.length}
+            </span>
+          </h2>
+          <div className="space-y-1">
+            {visibleNewEpisodes.map((ep) => (
+              <div
+                key={ep.id}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group"
+                onClick={() => {
+                  play(ep);
+                  NewEpisodesService.markAsSeen(ep.id);
+                  setNewEpisodes(prev => prev.filter(e => e.id !== ep.id));
+                }}
+              >
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                  <CachedImage
+                    src={ep.image || ep.feedImage}
+                    alt={ep.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate text-foreground">{ep.title}</p>
+                  <span className="text-xs text-muted-foreground truncate block">{ep.feedTitle}</span>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      NewEpisodesService.markAsSeen(ep.id);
+                      setNewEpisodes(prev => prev.filter(item => item.id !== ep.id));
+                    }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {newEpisodes.length > INITIAL_VISIBLE && (
+            <button
+              onClick={() => setShowAllNewEpisodes((v) => !v)}
+              className="mt-2 w-full flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium text-primary hover:bg-accent/50 transition-colors"
+            >
+              {showAllNewEpisodes ? t("library.showLess") : t("library.showMore")}
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showAllNewEpisodes && "rotate-180")} />
             </button>
           )}
         </section>
