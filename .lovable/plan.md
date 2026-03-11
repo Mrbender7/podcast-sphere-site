@@ -1,16 +1,33 @@
 
 
-## Plan : Podcast Sphere v1.0 — Architecture
+## Audit du contenu dynamique
 
-### Architecture
+### 1. Images qui ne chargent pas (preview web uniquement)
 
-**App podcast pure** — pas de code radio natif, pas d'ExoPlayer, pas de Cast.
-- Lecture audio via HTML5 Audio dans le WebView Capacitor
-- API Podcast Index pour la découverte de contenu
-- Notification foreground service via @capawesome-team/capacitor-android-foreground-service
+Toutes les requêtes d'images échouent avec "Failed to fetch" à cause de CORS. C'est **normal dans la preview web** — ces domaines externes (pippa.io, audiomeans.fr, etc.) bloquent les requêtes cross-origin. Dans l'APK Capacitor, `CapacitorHttp` intercepte les `fetch()` et contourne CORS nativement. **Aucune correction nécessaire côté code.**
 
-### Build
+Le `CachedImage` fonctionne correctement : cache miss → affiche l'URL directe → si `<img>` échoue aussi → placeholder. Le flux est bon.
 
-- Script de déploiement : `podcastsphere_v1_0_0.ps1`
-- Dossier cible : `E:\Projets\Podcastsphere`
-- Package : `com.fhm.podcastsphere`
+### 2. Écran de verrouillage — MediaSession
+
+**Problème** : Le code enregistre 4 action handlers en plus de play/pause :
+- `seekbackward` (−15s)
+- `seekforward` (+30s)  
+- `seekto`
+
+Ces handlers font apparaître des boutons supplémentaires sur l'écran de verrouillage Android/iOS. L'utilisateur veut uniquement **play/pause**, comme RadioSphere.
+
+**Correction dans `src/contexts/PlayerContext.tsx`** :
+
+Supprimer les `setActionHandler` pour `seekbackward`, `seekforward` et `seekto` dans le `useEffect` des MediaSession action handlers (lignes ~143-158). Ne conserver que `play` et `pause`. Le cleanup doit aussi être simplifié en conséquence.
+
+Le `updateMediaSession` (metadata : titre, artiste, artwork) reste inchangé — c'est ce qui alimente le contenu dynamique affiché sur l'écran de verrouillage.
+
+### Résumé des changements
+
+| Fichier | Action |
+|---|---|
+| `src/contexts/PlayerContext.tsx` | Retirer les handlers `seekbackward`, `seekforward`, `seekto` du MediaSession |
+
+Aucun autre fichier n'est impacté.
+
