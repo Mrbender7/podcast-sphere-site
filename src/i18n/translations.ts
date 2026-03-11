@@ -343,6 +343,8 @@ const translations: Record<Language, Record<string, string>> = {
     "home.noSubscriptions": "Suscríbete a podcasts para verlos aquí",
     "home.exploreByCategory": "Explorar por categoría",
     "home.resumeListening": "Retomar la escucha",
+    "home.latestReleases": "Últimos lanzamientos",
+    "home.pullToRefresh": "Desliza para actualizar",
     "settings.podcastIndexTitle": "Desarrollado por Podcast Index",
     "settings.podcastIndexDesc": "Los datos de podcasts son proporcionados por Podcast Index, un índice de podcasts abierto y gratuito. ¡Gracias por su increíble trabajo!",
     "search.title": "Buscar",
