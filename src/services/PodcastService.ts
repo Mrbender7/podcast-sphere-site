@@ -5,7 +5,12 @@ import { Podcast, Episode } from "@/types/podcast";
 // Obfuscated with simple encoding to prevent casual extraction.
 // ============================================================
 
-const BASE_URL = "https://api.podcastindex.org/api/1.0";
+// On native (Capacitor), requests go directly without CORS issues.
+// In browser dev/preview, we route through Vite's proxy to avoid CORS.
+const isNative = typeof (window as any)?.Capacitor !== "undefined";
+const BASE_URL = isNative
+  ? "https://api.podcastindex.org/api/1.0"
+  : "/api/podcast";
 
 // Simple decode function
 function _d(s: string): string {
