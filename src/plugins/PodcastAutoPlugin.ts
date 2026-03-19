@@ -72,6 +72,30 @@ export async function notifyNativePlaybackState(episode: Episode | null, isPlayi
   }
 }
 
+export async function updateNativeNowPlaying(episode: Episode): Promise<void> {
+  if (!isCapacitorAndroid()) return;
+  try {
+    const durationMs = (episode.duration || 0) * 1000;
+    await getPlugin().updateNowPlaying({
+      title: episode.title || '',
+      author: episode.feedAuthor || episode.feedTitle || '',
+      artworkUrl: episode.image || episode.feedImage || '',
+      duration: durationMs,
+    });
+  } catch (e) {
+    console.log('[PodcastAuto] updateNowPlaying failed (expected in browser):', e);
+  }
+}
+
+export async function updateNativePlaybackState(isPlaying: boolean, positionMs: number): Promise<void> {
+  if (!isCapacitorAndroid()) return;
+  try {
+    await getPlugin().updatePlaybackState2({ isPlaying, position: positionMs });
+  } catch (e) {
+    console.log('[PodcastAuto] updatePlaybackState2 failed (expected in browser):', e);
+  }
+}
+
 export async function clearNativeAppData(): Promise<void> {
   if (!isCapacitorAndroid()) return;
   try { await getPlugin().clearAppData(); } catch {}
