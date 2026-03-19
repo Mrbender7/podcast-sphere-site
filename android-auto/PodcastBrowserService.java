@@ -66,7 +66,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     // État courant (mis à jour par le WebView via Intents)
     // ---------------------------------------------------------------
     private MediaSessionCompat mediaSession;
-    private ExoPlayer          exoPlayer;
+    
 
     private String  currentTitle    = "";
     private String  currentAuthor   = "";
