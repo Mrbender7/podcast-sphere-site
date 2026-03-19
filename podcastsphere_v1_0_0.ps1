@@ -264,6 +264,21 @@ if (Test-Path $ManifestPath) {
         $AppInjections += "`n"
     }
 
+    # MediaButtonReceiver (hardware media buttons: headsets, car steering wheel)
+    if ($ManifestContent -notmatch 'MediaButtonReceiver') {
+        $AppInjections += @(
+            '',
+            '        <receiver',
+            '            android:name="androidx.media.session.MediaButtonReceiver"',
+            '            android:exported="true">',
+            '            <intent-filter>',
+            '                <action android:name="android.intent.action.MEDIA_BUTTON" />',
+            '            </intent-filter>',
+            '        </receiver>'
+        ) -join "`n"
+        $AppInjections += "`n"
+    }
+
     # CastOptionsProvider meta-data
     if ($ManifestContent -notmatch 'CastOptionsProvider') {
         $AppInjections += @(

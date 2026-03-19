@@ -93,10 +93,33 @@ L'application est le pendant podcast de **Radio Sphere** (application de radio e
 
 ### Background Keep-Alive (lecture en arrière-plan)
 
-- Silent audio loop (WAV base64, volume 0.01) via `src/utils/backgroundAudio.ts`
-- WakeLock API (`navigator.wakeLock.request('screen')`)
-- Visibility change recovery (500ms delay resume)
-- Foreground Service Android (@capawesome-team)
+> **Référence** : [developer.android.com — Background playback](https://developer.android.com/media/media3/session/background-playback)
+
+**Stack utilisée** : Legacy `MediaBrowserServiceCompat` + `MediaSessionCompat` (via `androidx.media:media:1.7.0`). La doc Android recommande Media3 (`MediaSessionService`), mais la stack legacy reste pleinement supportée et fonctionnelle.
+
+**Mécanismes côté WebView** (fichier `src/utils/backgroundAudio.ts`) :
+- Silent audio loop (WAV base64, volume 0.01) — maintient le WebView actif
+- WakeLock API (`navigator.wakeLock.request('screen')`) — empêche la mise en veille
+- Visibility change recovery (500ms delay resume) — restaure la lecture au retour au premier plan
+
+**Mécanismes côté Android natif** :
+- Foreground Service (@capawesome-team) avec `foregroundServiceType="mediaPlayback"`
+- `PodcastBrowserService.java` déclaré comme `foregroundServiceType="mediaPlayback"` + `exported="true"`
+- `android:appCategory="audio"` sur la balise `<application>`
+- Canaux de notification (`podcast_playback`, `podcast_downloads`) créés dans `MainActivity`
+- `MediaButtonReceiver` (`androidx.media.session.MediaButtonReceiver`) — reçoit les événements boutons média matériels (casques Bluetooth, volant auto) et réveille le service pour reprendre la lecture
+
+**Éléments manifest requis (tous présents via PS1)** :
+| Élément | Statut |
+|---------|--------|
+| `FOREGROUND_SERVICE` permission | ✅ |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission | ✅ |
+| `PodcastBrowserService` avec `foregroundServiceType="mediaPlayback"` | ✅ |
+| `android:appCategory="audio"` | ✅ |
+| `android:usesCleartextTraffic="true"` | ✅ |
+| `network_security_config.xml` | ✅ |
+| `MediaButtonReceiver` (hardware media buttons) | ✅ |
+| Canaux de notification (MainActivity) | ✅ |
 
 ### Chromecast
 
