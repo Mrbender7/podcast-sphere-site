@@ -107,6 +107,48 @@ public class PodcastAutoPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Updates the native MediaSession metadata (title, artist, artwork, duration)
+     * so the lock screen and notification display current episode info.
+     */
+    @PluginMethod
+    public void updateNowPlaying(PluginCall call) {
+        String title = call.getString("title", "");
+        String author = call.getString("author", "");
+        String artworkUrl = call.getString("artworkUrl", "");
+        long duration = call.getInt("duration", 0); // duration in ms
+
+        Intent intent = new Intent(getContext(), PodcastBrowserService.class);
+        intent.setAction("UPDATE_METADATA");
+        intent.putExtra("title", title);
+        intent.putExtra("author", author);
+        intent.putExtra("artworkUrl", artworkUrl);
+        intent.putExtra("duration", duration);
+        getContext().startService(intent);
+
+        Log.d(TAG, "updateNowPlaying: " + title + " by " + author);
+        call.resolve();
+    }
+
+    /**
+     * Updates the native MediaSession playback state (playing/paused + position)
+     * so the lock screen progress bar and play/pause icon stay in sync.
+     */
+    @PluginMethod
+    public void updatePlaybackState2(PluginCall call) {
+        boolean isPlaying = call.getBoolean("isPlaying", false);
+        long position = call.getInt("position", 0); // position in ms
+
+        Intent intent = new Intent(getContext(), PodcastBrowserService.class);
+        intent.setAction("UPDATE_PLAYBACK_STATE");
+        intent.putExtra("isPlaying", isPlaying);
+        intent.putExtra("position", position);
+        getContext().startService(intent);
+
+        Log.d(TAG, "updatePlaybackState2: playing=" + isPlaying + " pos=" + position);
+        call.resolve();
+    }
+
     @PluginMethod
     public void clearAppData(PluginCall call) {
         getPrefs().edit().clear().apply();

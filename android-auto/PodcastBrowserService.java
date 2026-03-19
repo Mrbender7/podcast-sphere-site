@@ -61,6 +61,8 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private static final String TAG = "PodcastBrowserService";
     private static final String CHANNEL_ID = "podcast_playback";
     private static final int NOTIFICATION_ID = 1001;
+    private static final String ACTION_UPDATE_METADATA = "UPDATE_METADATA";
+    private static final String ACTION_UPDATE_PLAYBACK = "UPDATE_PLAYBACK_STATE";
     private static final String PREFS_NAME = "podcastsphere_data";
     private static final String MEDIA_TOGGLE_ACTION = "com.fhm.podcastsphere.MEDIA_TOGGLE";
 
