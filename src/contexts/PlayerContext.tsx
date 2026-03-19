@@ -235,16 +235,25 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     const audio = audioRef.current;
     if (!stateRef.current.currentEpisode) return;
     if (stateRef.current.isPlaying) {
+      isPlayingRef.current = false;
       audio.pause();
       // Save progress on pause
       saveEpisodeProgress(stateRef.current.currentEpisode.id, audio.currentTime, audio.duration || 0);
       addToHistory(stateRef.current.currentEpisode, audio.currentTime, audio.duration || 0);
       setState(s => ({ ...s, isPlaying: false }));
       updateMediaSession(stateRef.current.currentEpisode, false);
+      // Stop background keep-alive
+      stopSilentLoop();
+      releaseWakeLock();
+      notifyNativePlaybackState(stateRef.current.currentEpisode, false);
     } else {
       audio.play().then(() => {
+        isPlayingRef.current = true;
         setState(s => ({ ...s, isPlaying: true }));
         updateMediaSession(stateRef.current.currentEpisode!, true);
+        startSilentLoop();
+        requestWakeLock();
+        notifyNativePlaybackState(stateRef.current.currentEpisode!, true);
       }).catch(() => {});
     }
   }, [updateMediaSession]);
