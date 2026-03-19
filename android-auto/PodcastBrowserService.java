@@ -1,27 +1,17 @@
 package com.fhm.podcastsphere;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
-import android.media.AudioManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -30,800 +20,457 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.media.MediaBrowserServiceCompat;
-import androidx.media.session.MediaButtonReceiver;
+import androidx.media.app.NotificationCompat.MediaStyle;
 
 import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * MediaBrowserServiceCompat for Android Auto podcast playback.
- * Browse tree: ROOT -> Subscriptions -> Episodes, In Progress, Categories
- * Uses ExoPlayer for native audio playback in car environment.
+ * PodcastBrowserService — MediaBrowserServiceCompat
+ *
+ * Responsabilités :
+ *  - Maintenir la MediaSession (métadonnées + état lecture)
+ *  - Afficher la notification MediaStyle (mini player notif + lock screen)
+ *  - Répondre aux commandes hardware (casques, boutons Bluetooth, Android Auto)
+ *  - Exposer le browse tree pour Android Auto
+ *
+ * Communication WebView → Service  : Intent via startForegroundService()
+ *   Actions : UPDATE_METADATA | UPDATE_PLAYBACK_STATE | STOP_SERVICE
+ *
+ * Communication Service → WebView  : Broadcast local "WEBVIEW_COMMAND"
+ *   Écouté par PodcastAutoPlugin qui notifie le layer React via Capacitor
  */
 public class PodcastBrowserService extends MediaBrowserServiceCompat {
 
     private static final String TAG = "PodcastBrowserService";
-    private static final String CHANNEL_ID = "podcast_playback";
-    private static final int NOTIFICATION_ID = 1001;
-    private static final String ACTION_UPDATE_METADATA = "UPDATE_METADATA";
-    private static final String ACTION_UPDATE_PLAYBACK = "UPDATE_PLAYBACK_STATE";
-    private static final String PREFS_NAME = "podcastsphere_data";
-    private static final String MEDIA_TOGGLE_ACTION = "com.fhm.podcastsphere.MEDIA_TOGGLE";
 
-    // Browse tree root IDs
-    private static final String ROOT_ID = "__ROOT__";
-    private static final String SUBSCRIPTIONS_ID = "__SUBSCRIPTIONS__";
-    private static final String IN_PROGRESS_ID = "__IN_PROGRESS__";
-    private static final String CATEGORIES_ID = "__CATEGORIES__";
+    // IDs stables
+    private static final String MEDIA_ROOT_ID   = "podcast_root";
+    private static final int    NOTIFICATION_ID  = 1001;
+    private static final String CHANNEL_ID       = "podcast_playback";
 
-    private static PodcastBrowserService instance;
+    // Actions entrantes (depuis PodcastAutoPlugin)
+    public static final String ACTION_UPDATE_METADATA       = "UPDATE_METADATA";
+    public static final String ACTION_UPDATE_PLAYBACK_STATE = "UPDATE_PLAYBACK_STATE";
+    public static final String ACTION_STOP_SERVICE          = "STOP_SERVICE";
 
+    // Action sortante (vers PodcastAutoPlugin → React)
+    public static final String ACTION_WEBVIEW_COMMAND = "com.fhm.podcastsphere.WEBVIEW_COMMAND";
+
+    // ---------------------------------------------------------------
+    // État courant (mis à jour par le WebView via Intents)
+    // ---------------------------------------------------------------
     private MediaSessionCompat mediaSession;
-    private ExoPlayer player;
-    private AudioManager audioManager;
-    private AudioFocusRequest audioFocusRequest;
-    private Handler handler;
-    private ExecutorService executor;
-    private final AtomicInteger playbackRequestSeq = new AtomicInteger(0);
+    private ExoPlayer          exoPlayer;
 
-    private String currentEpisodeId;
-    private String currentTitle = "";
-    private String currentArtist = "";
-    private String currentImageUrl = "";
-    private boolean triedProtocolFallback = false;
+    private String  currentTitle    = "";
+    private String  currentAuthor   = "";
+    private Bitmap  currentArtwork  = null;
+    private long    currentDuration = 0L;
+    private boolean isPlaying       = false;
+    private long    currentPosition = 0L;
 
-    private BroadcastReceiver noisyReceiver;
-
-    public static PodcastBrowserService getInstance() {
-        return instance;
-    }
+    // ===============================================================
+    //  Cycle de vie du Service
+    // ===============================================================
 
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
-        handler = new Handler(Looper.getMainLooper());
-        executor = Executors.newSingleThreadExecutor();
-        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 
-        // Create notification channel
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "Lecture Podcast", NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Contr\u00f4les de lecture Podcast Sphere");
-            channel.setSound(null, null);
-            channel.enableVibration(false);
-            channel.setShowBadge(false);
-            NotificationManager nm = getSystemService(NotificationManager.class);
-            if (nm != null) nm.createNotificationChannel(channel);
-        }
-
-        // Init ExoPlayer
-        player = new ExoPlayer.Builder(this).build();
-        player.addListener(playerListener);
-
-        // Init MediaSession
-        mediaSession = new MediaSessionCompat(this, TAG);
-        mediaSession.setCallback(mediaSessionCallback);
-        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-            MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
-        setSessionToken(mediaSession.getSessionToken());
-
-        // Audio focus
-        AudioAttributes attrs = new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build();
-        player.setAudioAttributes(
-            new com.google.android.exoplayer2.audio.AudioAttributes.Builder()
-                .setUsage(com.google.android.exoplayer2.C.USAGE_MEDIA)
-                .setContentType(com.google.android.exoplayer2.C.AUDIO_CONTENT_TYPE_MUSIC)
-                .build(),
-            false
-        );
-        audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(attrs)
-            .setOnAudioFocusChangeListener(audioFocusChangeListener)
-            .setWillPauseWhenDucked(true) // Required for Google Play compliance
-            .build();
-
-        // AUDIO_BECOMING_NOISY receiver (vehicle disconnect)
-        noisyReceiver = new BroadcastReceiver() {
+        // --- ExoPlayer (lecture Android Auto / Chromecast) ---
+        exoPlayer = new ExoPlayer.Builder(this).build();
+        exoPlayer.addListener(new Player.Listener() {
             @Override
-            public void onReceive(Context context, Intent intent) {
-                if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
-                    player.pause();
-                    updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                    PodcastAutoPlugin plugin = PodcastAutoPlugin.getActiveInstance();
-                    if (plugin != null) {
-                        plugin.notifyVehicleDisconnected(currentEpisodeId);
-                    }
+            public void onIsPlayingChanged(boolean playing) {
+                // Synchronisation avec l'état ExoPlayer (lecture Android Auto)
+                isPlaying = playing;
+                applyPlaybackState(playing, exoPlayer.getCurrentPosition());
+            }
+
+            @Override
+            public void onPlaybackStateChanged(int state) {
+                if (state == Player.STATE_ENDED) {
+                    applyPlaybackState(false, 0);
+                    rebuildNotification();
                 }
             }
-        };
-        registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+        });
+
+        // --- MediaSession ---
+        Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+        mediaButtonIntent.setClass(this, MediaButtonReceiver.class);
+        PendingIntent mediaPendingIntent = PendingIntent.getBroadcast(
+            this, 0, mediaButtonIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        mediaSession = new MediaSessionCompat(this, TAG);
+        mediaSession.setMediaButtonReceiver(mediaPendingIntent);
+        mediaSession.setCallback(new PodcastSessionCallback());
+        mediaSession.setFlags(
+            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+            MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+        );
+
+        // État initial : arrêté
+        applyPlaybackState(false, 0);
+        setSessionToken(mediaSession.getSessionToken());
+
+        Log.d(TAG, "Service créé, session token défini");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && intent.getAction() != null) {
-            String action = intent.getAction();
+        if (intent != null) {
+            final String action = intent.getAction();
 
             if (ACTION_UPDATE_METADATA.equals(action)) {
-                String title = intent.getStringExtra("title");
-                String author = intent.getStringExtra("author");
+                // ── Mettre à jour titre / auteur / artwork / durée ──────────
+                String title      = intent.getStringExtra("title");
+                String author     = intent.getStringExtra("author");
                 String artworkUrl = intent.getStringExtra("artworkUrl");
-                long duration = intent.getLongExtra("duration", 0);
+                long   duration   = intent.getLongExtra("duration", 0L);
+                handleUpdateMetadata(title, author, artworkUrl, duration);
 
-                currentTitle = title != null ? title : "";
-                currentArtist = author != null ? author : "";
-                currentImageUrl = artworkUrl != null ? artworkUrl : "";
+            } else if (ACTION_UPDATE_PLAYBACK_STATE.equals(action)) {
+                // ── Mettre à jour play/pause + position ──────────────────────
+                boolean playing  = intent.getBooleanExtra("isPlaying", false);
+                long    position = intent.getLongExtra("position", 0L);
+                handleUpdatePlaybackState(playing, position);
 
-                // Build metadata on background thread (artwork download)
-                new Thread(() -> {
-                    Bitmap artwork = null;
-                    if (artworkUrl != null && !artworkUrl.isEmpty()) {
-                        try {
-                            java.io.InputStream is = new URL(artworkUrl.replace("http://", "https://")).openStream();
-                            artwork = BitmapFactory.decodeStream(is);
-                            is.close();
-                        } catch (Exception e) {
-                            Log.w(TAG, "Artwork download failed", e);
-                        }
-                    }
-
-                    final Bitmap finalArt = artwork;
-                    handler.post(() -> {
-                        MediaMetadataCompat.Builder mb = new MediaMetadataCompat.Builder()
-                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
-                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration);
-                        if (finalArt != null) {
-                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, finalArt);
-                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, finalArt);
-                        }
-                        mediaSession.setMetadata(mb.build());
-                        mediaSession.setActive(true);
-                        rebuildNotification();
-                    });
-                }).start();
-
-                return START_NOT_STICKY;
-            }
-
-            if (ACTION_UPDATE_PLAYBACK.equals(action)) {
-                boolean isPlaying = intent.getBooleanExtra("isPlaying", false);
-                long position = intent.getLongExtra("position", 0);
-
-                long actions = PlaybackStateCompat.ACTION_PLAY |
-                    PlaybackStateCompat.ACTION_PAUSE |
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE |
-                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
-                    PlaybackStateCompat.ACTION_SEEK_TO;
-
-                int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
-                mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
-                    .setActions(actions)
-                    .setState(state, position, 1.0f)
-                    .build());
-                rebuildNotification();
-
+            } else if (ACTION_STOP_SERVICE.equals(action)) {
+                // ── Arrêt propre ─────────────────────────────────────────────
+                mediaSession.setActive(false);
+                stopForeground(true);
+                stopSelf();
                 return START_NOT_STICKY;
             }
         }
 
+        // Laisser passer les events hardware (casques, boutons Bluetooth)
         MediaButtonReceiver.handleIntent(mediaSession, intent);
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
+    @Override
+    public void onDestroy() {
         super.onDestroy();
-        instance = null;
-        if (noisyReceiver != null) {
-            try { unregisterReceiver(noisyReceiver); } catch (Exception ignored) {}
-        }
-        if (player != null) {
-            player.release();
-            player = null;
-        }
         if (mediaSession != null) {
+            mediaSession.setActive(false);
             mediaSession.release();
         }
-        if (executor != null) {
-            executor.shutdownNow();
+        if (exoPlayer != null) {
+            exoPlayer.release();
         }
+        Log.d(TAG, "Service détruit");
     }
 
-    // --- Browse Tree ---
+    // ===============================================================
+    //  Gestion des métadonnées
+    // ===============================================================
 
-    @Nullable
-    @Override
-    public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
-        return new BrowserRoot(ROOT_ID, null);
-    }
+    /**
+     * Appelé quand un nouvel épisode commence à jouer côté WebView.
+     * Met à jour la MediaSession immédiatement (sans artwork),
+     * puis charge l'artwork en arrière-plan et reconstruit la notif.
+     */
+    private void handleUpdateMetadata(String title, String author, String artworkUrl, long duration) {
+        currentTitle    = title    != null ? title    : "";
+        currentAuthor   = author   != null ? author   : "";
+        currentDuration = duration;
+        currentArtwork  = null;
 
-    @Override
-    public void onLoadChildren(@NonNull String parentId, @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
-        result.detach();
+        // Mise à jour immédiate sans artwork (la notif apparaît vite)
+        applyMetadata(null);
+        mediaSession.setActive(true); // ← CRUCIAL pour le lock screen
+        rebuildNotification();
 
-        new Thread(() -> {
-            List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+        Log.d(TAG, "Métadonnées mises à jour : " + currentTitle);
 
-            switch (parentId) {
-                case ROOT_ID:
-                    items.add(buildBrowsableItem(SUBSCRIPTIONS_ID, "Abonn\u00e9s", "Vos podcasts abonn\u00e9s"));
-                    items.add(buildBrowsableItem(IN_PROGRESS_ID, "En cours", "\u00c9pisodes en cours de lecture"));
-                    items.add(buildBrowsableItem(CATEGORIES_ID, "Cat\u00e9gories", "D\u00e9couvrir par cat\u00e9gorie"));
-                    break;
-
-                case SUBSCRIPTIONS_ID:
-                    items.addAll(loadFavorites());
-                    break;
-
-                case IN_PROGRESS_ID:
-                    items.addAll(loadInProgress());
-                    break;
-
-                case CATEGORIES_ID:
-                    items.addAll(buildCategoryItems());
-                    break;
-
-                default:
-                    // Could be a podcast ID -> load its episodes
-                    items.addAll(loadEpisodesForPodcast(parentId));
-                    break;
-            }
-
-            handler.post(() -> result.sendResult(items));
-        }).start();
-    }
-
-    private MediaBrowserCompat.MediaItem buildBrowsableItem(String mediaId, String title, String subtitle) {
-        MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
-            .setMediaId(mediaId)
-            .setTitle(title)
-            .setSubtitle(subtitle)
-            // No icon for browsable items — avoids broken icons on some car screens
-            .build();
-        return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
-    }
-
-    private MediaBrowserCompat.MediaItem buildPlayableItem(String mediaId, String title, String subtitle, String imageUrl) {
-        MediaDescriptionCompat.Builder builder = new MediaDescriptionCompat.Builder()
-            .setMediaId(mediaId)
-            .setTitle(title)
-            .setSubtitle(subtitle);
-
-        if (imageUrl != null && !imageUrl.isEmpty()) {
-            builder.setIconUri(Uri.parse(imageUrl.replace("http://", "https://")));
-        } else {
-            builder.setIconUri(Uri.parse("android.resource://" + getPackageName() + "/drawable/podcast_placeholder"));
-        }
-
-        return new MediaBrowserCompat.MediaItem(builder.build(), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
-    }
-
-    private List<MediaBrowserCompat.MediaItem> loadFavorites() {
-        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-        try {
-            String json = getPrefs().getString("favorites", "[]");
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
-                String id = obj.optString("id", "");
-                String title = obj.optString("title", "Podcast");
-                String author = obj.optString("author", "");
-                String image = obj.optString("image", "");
-                // Podcasts are browsable (contain episodes)
-                items.add(buildBrowsableItem("podcast_" + id, title, author));
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading favorites", e);
-        }
-        return items;
-    }
-
-    private List<MediaBrowserCompat.MediaItem> loadInProgress() {
-        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-        try {
-            String json = getPrefs().getString("recents", "[]");
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < Math.min(arr.length(), 20); i++) {
-                JSONObject obj = arr.getJSONObject(i);
-                String id = obj.optString("id", "");
-                String title = obj.optString("title", "");
-                String artist = obj.optString("feedTitle", obj.optString("feedAuthor", ""));
-                String image = obj.optString("image", obj.optString("feedImage", ""));
-                items.add(buildPlayableItem("episode_" + id, title, artist, image));
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading recents", e);
-        }
-        return items;
-    }
-
-    private List<MediaBrowserCompat.MediaItem> buildCategoryItems() {
-        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-        String[][] categories = {
-            {"technology", "Technologie"},
-            {"comedy", "Com\u00e9die"},
-            {"news", "Actualit\u00e9s"},
-            {"education", "\u00c9ducation"},
-            {"science", "Science"},
-            {"health", "Sant\u00e9"},
-            {"sports", "Sports"},
-            {"music", "Musique"},
-            {"society", "Soci\u00e9t\u00e9"},
-            {"business", "Business"},
-            {"history", "Histoire"},
-            {"fiction", "Fiction"},
-            {"truecrime", "True Crime"},
-        };
-        for (String[] cat : categories) {
-            items.add(buildBrowsableItem("category_" + cat[0], cat[1], ""));
-        }
-        return items;
-    }
-
-    private List<MediaBrowserCompat.MediaItem> loadEpisodesForPodcast(String parentId) {
-        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-        // This would need podcast episode data from SharedPreferences or API
-        // For now return empty — will be populated via syncFavorites with episode data
-        Log.d(TAG, "loadEpisodesForPodcast: " + parentId);
-        return items;
-    }
-
-    // --- Playback ---
-
-    private void playEpisode(String episodeId) {
-        final int reqSeq = playbackRequestSeq.incrementAndGet();
-
-        // Find episode data from recents/favorites
-        String audioUrl = null;
-        try {
-            String json = getPrefs().getString("recents", "[]");
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
-                if (episodeId.equals(obj.optString("id"))) {
-                    audioUrl = obj.optString("enclosureUrl", "");
-                    currentTitle = obj.optString("title", "");
-                    currentArtist = obj.optString("feedTitle", obj.optString("feedAuthor", ""));
-                    currentImageUrl = obj.optString("image", obj.optString("feedImage", ""));
-                    break;
+        // Chargement artwork en arrière-plan
+        if (artworkUrl != null && !artworkUrl.isEmpty()) {
+            final String url = artworkUrl;
+            new Thread(() -> {
+                Bitmap bitmap = null;
+                try {
+                    bitmap = BitmapFactory.decodeStream(new URL(url).openStream());
+                } catch (Exception e) {
+                    Log.w(TAG, "Artwork non chargé : " + e.getMessage());
                 }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error finding episode", e);
-        }
-
-        if (audioUrl == null || audioUrl.isEmpty()) {
-            Log.w(TAG, "No audio URL for episode: " + episodeId);
-            return;
-        }
-
-        currentEpisodeId = episodeId;
-        triedProtocolFallback = false;
-
-        final String url = audioUrl;
-        new Thread(() -> {
-            String resolvedUrl = resolveStreamUrlSafely(url);
-            handler.post(() -> {
-                if (reqSeq != playbackRequestSeq.get()) return;
-
-                forceResetPlayer();
-
-                // Set metadata BEFORE playback state
-                MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentArtist)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ART_URI,
-                        currentImageUrl != null ? currentImageUrl.replace("http://", "https://") : "")
-                    .build();
-                mediaSession.setMetadata(metadata);
-                updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
-
-                requestAudioFocus();
-                player.setMediaItem(MediaItem.fromUri(resolvedUrl));
-                player.prepare();
-                player.play();
-
-                startForegroundNotification(true);
-            });
-        }).start();
-    }
-
-    private void forceResetPlayer() {
-        if (player != null) {
-            player.stop();
-            player.clearMediaItems();
-        }
-    }
-
-    // --- Audio Focus ---
-
-    private void requestAudioFocus() {
-        audioManager.requestAudioFocus(audioFocusRequest);
-    }
-
-    private void abandonAudioFocus() {
-        audioManager.abandonAudioFocusRequest(audioFocusRequest);
-    }
-
-    private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
-        switch (focusChange) {
-            case AudioManager.AUDIOFOCUS_GAIN:
-                player.setVolume(1.0f);
-                // v1.2.2: Do NOT auto-resume — prevents unwanted restart after vehicle disconnect
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS:
-                player.pause();
-                updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                abandonAudioFocus();
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                player.pause();
-                updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                // With willPauseWhenDucked=true, Android converts this to LOSS_TRANSIENT
-                player.setVolume(0.2f);
-                break;
-        }
-    };
-
-    // --- ExoPlayer Listener ---
-
-    private final Player.Listener playerListener = new Player.Listener() {
-        @Override
-        public void onPlaybackStateChanged(int playbackState) {
-            switch (playbackState) {
-                case Player.STATE_BUFFERING:
-                    updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
-                    break;
-                case Player.STATE_READY:
-                    if (player.isPlaying()) {
-                        updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
-                        startForegroundNotification(true);
-                    }
-                    break;
-                case Player.STATE_ENDED:
-                    updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
-                    break;
-            }
-        }
-
-        @Override
-        public void onIsPlayingChanged(boolean isPlaying) {
-            updatePlaybackState(isPlaying ?
-                PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
-            startForegroundNotification(isPlaying);
-        }
-    };
-
-    // --- MediaSession Callback ---
-
-    private final MediaSessionCompat.Callback mediaSessionCallback = new MediaSessionCompat.Callback() {
-        @Override
-        public void onPlay() {
-            requestAudioFocus();
-            player.play();
-            updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
-            startForegroundNotification(true);
-            mediaSession.setActive(true);
-        }
-
-        @Override
-        public void onPause() {
-            player.pause();
-            updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-            startForegroundNotification(false);
-        }
-
-        @Override
-        public void onStop() {
-            player.stop();
-            updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
-            abandonAudioFocus();
-            stopForeground(true);
-            stopSelf();
-        }
-
-        @Override
-        public void onSeekTo(long pos) {
-            player.seekTo(pos);
-        }
-
-        @Override
-        public void onSkipToNext() {
-            player.seekTo(Math.min(player.getDuration(), player.getCurrentPosition() + 30000));
-        }
-
-        @Override
-        public void onSkipToPrevious() {
-            player.seekTo(Math.max(0, player.getCurrentPosition() - 15000));
-        }
-
-        @Override
-        public void onPrepare() {
-            // Restore metadata without autoplay (MA-1 compliance)
-            SharedPreferences prefs = getPrefs();
-            String title = prefs.getString("current_title", "");
-            String artist = prefs.getString("current_artist", "");
-            if (!title.isEmpty()) {
-                MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-                    .build();
-                mediaSession.setMetadata(metadata);
-                updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-            }
-        }
-
-        @Override
-        public void onPlayFromMediaId(String mediaId, Bundle extras) {
-            if (mediaId != null && mediaId.startsWith("episode_")) {
-                String episodeId = mediaId.substring(8);
-                playEpisode(episodeId);
-            }
-        }
-
-        @Override
-        public void onPlayFromSearch(String query, Bundle extras) {
-            // Search through recents/favorites for matching episode
-            if (query == null || query.isEmpty()) return;
-            String lowerQuery = query.toLowerCase();
-            try {
-                String json = getPrefs().getString("recents", "[]");
-                JSONArray arr = new JSONArray(json);
-                for (int i = 0; i < arr.length(); i++) {
-                    JSONObject obj = arr.getJSONObject(i);
-                    String title = obj.optString("title", "").toLowerCase();
-                    String feedTitle = obj.optString("feedTitle", "").toLowerCase();
-                    if (title.contains(lowerQuery) || feedTitle.contains(lowerQuery)) {
-                        playEpisode(obj.optString("id"));
-                        return;
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Search error", e);
-            }
-        }
-    };
-
-    // --- Playback State ---
-
-    private void updatePlaybackState(int state) {
-        long actions = PlaybackStateCompat.ACTION_PLAY |
-            PlaybackStateCompat.ACTION_PAUSE |
-            PlaybackStateCompat.ACTION_STOP |
-            PlaybackStateCompat.ACTION_SEEK_TO |
-            PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-            PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
-            PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH |
-            PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID;
-
-        long position = player != null ? player.getCurrentPosition() : PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN;
-
-        mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
-            .setActions(actions)
-            .setState(state, position, 1.0f)
-            .build());
-    }
-
-    // --- Notification ---
-
-    private void startForegroundNotification(boolean isPlaying) {
-        Intent toggleIntent = new Intent(MEDIA_TOGGLE_ACTION);
-        toggleIntent.setPackage(getPackageName());
-        PendingIntent togglePI = PendingIntent.getBroadcast(this, 0, toggleIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(currentTitle)
-            .setContentText(currentArtist)
-            .addAction(isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                isPlaying ? "Pause" : "Play", togglePI)
-            .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-                .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0))
-            .setOngoing(isPlaying)
-            .setPriority(NotificationCompat.PRIORITY_LOW);
-
-        Notification notification = builder.build();
-
-        if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-            startForeground(NOTIFICATION_ID, notification);
+                final Bitmap bmp = bitmap;
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    currentArtwork = bmp;
+                    applyMetadata(bmp);
+                    rebuildNotification(); // Mise à jour avec artwork
+                });
+            }).start();
         }
     }
 
     /**
-     * Rebuilds the foreground notification with current metadata and playback state.
-     * Uses MediaStyle for lock screen and notification shade display.
+     * Appelé à chaque play/pause/seek depuis le WebView.
+     */
+    private void handleUpdatePlaybackState(boolean playing, long position) {
+        isPlaying       = playing;
+        currentPosition = position;
+        applyPlaybackState(playing, position);
+        rebuildNotification();
+    }
+
+    // ===============================================================
+    //  MediaSession — application des états
+    // ===============================================================
+
+    private void applyMetadata(Bitmap artwork) {
+        MediaMetadataCompat.Builder builder = new MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE,    currentTitle)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST,   currentAuthor)
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM,    currentAuthor)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION,   currentDuration);
+
+        if (artwork != null) {
+            builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,       artwork);
+            builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork);
+        }
+
+        mediaSession.setMetadata(builder.build());
+    }
+
+    private void applyPlaybackState(boolean playing, long position) {
+        int state = playing
+            ? PlaybackStateCompat.STATE_PLAYING
+            : PlaybackStateCompat.STATE_PAUSED;
+
+        PlaybackStateCompat ps = new PlaybackStateCompat.Builder()
+            .setActions(
+                PlaybackStateCompat.ACTION_PLAY            |
+                PlaybackStateCompat.ACTION_PAUSE           |
+                PlaybackStateCompat.ACTION_PLAY_PAUSE      |
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT    |
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS|
+                PlaybackStateCompat.ACTION_SEEK_TO         |
+                PlaybackStateCompat.ACTION_STOP
+            )
+            .setState(state, position, 1.0f)
+            .build();
+
+        mediaSession.setPlaybackState(ps);
+    }
+
+    // ===============================================================
+    //  Notification MediaStyle
+    // ===============================================================
+
+    /**
+     * Construit (ou reconstruit) la notification MediaStyle.
+     *
+     * Points critiques :
+     *  - VISIBILITY_PUBLIC  → visible sur le lock screen
+     *  - setShowActionsInCompactView(0,1,2) → 3 boutons en vue compacte
+     *  - startForeground()  → le service reste vivant en arrière-plan
      */
     private void rebuildNotification() {
-        boolean isPlaying = false;
-        PlaybackStateCompat pbState = mediaSession.getController().getPlaybackState();
-        if (pbState != null) {
-            isPlaying = pbState.getState() == PlaybackStateCompat.STATE_PLAYING;
-        }
+        // Intent pour ouvrir l'app au clic sur la notification
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        PendingIntent launchPending = PendingIntent.getActivity(
+            this, 0, launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
-        // PendingIntents for prev, play/pause, next
-        Intent prevIntent = new Intent(MEDIA_TOGGLE_ACTION + ".PREV");
-        prevIntent.setPackage(getPackageName());
-        PendingIntent prevPI = PendingIntent.getBroadcast(this, 1, prevIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        // Icône dynamique play/pause
+        int    playPauseIcon  = isPlaying ? android.R.drawable.ic_media_pause
+                                          : android.R.drawable.ic_media_play;
+        String playPauseLabel = isPlaying ? "Pause" : "Lecture";
 
-        Intent toggleIntent = new Intent(MEDIA_TOGGLE_ACTION);
-        toggleIntent.setPackage(getPackageName());
-        PendingIntent togglePI = PendingIntent.getBroadcast(this, 0, toggleIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent nextIntent = new Intent(MEDIA_TOGGLE_ACTION + ".NEXT");
-        nextIntent.setPackage(getPackageName());
-        PendingIntent nextPI = PendingIntent.getBroadcast(this, 2, nextIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_ID)
+            // ── Apparence ──────────────────────────────────────────
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(currentTitle)
-            .setContentText(currentArtist)
+            .setContentTitle(currentTitle.isEmpty()  ? "Podcast Sphere" : currentTitle)
+            .setContentText(currentAuthor.isEmpty() ? ""               : currentAuthor)
+            .setContentIntent(launchPending)
+
+            // ── Lock screen : VISIBILITY_PUBLIC obligatoire ─────────
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(android.R.drawable.ic_media_previous, "Prev", prevPI)
-            .addAction(isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                isPlaying ? "Pause" : "Play", togglePI)
-            .addAction(android.R.drawable.ic_media_next, "Next", nextPI)
-            .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+
+            // ── Comportement ───────────────────────────────────────
+            .setOnlyAlertOnce(true)
+            .setOngoing(isPlaying)          // Non-dismissible pendant lecture
+            .setAutoCancel(!isPlaying)      // Dismissible quand en pause
+
+            // ── Style MediaStyle ───────────────────────────────────
+            .setStyle(new MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2))
-            .setOngoing(isPlaying)
-            .setPriority(NotificationCompat.PRIORITY_LOW);
+                .setShowActionsInCompactView(0, 1, 2) // Prev | Play/Pause | Next
+                .setShowCancelButton(true)
+                .setCancelButtonIntent(
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this, PlaybackStateCompat.ACTION_STOP)))
 
-        // Set large icon from current metadata artwork
-        MediaMetadataCompat meta = mediaSession.getController().getMetadata();
-        if (meta != null) {
-            Bitmap art = meta.getBitmap(MediaMetadataCompat.METADATA_KEY_ART);
-            if (art != null) {
-                builder.setLargeIcon(art);
-            }
+            // ── Actions ────────────────────────────────────────────
+            // Action 0 : Précédent
+            .addAction(new NotificationCompat.Action(
+                android.R.drawable.ic_media_previous, "Précédent",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
+
+            // Action 1 : Play / Pause (icône dynamique)
+            .addAction(new NotificationCompat.Action(
+                playPauseIcon, playPauseLabel,
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
+
+            // Action 2 : Suivant
+            .addAction(new NotificationCompat.Action(
+                android.R.drawable.ic_media_next, "Suivant",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)));
+
+        // Artwork si disponible
+        if (currentArtwork != null) {
+            nb.setLargeIcon(currentArtwork);
         }
 
-        Notification notification = builder.build();
-        if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        Notification notification = nb.build();
+        startForeground(NOTIFICATION_ID, notification);
+    }
+
+    // ===============================================================
+    //  Communication Service → WebView
+    // ===============================================================
+
+    /**
+     * Envoie une commande au WebView React via broadcast local.
+     * PodcastAutoPlugin écoute ce broadcast et appelle notifyListeners().
+     *
+     * Commandes : "play" | "pause" | "next" | "previous" | "seek:<ms>"
+     */
+    private void sendWebViewCommand(String command) {
+        Intent intent = new Intent(ACTION_WEBVIEW_COMMAND);
+        intent.putExtra("command", command);
+        sendBroadcast(intent);
+        Log.d(TAG, "Commande WebView envoyée : " + command);
+    }
+
+    // ===============================================================
+    //  MediaSession Callbacks
+    //  Reçoit les commandes hardware (casques, Android Auto, Bluetooth)
+    // ===============================================================
+
+    private class PodcastSessionCallback extends MediaSessionCompat.Callback {
+
+        @Override
+        public void onPlay() {
+            isPlaying = true;
+            applyPlaybackState(true, currentPosition);
+            rebuildNotification();
+            sendWebViewCommand("play");
+        }
+
+        @Override
+        public void onPause() {
+            isPlaying = false;
+            applyPlaybackState(false, currentPosition);
+            rebuildNotification();
+            sendWebViewCommand("pause");
+        }
+
+        @Override
+        public void onStop() {
+            mediaSession.setActive(false);
+            stopForeground(true);
+            stopSelf();
+            sendWebViewCommand("stop");
+        }
+
+        @Override
+        public void onSkipToNext() {
+            sendWebViewCommand("next");
+        }
+
+        @Override
+        public void onSkipToPrevious() {
+            sendWebViewCommand("previous");
+        }
+
+        @Override
+        public void onSeekTo(long pos) {
+            currentPosition = pos;
+            applyPlaybackState(isPlaying, pos);
+            sendWebViewCommand("seek:" + pos);
+        }
+
+        @Override
+        public void onPlayFromMediaId(String mediaId, Bundle extras) {
+            // Android Auto : lecture d'un item du browse tree
+            sendWebViewCommand("playFromId:" + mediaId);
+        }
+    }
+
+    // ===============================================================
+    //  Android Auto — MediaBrowserServiceCompat
+    // ===============================================================
+
+    @Nullable
+    @Override
+    public BrowserRoot onGetRoot(@NonNull String clientPackageName,
+                                 int clientUid,
+                                 @Nullable Bundle rootHints) {
+        // Toujours accepter la connexion (Android Auto, contrôleurs Bluetooth, etc.)
+        return new BrowserRoot(MEDIA_ROOT_ID, null);
+    }
+
+    @Override
+    public void onLoadChildren(@NonNull String parentId,
+                               @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
+        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+
+        if (MEDIA_ROOT_ID.equals(parentId)) {
+            // Racine : catégories de navigation
+            items.add(makeBrowsableItem("subscriptions", "Mes abonnements", "Vos podcasts favoris"));
+            items.add(makeBrowsableItem("recent",         "Récents",          "Derniers épisodes écoutés"));
+            items.add(makeBrowsableItem("trending",       "Tendances",        "Podcasts populaires"));
         } else {
-            startForeground(NOTIFICATION_ID, notification);
-        }
-    }
-
-    // --- Data sync from WebView ---
-
-    public void updateFavorites(String json) {
-        notifyChildrenChanged(SUBSCRIPTIONS_ID);
-        Log.d(TAG, "Browse tree updated: favorites");
-    }
-
-    public void updateRecents(String json) {
-        notifyChildrenChanged(IN_PROGRESS_ID);
-        Log.d(TAG, "Browse tree updated: recents");
-    }
-
-    // --- Stream URL Resolution ---
-
-    private String resolveStreamUrlSafely(String url) {
-        try {
-            Future<String> future = executor.submit(() -> resolveStreamUrl(url));
-            return future.get(8000, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            return url;
-        }
-    }
-
-    private String resolveStreamUrl(String urlStr) throws Exception {
-        String resolved = followRedirects(urlStr, 5);
-
-        HttpURLConnection headConn = (HttpURLConnection) new URL(resolved).openConnection();
-        headConn.setRequestMethod("HEAD");
-        headConn.setConnectTimeout(5000);
-        headConn.setReadTimeout(5000);
-        headConn.setRequestProperty("User-Agent", "PodcastSphere/1.0");
-
-        String contentType = headConn.getContentType();
-        headConn.disconnect();
-
-        if (contentType != null) {
-            String ct = contentType.toLowerCase();
-            if (ct.contains("audio/x-mpegurl") || ct.contains("application/vnd.apple.mpegurl")) {
-                return parseM3uPlaylist(resolved);
-            }
-            if (ct.contains("audio/x-scpls")) {
-                return parsePlsPlaylist(resolved);
+            // Sous-éléments alimentés par les SharedPreferences
+            // (synchronisées par PodcastAutoPlugin.syncFavorites)
+            android.content.SharedPreferences prefs =
+                getSharedPreferences("podcast_auto_data", MODE_PRIVATE);
+            String json = prefs.getString(parentId + "_items", "");
+            if (!json.isEmpty()) {
+                // Parsing minimal JSON array de strings "title|mediaId"
+                // Remplacer par Gson si besoin de données plus riches
+                String[] entries = json.replace("[","").replace("]","")
+                                       .replace("\"","").split(",");
+                for (String entry : entries) {
+                    String[] parts = entry.trim().split("\\|");
+                    if (parts.length >= 2) {
+                        items.add(makePlayableItem(parts[1].trim(), parts[0].trim()));
+                    }
+                }
             }
         }
 
-        return resolved;
+        result.sendResult(items);
     }
 
-    private String followRedirects(String urlStr, int maxRedirects) throws Exception {
-        for (int i = 0; i < maxRedirects; i++) {
-            HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
-            conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.setRequestProperty("User-Agent", "PodcastSphere/1.0");
-            int code = conn.getResponseCode();
-            if (code >= 300 && code < 400) {
-                String location = conn.getHeaderField("Location");
-                conn.disconnect();
-                if (location == null) break;
-                urlStr = location;
-            } else {
-                conn.disconnect();
-                break;
-            }
-        }
-        return urlStr;
+    private MediaBrowserCompat.MediaItem makeBrowsableItem(String id, String title, String subtitle) {
+        MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
+            .setMediaId(id)
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .build();
+        return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
-    private String parseM3uPlaylist(String url) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setConnectTimeout(5000);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            if (!line.isEmpty() && !line.startsWith("#")) {
-                reader.close();
-                conn.disconnect();
-                return line;
-            }
-        }
-        reader.close();
-        conn.disconnect();
-        return url;
-    }
-
-    private String parsePlsPlaylist(String url) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setConnectTimeout(5000);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.trim().toLowerCase().startsWith("file1=")) {
-                String streamUrl = line.trim().substring(6);
-                reader.close();
-                conn.disconnect();
-                return streamUrl;
-            }
-        }
-        reader.close();
-        conn.disconnect();
-        return url;
-    }
-
-    private SharedPreferences getPrefs() {
-        return getSharedPreferences(PREFS_NAME, 0);
+    private MediaBrowserCompat.MediaItem makePlayableItem(String id, String title) {
+        MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
+            .setMediaId(id)
+            .setTitle(title)
+            .build();
+        return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
     }
 }
