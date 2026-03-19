@@ -241,6 +241,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     });
 
     try {
+      await new Promise<void>((resolve, reject) => {
+        const onCanPlayOnce = () => { audio.removeEventListener("canplaythrough", onCanPlayOnce); resolve(); };
+        const onErrorOnce = () => { audio.removeEventListener("error", onErrorOnce); reject(new Error("Audio load error")); };
+        audio.addEventListener("canplaythrough", onCanPlayOnce, { once: true });
+        audio.addEventListener("error", onErrorOnce, { once: true });
+        // Timeout safety — don't hang forever
+        setTimeout(() => { resolve(); }, 10000);
+      });
       await audio.play();
       if (resumeTime > 0) audio.currentTime = resumeTime;
       isPlayingRef.current = true;
@@ -250,8 +258,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       requestWakeLock();
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
-      notifyNativePlaybackState(episode, true);
-    } catch {
+      try { notifyNativePlaybackState(episode, true); } catch {}
+    } catch (e) {
+      console.error('[Player] Playback failed:', e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
