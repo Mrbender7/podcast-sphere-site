@@ -74,13 +74,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       const dur = audio.duration || 0;
       setState(s => ({ ...s, currentTime: ct, duration: dur }));
 
-      // Envoi de la position au lockscreen Android
-      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0) {
+      // Envoi de la position au lockscreen Android — clamp position to [0, duration]
+      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0 && !isNaN(ct)) {
         try {
+          const safePosition = Math.max(0, Math.min(ct, dur));
           navigator.mediaSession.setPositionState({
             duration: dur,
             playbackRate: audio.playbackRate || 1,
-            position: ct,
+            position: safePosition,
           });
         } catch (e) { /* Ignore les erreurs de synchronisation natives */ }
       }
@@ -166,7 +167,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 30);
     });
     navigator.mediaSession.setActionHandler("seekto", (details) => {
-      if (details.seekTime) audioRef.current.currentTime = details.seekTime;
+      if (details.seekTime != null && !isNaN(details.seekTime)) {
+        audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration || 0, details.seekTime));
+      }
     });
 
     return () => {
@@ -238,6 +241,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     });
 
     try {
+      await new Promise<void>((resolve, reject) => {
+        const onCanPlayOnce = () => { audio.removeEventListener("canplaythrough", onCanPlayOnce); resolve(); };
+        const onErrorOnce = () => { audio.removeEventListener("error", onErrorOnce); reject(new Error("Audio load error")); };
+        audio.addEventListener("canplaythrough", onCanPlayOnce, { once: true });
+        audio.addEventListener("error", onErrorOnce, { once: true });
+        // Timeout safety — don't hang forever
+        setTimeout(() => { resolve(); }, 10000);
+      });
       await audio.play();
       if (resumeTime > 0) audio.currentTime = resumeTime;
       isPlayingRef.current = true;
@@ -247,8 +258,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       requestWakeLock();
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
-      notifyNativePlaybackState(episode, true);
-    } catch {
+      try { notifyNativePlaybackState(episode, true); } catch {}
+    } catch (e) {
+      console.error('[Player] Playback failed:', e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
@@ -268,7 +280,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       // Stop background keep-alive
       stopSilentLoop();
       releaseWakeLock();
-      notifyNativePlaybackState(stateRef.current.currentEpisode, false);
+      try { notifyNativePlaybackState(stateRef.current.currentEpisode, false); } catch {}
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
@@ -276,8 +288,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         updateMediaSession(stateRef.current.currentEpisode!, true);
         startSilentLoop();
         requestWakeLock();
-        notifyNativePlaybackState(stateRef.current.currentEpisode!, true);
-      }).catch(() => {});
+        try { notifyNativePlaybackState(stateRef.current.currentEpisode!, true); } catch {}
+      }).catch((e) => { console.error('[Player] togglePlay failed:', e); });
     }
   }, [updateMediaSession]);
 
