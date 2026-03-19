@@ -384,6 +384,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
       safeNotifyNative(episode, true);
+      updateNativeNowPlaying(episode);
+      updateNativePlaybackState(true, Math.round(resumeTime * 1000));
     } catch (e) {
       console.error("[Player] Playback failed:", e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
