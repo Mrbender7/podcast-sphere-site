@@ -49,8 +49,8 @@ function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 10000): Promise<vo
     const timeout = setTimeout(() => {
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("error", onError);
-      // Don't reject on timeout — try to play anyway
-      resolve();
+      // Timeout reached — try to play anyway
+      audio.play().then(resolve).catch(reject);
     }, timeoutMs);
 
     const onCanPlay = () => {
