@@ -1,11 +1,16 @@
 package com.fhm.podcastsphere;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -36,6 +41,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class PodcastAutoPlugin extends Plugin {
 
     private static final String TAG = "PodcastAutoPlugin";
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1101;
 
     // Singleton pour accès depuis d'autres classes Java si besoin
     private static PodcastAutoPlugin instance;
@@ -50,6 +56,7 @@ public class PodcastAutoPlugin extends Plugin {
     @Override
     public void load() {
         instance = this;
+        requestNotificationPermissionIfNeeded();
         registerWebViewCommandReceiver();
         Log.d(TAG, "PodcastAutoPlugin chargé");
     }
@@ -138,6 +145,7 @@ public class PodcastAutoPlugin extends Plugin {
         Long   duration   = call.getLong("duration");
         if (duration == null) duration = 0L;
 
+        requestNotificationPermissionIfNeeded();
         Log.d(TAG, "updateNowPlaying → " + title + " | " + author);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
@@ -166,6 +174,7 @@ public class PodcastAutoPlugin extends Plugin {
         if (isPlaying == null) isPlaying = false;
         if (position  == null) position  = 0L;
 
+        requestNotificationPermissionIfNeeded();
         Log.d(TAG, "updatePlaybackState → isPlaying=" + isPlaying + " | position=" + position);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
@@ -209,7 +218,7 @@ public class PodcastAutoPlugin extends Plugin {
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_STOP_SERVICE);
-        getContext().startService(intent);
+        startService(intent);
 
         call.resolve();
     }
@@ -217,6 +226,25 @@ public class PodcastAutoPlugin extends Plugin {
     // ===============================================================
     //  Helpers privés
     // ===============================================================
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (getActivity() == null) return;
+
+        try {
+            if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    getActivity(),
+                    new String[]{ Manifest.permission.POST_NOTIFICATIONS },
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                );
+                Log.d(TAG, "Permission POST_NOTIFICATIONS demandée");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Impossible de demander POST_NOTIFICATIONS", e);
+        }
+    }
 
     /**
      * Démarre le service en Foreground si API >= 26, sinon startService normal.

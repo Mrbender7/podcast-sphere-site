@@ -3,8 +3,10 @@ package com.fhm.podcastsphere;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,6 +27,7 @@ import androidx.media.app.NotificationCompat.MediaStyle;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Player;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,8 +53,9 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
 
     // IDs stables
     private static final String MEDIA_ROOT_ID   = "podcast_root";
-    private static final int    NOTIFICATION_ID  = 1001;
-    private static final String CHANNEL_ID       = "podcast_playback";
+    private static final int    NOTIFICATION_ID = 1001;
+    private static final String CHANNEL_ID      = "podcast_playback";
+    private static final int    ARTWORK_MAX_SIZE = 500;
 
     // Actions entrantes (depuis PodcastAutoPlugin)
     public static final String ACTION_UPDATE_METADATA       = "UPDATE_METADATA";
@@ -90,6 +94,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
                 // Synchronisation avec l'état ExoPlayer (lecture Android Auto)
                 isPlaying = playing;
                 applyPlaybackState(playing, exoPlayer.getCurrentPosition());
+                rebuildNotification();
             }
 
             @Override
@@ -117,7 +122,8 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
         );
 
-        // État initial : arrêté
+        // État initial : session active pour rendre MediaStyle visible même en pause
+        mediaSession.setActive(true);
         applyPlaybackState(false, 0);
         setSessionToken(mediaSession.getSessionToken());
 
@@ -130,21 +136,22 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             final String action = intent.getAction();
 
             if (ACTION_UPDATE_METADATA.equals(action)) {
-                // ── Mettre à jour titre / auteur / artwork / durée ──────────
                 String title      = intent.getStringExtra("title");
                 String author     = intent.getStringExtra("author");
                 String artworkUrl = intent.getStringExtra("artworkUrl");
                 long   duration   = intent.getLongExtra("duration", 0L);
                 handleUpdateMetadata(title, author, artworkUrl, duration);
+                return START_STICKY;
+            }
 
-            } else if (ACTION_UPDATE_PLAYBACK_STATE.equals(action)) {
-                // ── Mettre à jour play/pause + position ──────────────────────
+            if (ACTION_UPDATE_PLAYBACK_STATE.equals(action)) {
                 boolean playing  = intent.getBooleanExtra("isPlaying", false);
                 long    position = intent.getLongExtra("position", 0L);
                 handleUpdatePlaybackState(playing, position);
+                return START_STICKY;
+            }
 
-            } else if (ACTION_STOP_SERVICE.equals(action)) {
-                // ── Arrêt propre ─────────────────────────────────────────────
+            if (ACTION_STOP_SERVICE.equals(action)) {
                 mediaSession.setActive(false);
                 stopForeground(true);
                 stopSelf();
@@ -152,8 +159,10 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             }
         }
 
-        // Laisser passer les events hardware (casques, boutons Bluetooth)
-        MediaButtonReceiver.handleIntent(mediaSession, intent);
+        // Laisser passer uniquement les events hardware (casques, boutons Bluetooth)
+        if (intent != null) {
+            MediaButtonReceiver.handleIntent(mediaSession, intent);
+        }
         return START_STICKY;
     }
 
@@ -185,20 +194,19 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
         currentDuration = duration;
         currentArtwork  = null;
 
-        // Mise à jour immédiate sans artwork (la notif apparaît vite)
         applyMetadata(null);
-        mediaSession.setActive(true); // ← CRUCIAL pour le lock screen
+        mediaSession.setActive(true);
         rebuildNotification();
 
         Log.d(TAG, "Métadonnées mises à jour : " + currentTitle);
 
-        // Chargement artwork en arrière-plan
         if (artworkUrl != null && !artworkUrl.isEmpty()) {
             final String url = artworkUrl;
             new Thread(() -> {
                 Bitmap bitmap = null;
-                try {
-                    bitmap = BitmapFactory.decodeStream(new URL(url).openStream());
+                try (InputStream stream = new URL(url).openStream()) {
+                    bitmap = BitmapFactory.decodeStream(stream);
+                    bitmap = scaleArtwork(bitmap);
                 } catch (Exception e) {
                     Log.w(TAG, "Artwork non chargé : " + e.getMessage());
                 }
@@ -206,7 +214,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
                 new Handler(Looper.getMainLooper()).post(() -> {
                     currentArtwork = bmp;
                     applyMetadata(bmp);
-                    rebuildNotification(); // Mise à jour avec artwork
+                    rebuildNotification();
                 });
             }).start();
         }
@@ -218,8 +226,25 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private void handleUpdatePlaybackState(boolean playing, long position) {
         isPlaying       = playing;
         currentPosition = position;
+        mediaSession.setActive(true);
         applyPlaybackState(playing, position);
         rebuildNotification();
+    }
+
+    private Bitmap scaleArtwork(Bitmap bitmap) {
+        if (bitmap == null) return null;
+
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        if (width <= ARTWORK_MAX_SIZE && height <= ARTWORK_MAX_SIZE) {
+            return bitmap;
+        }
+
+        float ratio = Math.min((float) ARTWORK_MAX_SIZE / width, (float) ARTWORK_MAX_SIZE / height);
+        int targetWidth = Math.max(1, Math.round(width * ratio));
+        int targetHeight = Math.max(1, Math.round(height * ratio));
+
+        return Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
     }
 
     // ===============================================================
@@ -275,68 +300,73 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
      *  - startForeground()  → le service reste vivant en arrière-plan
      */
     private void rebuildNotification() {
-        // Intent pour ouvrir l'app au clic sur la notification
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        PendingIntent launchPending = PendingIntent.getActivity(
-            this, 0, launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent launchPending = launchIntent == null
+            ? null
+            : PendingIntent.getActivity(
+                this, 0, launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
 
-        // Icône dynamique play/pause
-        int    playPauseIcon  = isPlaying ? android.R.drawable.ic_media_pause
-                                          : android.R.drawable.ic_media_play;
+        int playPauseIcon = isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
         String playPauseLabel = isPlaying ? "Pause" : "Lecture";
 
+        if (!mediaSession.isActive()) {
+            mediaSession.setActive(true);
+        }
+
         NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_ID)
-            // ── Apparence ──────────────────────────────────────────
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(currentTitle.isEmpty()  ? "Podcast Sphere" : currentTitle)
-            .setContentText(currentAuthor.isEmpty() ? ""               : currentAuthor)
-            .setContentIntent(launchPending)
-
-            // ── Lock screen : VISIBILITY_PUBLIC obligatoire ─────────
+            .setContentTitle(currentTitle.isEmpty() ? "Podcast Sphere" : currentTitle)
+            .setContentText(currentAuthor.isEmpty() ? "" : currentAuthor)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-
-            // ── Comportement ───────────────────────────────────────
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setOnlyAlertOnce(true)
-            .setOngoing(isPlaying)          // Non-dismissible pendant lecture
-            .setAutoCancel(!isPlaying)      // Dismissible quand en pause
-
-            // ── Style MediaStyle ───────────────────────────────────
+            .setOngoing(true)
+            .setAutoCancel(false)
             .setStyle(new MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2) // Prev | Play/Pause | Next
+                .setShowActionsInCompactView(0, 1, 2)
                 .setShowCancelButton(true)
                 .setCancelButtonIntent(
                     MediaButtonReceiver.buildMediaButtonPendingIntent(
                         this, PlaybackStateCompat.ACTION_STOP)))
-
-            // ── Actions ────────────────────────────────────────────
-            // Action 0 : Précédent
             .addAction(new NotificationCompat.Action(
                 android.R.drawable.ic_media_previous, "Précédent",
                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                     this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
-
-            // Action 1 : Play / Pause (icône dynamique)
             .addAction(new NotificationCompat.Action(
                 playPauseIcon, playPauseLabel,
                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                     this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
-
-            // Action 2 : Suivant
             .addAction(new NotificationCompat.Action(
                 android.R.drawable.ic_media_next, "Suivant",
                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                     this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)));
 
-        // Artwork si disponible
+        if (launchPending != null) {
+            nb.setContentIntent(launchPending);
+        }
+
         if (currentArtwork != null) {
             nb.setLargeIcon(currentArtwork);
         }
 
         Notification notification = nb.build();
-        startForeground(NOTIFICATION_ID, notification);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                );
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "Impossible d'afficher la notification media (permission ou config manquante)", e);
+        }
     }
 
     // ===============================================================
