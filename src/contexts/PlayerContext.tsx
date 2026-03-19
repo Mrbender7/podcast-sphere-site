@@ -59,6 +59,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
   const stateRef = useRef(state);
   stateRef.current = state;
+  const isPlayingRef = useRef(false);
+  isPlayingRef.current = state.isPlaying;
 
   // Time update listener + auto-save progress
   const saveCounterRef = useRef(0);
