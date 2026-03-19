@@ -74,6 +74,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       const dur = audio.duration || 0;
       setState(s => ({ ...s, currentTime: ct, duration: dur }));
 
+      // Envoi de la position au lockscreen Android
+      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            playbackRate: audio.playbackRate || 1,
+            position: ct,
+          });
+        } catch (e) { /* Ignore les erreurs de synchronisation natives */ }
+      }
+
       // Save progress every ~5 seconds
       saveCounterRef.current++;
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
