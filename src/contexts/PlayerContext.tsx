@@ -330,6 +330,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   useEffect(() => {
     let mediaToggleListener: any;
     let vehicleDisconnectListener: any;
+    let mediaCommandListener: any;
 
     try {
       mediaToggleListener = PodcastAutoPlugin.addListener("mediaToggle", () => {
@@ -344,10 +345,42 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       console.log("[Player] Native listeners not available (expected in browser):", e);
     }
 
+    // Listen for mediaCommand events from PodcastBrowserService
+    if (Capacitor.isNativePlatform()) {
+      (async () => {
+        try {
+          mediaCommandListener = await PodcastAutoPlugin.addListener(
+            'mediaCommand',
+            (data: { action: string; position?: number; mediaId?: string }) => {
+              switch (data.action) {
+                case 'play':
+                  if (!isPlayingRef.current) togglePlayRef.current();
+                  break;
+                case 'pause':
+                  if (isPlayingRef.current) togglePlayRef.current();
+                  break;
+                case 'toggle':
+                  togglePlayRef.current();
+                  break;
+                case 'seek':
+                  if (audioRef.current && data.position != null) {
+                    audioRef.current.currentTime = data.position / 1000;
+                  }
+                  break;
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('[PodcastAutoPlugin] addListener mediaCommand failed:', e);
+        }
+      })();
+    }
+
     return () => {
       try {
         mediaToggleListener?.then?.((l: any) => l.remove());
         vehicleDisconnectListener?.then?.((l: any) => l.remove());
+        mediaCommandListener?.remove?.();
       } catch {}
     };
   }, []);
