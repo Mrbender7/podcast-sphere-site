@@ -90,7 +90,7 @@ export async function updateNativeNowPlaying(episode: Episode): Promise<void> {
 export async function updateNativePlaybackState(isPlaying: boolean, positionMs: number): Promise<void> {
   if (!isCapacitorAndroid()) return;
   try {
-    await getPlugin().updatePlaybackState2({ isPlaying, position: positionMs });
+    await getPlugin().updatePlaybackState({ isPlaying, position: positionMs });
   } catch (e) {
     console.log('[PodcastAuto] updatePlaybackState2 failed (expected in browser):', e);
   }
