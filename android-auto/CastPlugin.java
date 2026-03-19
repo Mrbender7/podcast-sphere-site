@@ -112,6 +112,12 @@ public class CastPlugin extends Plugin {
 
         @Override
         public void onSessionSuspended(@NonNull CastSession session, int reason) {}
+
+        @Override
+        public void onSessionResumeFailed(@NonNull CastSession session, int error) {
+            Log.e(TAG, "Session resume failed: " + error);
+            currentSession = null;
+        }
     };
 
     @Override
