@@ -5,7 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
-import { notifyNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { notifyNativePlaybackState, updateNativeNowPlaying, updateNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -154,6 +154,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
         saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
         addToHistory(stateRef.current.currentEpisode, ct, dur);
+        // Sync native lock screen / notification position
+        updateNativePlaybackState(true, Math.round(ct * 1000));
       }
     };
 
@@ -289,6 +291,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       stopSilentLoop();
       releaseWakeLock();
       safeNotifyNative(stateRef.current.currentEpisode, false);
+      updateNativePlaybackState(false, Math.round(audio.currentTime * 1000));
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
@@ -298,6 +301,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         startSilentLoop();
         requestWakeLock();
         safeNotifyNative(stateRef.current.currentEpisode!, true);
+        updateNativePlaybackState(true, Math.round(audio.currentTime * 1000));
       }).catch(e => console.error("[Player] Toggle play error:", e));
     }
   }, [updateMediaSession, syncMediaSessionPosition, safeNotifyNative]);
@@ -380,6 +384,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
       safeNotifyNative(episode, true);
+      updateNativeNowPlaying(episode);
+      updateNativePlaybackState(true, Math.round(resumeTime * 1000));
     } catch (e) {
       console.error("[Player] Playback failed:", e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));

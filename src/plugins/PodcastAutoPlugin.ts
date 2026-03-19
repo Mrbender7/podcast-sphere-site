@@ -8,6 +8,8 @@ export interface PodcastAutoPluginInterface {
   syncFavorites(options: { podcasts: string }): Promise<void>;
   syncRecents(options: { podcasts: string }): Promise<void>;
   notifyPlaybackState(options: Record<string, any>): Promise<void>;
+  updateNowPlaying(options: { title: string; author: string; artworkUrl: string; duration: number }): Promise<void>;
+  updatePlaybackState2(options: { isPlaying: boolean; position: number }): Promise<void>;
   clearAppData(): Promise<void>;
   addListener(event: string, cb: (data: any) => void): Promise<any>;
 }
@@ -67,6 +69,30 @@ export async function notifyNativePlaybackState(episode: Episode | null, isPlayi
     });
   } catch (e) {
     console.log('[PodcastAuto] notifyPlaybackState failed (expected in browser):', e);
+  }
+}
+
+export async function updateNativeNowPlaying(episode: Episode): Promise<void> {
+  if (!isCapacitorAndroid()) return;
+  try {
+    const durationMs = (episode.duration || 0) * 1000;
+    await getPlugin().updateNowPlaying({
+      title: episode.title || '',
+      author: episode.feedAuthor || episode.feedTitle || '',
+      artworkUrl: episode.image || episode.feedImage || '',
+      duration: durationMs,
+    });
+  } catch (e) {
+    console.log('[PodcastAuto] updateNowPlaying failed (expected in browser):', e);
+  }
+}
+
+export async function updateNativePlaybackState(isPlaying: boolean, positionMs: number): Promise<void> {
+  if (!isCapacitorAndroid()) return;
+  try {
+    await getPlugin().updatePlaybackState2({ isPlaying, position: positionMs });
+  } catch (e) {
+    console.log('[PodcastAuto] updatePlaybackState2 failed (expected in browser):', e);
   }
 }
 

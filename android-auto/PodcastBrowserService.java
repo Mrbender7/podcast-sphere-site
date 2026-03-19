@@ -61,6 +61,8 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private static final String TAG = "PodcastBrowserService";
     private static final String CHANNEL_ID = "podcast_playback";
     private static final int NOTIFICATION_ID = 1001;
+    private static final String ACTION_UPDATE_METADATA = "UPDATE_METADATA";
+    private static final String ACTION_UPDATE_PLAYBACK = "UPDATE_PLAYBACK_STATE";
     private static final String PREFS_NAME = "podcastsphere_data";
     private static final String MEDIA_TOGGLE_ACTION = "com.fhm.podcastsphere.MEDIA_TOGGLE";
 
@@ -159,7 +161,78 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     }
 
     @Override
-    public void onDestroy() {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+
+            if (ACTION_UPDATE_METADATA.equals(action)) {
+                String title = intent.getStringExtra("title");
+                String author = intent.getStringExtra("author");
+                String artworkUrl = intent.getStringExtra("artworkUrl");
+                long duration = intent.getLongExtra("duration", 0);
+
+                currentTitle = title != null ? title : "";
+                currentArtist = author != null ? author : "";
+                currentImageUrl = artworkUrl != null ? artworkUrl : "";
+
+                // Build metadata on background thread (artwork download)
+                new Thread(() -> {
+                    Bitmap artwork = null;
+                    if (artworkUrl != null && !artworkUrl.isEmpty()) {
+                        try {
+                            java.io.InputStream is = new URL(artworkUrl.replace("http://", "https://")).openStream();
+                            artwork = BitmapFactory.decodeStream(is);
+                            is.close();
+                        } catch (Exception e) {
+                            Log.w(TAG, "Artwork download failed", e);
+                        }
+                    }
+
+                    final Bitmap finalArt = artwork;
+                    handler.post(() -> {
+                        MediaMetadataCompat.Builder mb = new MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration);
+                        if (finalArt != null) {
+                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, finalArt);
+                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, finalArt);
+                        }
+                        mediaSession.setMetadata(mb.build());
+                        mediaSession.setActive(true);
+                        rebuildNotification();
+                    });
+                }).start();
+
+                return START_NOT_STICKY;
+            }
+
+            if (ACTION_UPDATE_PLAYBACK.equals(action)) {
+                boolean isPlaying = intent.getBooleanExtra("isPlaying", false);
+                long position = intent.getLongExtra("position", 0);
+
+                long actions = PlaybackStateCompat.ACTION_PLAY |
+                    PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE |
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
+                    PlaybackStateCompat.ACTION_SEEK_TO;
+
+                int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+                mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
+                    .setActions(actions)
+                    .setState(state, position, 1.0f)
+                    .build());
+                rebuildNotification();
+
+                return START_NOT_STICKY;
+            }
+        }
+
+        MediaButtonReceiver.handleIntent(mediaSession, intent);
+        return START_NOT_STICKY;
+    }
+
         super.onDestroy();
         instance = null;
         if (noisyReceiver != null) {
@@ -577,6 +650,66 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
 
         Notification notification = builder.build();
 
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+    }
+
+    /**
+     * Rebuilds the foreground notification with current metadata and playback state.
+     * Uses MediaStyle for lock screen and notification shade display.
+     */
+    private void rebuildNotification() {
+        boolean isPlaying = false;
+        PlaybackStateCompat pbState = mediaSession.getController().getPlaybackState();
+        if (pbState != null) {
+            isPlaying = pbState.getState() == PlaybackStateCompat.STATE_PLAYING;
+        }
+
+        // PendingIntents for prev, play/pause, next
+        Intent prevIntent = new Intent(MEDIA_TOGGLE_ACTION + ".PREV");
+        prevIntent.setPackage(getPackageName());
+        PendingIntent prevPI = PendingIntent.getBroadcast(this, 1, prevIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent toggleIntent = new Intent(MEDIA_TOGGLE_ACTION);
+        toggleIntent.setPackage(getPackageName());
+        PendingIntent togglePI = PendingIntent.getBroadcast(this, 0, toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent nextIntent = new Intent(MEDIA_TOGGLE_ACTION + ".NEXT");
+        nextIntent.setPackage(getPackageName());
+        PendingIntent nextPI = PendingIntent.getBroadcast(this, 2, nextIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(currentTitle)
+            .setContentText(currentArtist)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(android.R.drawable.ic_media_previous, "Prev", prevPI)
+            .addAction(isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
+                isPlaying ? "Pause" : "Play", togglePI)
+            .addAction(android.R.drawable.ic_media_next, "Next", nextPI)
+            .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                .setMediaSession(mediaSession.getSessionToken())
+                .setShowActionsInCompactView(0, 1, 2))
+            .setOngoing(isPlaying)
+            .setPriority(NotificationCompat.PRIORITY_LOW);
+
+        // Set large icon from current metadata artwork
+        MediaMetadataCompat meta = mediaSession.getController().getMetadata();
+        if (meta != null) {
+            Bitmap art = meta.getBitmap(MediaMetadataCompat.METADATA_KEY_ART);
+            if (art != null) {
+                builder.setLargeIcon(art);
+            }
+        }
+
+        Notification notification = builder.build();
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, notification,
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
