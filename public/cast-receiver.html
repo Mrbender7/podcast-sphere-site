@@ -468,6 +468,31 @@
       }
     );
 
+    // Progress bar update for podcasts
+    function formatTime(s) {
+      if (!s || !isFinite(s)) return '0:00';
+      s = Math.floor(s);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+      return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    setInterval(() => {
+      try {
+        const media = playerManager.getMediaInformation();
+        if (!media) return;
+        const currentTime = playerManager.getCurrentTimeSec() || 0;
+        const duration = media.duration || 0;
+        document.getElementById('progressCurrent').textContent = formatTime(currentTime);
+        document.getElementById('progressDuration').textContent = formatTime(duration);
+        const pct = duration > 0 ? (currentTime / duration * 100) : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('miniStatus').textContent = duration > 0 ? 'Podcast' : 'En lecture';
+      } catch(e) {}
+    }, 1000);
+
     // Start receiver
     context.start();
   </script>

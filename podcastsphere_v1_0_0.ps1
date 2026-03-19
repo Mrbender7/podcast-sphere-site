@@ -132,6 +132,26 @@ $FilePathsContent = @(
 [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path "$XmlDir/file_paths.xml"), $FilePathsContent, $UTF8NoBOM)
 
 # ===================================================================
+# 3c. Android Auto automotive_app_desc.xml
+# ===================================================================
+Write-Host ">>> Copie de automotive_app_desc.xml..." -ForegroundColor Yellow
+$AutoDescSrc = "android-auto/res/xml/automotive_app_desc.xml"
+if (Test-Path $AutoDescSrc) {
+    Copy-Item $AutoDescSrc "$XmlDir/automotive_app_desc.xml" -Force
+    Write-Host "    automotive_app_desc.xml copie" -ForegroundColor Green
+}
+
+# ===================================================================
+# 3d. Podcast placeholder image for Android Auto
+# ===================================================================
+Write-Host ">>> Copie du placeholder podcast..." -ForegroundColor Yellow
+$PlaceholderSrc = "src/assets/station-placeholder.png"
+if (Test-Path $PlaceholderSrc) {
+    Copy-Item $PlaceholderSrc "$DrawablePath/podcast_placeholder.png" -Force
+    Write-Host "    podcast_placeholder.png copie" -ForegroundColor Green
+}
+
+# ===================================================================
 # 4. Injections propres dans l'AndroidManifest.xml
 # ===================================================================
 $ManifestPath = "android/app/src/main/AndroidManifest.xml"
@@ -149,7 +169,9 @@ if (Test-Path $ManifestPath) {
         '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
         '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
         '<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />',
-        '<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />'
+        '<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />',
+        '<uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />',
+        '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />'
     )
 
     $PermsToAdd = ""
@@ -184,6 +206,8 @@ if (Test-Path $ManifestPath) {
     }
 
     $AppInjections = ""
+
+    # Foreground service receiver + service
     if ($ManifestContent -notmatch 'NotificationActionBroadcastReceiver') {
         $AppInjections += @(
             '        <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" android:exported="false" />',
@@ -192,6 +216,7 @@ if (Test-Path $ManifestPath) {
         $AppInjections += "`n"
     }
 
+    # FileProvider
     if ($ManifestContent -notmatch 'capacitor\.android\.FileProvider') {
         $AppInjections += @(
             '',
@@ -205,6 +230,60 @@ if (Test-Path $ManifestPath) {
             '                android:resource="@xml/file_paths" />',
             '        </provider>'
         ) -join "`n"
+        $AppInjections += "`n"
+    }
+
+    # PodcastBrowserService (Android Auto)
+    if ($ManifestContent -notmatch 'PodcastBrowserService') {
+        $AppInjections += @(
+            '',
+            '        <service',
+            '            android:name="com.fhm.podcastsphere.PodcastBrowserService"',
+            '            android:foregroundServiceType="mediaPlayback"',
+            '            android:exported="true">',
+            '            <intent-filter>',
+            '                <action android:name="android.media.browse.MediaBrowserService" />',
+            '            </intent-filter>',
+            '        </service>'
+        ) -join "`n"
+        $AppInjections += "`n"
+    }
+
+    # MediaToggleReceiver
+    if ($ManifestContent -notmatch 'MediaToggleReceiver') {
+        $AppInjections += @(
+            '',
+            '        <receiver',
+            '            android:name="com.fhm.podcastsphere.MediaToggleReceiver"',
+            '            android:exported="false">',
+            '            <intent-filter>',
+            '                <action android:name="com.fhm.podcastsphere.MEDIA_TOGGLE" />',
+            '            </intent-filter>',
+            '        </receiver>'
+        ) -join "`n"
+        $AppInjections += "`n"
+    }
+
+    # CastOptionsProvider meta-data
+    if ($ManifestContent -notmatch 'CastOptionsProvider') {
+        $AppInjections += @(
+            '',
+            '        <meta-data',
+            '            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"',
+            '            android:value="com.fhm.podcastsphere.CastOptionsProvider" />'
+        ) -join "`n"
+        $AppInjections += "`n"
+    }
+
+    # Android Auto automotive_app_desc meta-data
+    if ($ManifestContent -notmatch 'automotive_app_desc') {
+        $AppInjections += @(
+            '',
+            '        <meta-data',
+            '            android:name="com.google.android.gms.car.application"',
+            '            android:resource="@xml/automotive_app_desc" />'
+        ) -join "`n"
+        $AppInjections += "`n"
     }
 
     if ($AppInjections.Length -gt 0) {
@@ -218,16 +297,35 @@ if (Test-Path $ManifestPath) {
 # ===================================================================
 # 5. Configuration Gradle
 # ===================================================================
-Write-Host ">>> Verification Gradle targetSdk..." -ForegroundColor Yellow
+Write-Host ">>> Configuration Gradle (targetSdk + dependencies)..." -ForegroundColor Yellow
 $BuildGradlePath = "android/app/build.gradle"
 if (Test-Path $BuildGradlePath) {
     $GradleContent = Get-Content $BuildGradlePath -Raw
     $GradleContent = $GradleContent -replace 'targetSdk\s*=?\s*\d+', 'targetSdk = 34'
+
+    # Add native dependencies for Cast, Android Auto, ExoPlayer
+    $NativeDeps = @(
+        "implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'",
+        "implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'",
+        "implementation 'androidx.media:media:1.7.0'",
+        "implementation 'com.google.android.gms:play-services-cast-framework:21.4.0'",
+        "implementation 'androidx.mediarouter:mediarouter:1.7.0'"
+    )
+
+    foreach ($dep in $NativeDeps) {
+        $depArtifact = [regex]::Match($dep, "'([^']+)'").Groups[1].Value
+        $depName = $depArtifact.Split(':')[0..1] -join ':'
+        if ($GradleContent -notmatch [regex]::Escape($depName)) {
+            $GradleContent = $GradleContent -replace '(dependencies\s*\{)', "`$1`n    $dep"
+        }
+    }
+
     [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $BuildGradlePath), $GradleContent, $UTF8NoBOM)
+    Write-Host "    Gradle mis a jour avec succes" -ForegroundColor Green
 }
 
 # ===================================================================
-# 6. MainActivity -- WebView settings + notification channel
+# 6. MainActivity -- WebView settings + notification channel + plugin registration
 # ===================================================================
 Write-Host ">>> Generation MainActivity.java..." -ForegroundColor Yellow
 
@@ -260,10 +358,14 @@ $MainActivityJava = @(
     '    protected void onCreate(Bundle savedInstanceState) {',
     '        super.onCreate(savedInstanceState);',
     '        createNotificationChannels();',
+    '',
+    '        // Register native plugins',
+    '        registerPlugin(CastPlugin.class);',
+    '        registerPlugin(PodcastAutoPlugin.class);',
     '    }',
     '',
     '    @Override',
-    '    public void onResume() {', # FIX: 'protected' changed to 'public' to match BridgeActivity
+    '    public void onResume() {',
     '        super.onResume();',
     '        WebView wv = getBridge().getWebView();',
     '        if (wv != null) {',
@@ -312,14 +414,37 @@ $KtVersion = Join-Path $PackageDir "MainActivity.kt"
 if (Test-Path $KtVersion) { Remove-Item $KtVersion -Force }
 
 # ===================================================================
-# 7. Synchronisation Finale
+# 7. Copie des fichiers Java natifs
+# ===================================================================
+Write-Host ">>> Copie des fichiers Java natifs..." -ForegroundColor Yellow
+
+$JavaFiles = @(
+    "CastPlugin.java",
+    "CastOptionsProvider.java",
+    "PodcastBrowserService.java",
+    "PodcastAutoPlugin.java",
+    "MediaToggleReceiver.java"
+)
+
+foreach ($jf in $JavaFiles) {
+    $src = "android-auto/$jf"
+    if (Test-Path $src) {
+        Copy-Item $src (Join-Path $PackageDir $jf) -Force
+        Write-Host "    $jf copie vers $PackageDir" -ForegroundColor Green
+    } else {
+        Write-Host "    ATTENTION: $src introuvable" -ForegroundColor Yellow
+    }
+}
+
+# ===================================================================
+# 8. Synchronisation Finale
 # ===================================================================
 Write-Host ">>> Synchronisation Capacitor..." -ForegroundColor Yellow
 npx cap sync android
 if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: npx cap sync a echoue" -ForegroundColor Red; exit 1 }
 
 # ===================================================================
-# 8. Ouverture Android Studio
+# 9. Ouverture Android Studio
 # ===================================================================
 Write-Host ">>> Ouverture Android Studio..." -ForegroundColor Yellow
 npx cap open android
