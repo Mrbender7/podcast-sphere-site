@@ -83,25 +83,6 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     public void onCreate() {
         super.onCreate();
 
-        // --- ExoPlayer (lecture Android Auto / Chromecast) ---
-        exoPlayer = new ExoPlayer.Builder(this).build();
-        exoPlayer.addListener(new Player.Listener() {
-            @Override
-            public void onIsPlayingChanged(boolean playing) {
-                // Synchronisation avec l'état ExoPlayer (lecture Android Auto)
-                isPlaying = playing;
-                applyPlaybackState(playing, exoPlayer.getCurrentPosition());
-                rebuildNotification();
-            }
-
-            @Override
-            public void onPlaybackStateChanged(int state) {
-                if (state == Player.STATE_ENDED) {
-                    applyPlaybackState(false, 0);
-                    rebuildNotification();
-                }
-            }
-        });
 
         // --- MediaSession ---
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
