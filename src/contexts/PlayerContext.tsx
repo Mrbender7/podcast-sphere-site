@@ -74,6 +74,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       const dur = audio.duration || 0;
       setState(s => ({ ...s, currentTime: ct, duration: dur }));
 
+      // Envoi de la position au lockscreen Android
+      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            playbackRate: audio.playbackRate || 1,
+            position: ct,
+          });
+        } catch (e) { /* Ignore les erreurs de synchronisation natives */ }
+      }
+
       // Save progress every ~5 seconds
       saveCounterRef.current++;
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
@@ -148,10 +159,22 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       audioRef.current.pause();
       setState(s => ({ ...s, isPlaying: false }));
     });
+    navigator.mediaSession.setActionHandler("seekbackward", () => {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
+    });
+    navigator.mediaSession.setActionHandler("seekforward", () => {
+      audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 30);
+    });
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (details.seekTime) audioRef.current.currentTime = details.seekTime;
+    });
 
     return () => {
       navigator.mediaSession.setActionHandler("play", null);
       navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("seekbackward", null);
+      navigator.mediaSession.setActionHandler("seekforward", null);
+      navigator.mediaSession.setActionHandler("seekto", null);
     };
   }, []);
 
