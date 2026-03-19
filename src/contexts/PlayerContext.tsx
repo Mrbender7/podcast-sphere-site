@@ -275,38 +275,60 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     }
   }, []);
 
-  const togglePlay = useCallback(() => {
+  const pausePlayback = useCallback(() => {
     const audio = audioRef.current;
-    if (!stateRef.current.currentEpisode) return;
-    if (stateRef.current.isPlaying) {
-      isPlayingRef.current = false;
-      audio.pause();
-      saveEpisodeProgress(stateRef.current.currentEpisode.id, audio.currentTime, audio.duration || 0);
-      addToHistory(stateRef.current.currentEpisode, audio.currentTime, audio.duration || 0);
-      setState(s => ({ ...s, isPlaying: false }));
-      updateMediaSession(stateRef.current.currentEpisode, false);
+    const currentEpisode = stateRef.current.currentEpisode;
+    if (!currentEpisode) return;
+
+    isPlayingRef.current = false;
+    audio.pause();
+    saveEpisodeProgress(currentEpisode.id, audio.currentTime, audio.duration || 0);
+    addToHistory(currentEpisode, audio.currentTime, audio.duration || 0);
+    setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+    updateMediaSession(currentEpisode, false);
+    syncMediaSessionPosition();
+    stopSilentLoop();
+    releaseWakeLock();
+    void safeNativeCall('updatePlaybackState', {
+      isPlaying: false,
+      position: Math.round((audio.currentTime || 0) * 1000),
+    });
+  }, [updateMediaSession, syncMediaSessionPosition]);
+
+  const resumePlayback = useCallback(async () => {
+    const audio = audioRef.current;
+    const currentEpisode = stateRef.current.currentEpisode;
+    if (!currentEpisode) return;
+
+    setState(s => ({ ...s, isBuffering: true }));
+
+    try {
+      await playWithTimeout(audio);
+      isPlayingRef.current = true;
+      setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+      updateMediaSession(currentEpisode, true);
       syncMediaSessionPosition();
-      stopSilentLoop();
-      releaseWakeLock();
-      safeNativeCall('updatePlaybackState', {
-        isPlaying: false,
-        position: Math.round(audio.currentTime * 1000),
+      startSilentLoop();
+      requestWakeLock();
+      await safeNativeCall('updatePlaybackState', {
+        isPlaying: true,
+        position: Math.round((audio.currentTime || 0) * 1000),
       });
-    } else {
-      audio.play().then(() => {
-        isPlayingRef.current = true;
-        setState(s => ({ ...s, isPlaying: true }));
-        updateMediaSession(stateRef.current.currentEpisode!, true);
-        syncMediaSessionPosition();
-        startSilentLoop();
-        requestWakeLock();
-        safeNativeCall('updatePlaybackState', {
-          isPlaying: true,
-          position: Math.round(audio.currentTime * 1000),
-        });
-      }).catch(e => console.error("[Player] Toggle play error:", e));
+    } catch (e) {
+      console.error("[Player] Resume/toggle play error:", e);
+      setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
     }
   }, [updateMediaSession, syncMediaSessionPosition]);
+
+  const togglePlay = useCallback(() => {
+    if (!stateRef.current.currentEpisode) return;
+    if (stateRef.current.isPlaying) {
+      pausePlayback();
+      return;
+    }
+
+    void resumePlayback();
+  }, [pausePlayback, resumePlayback]);
 
   // Keep togglePlayRef in sync for native listeners
   togglePlayRef.current = togglePlay;
@@ -326,18 +348,22 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         });
         vehicleDisconnectListener = await PodcastAutoPlugin.addListener("vehicleDisconnected", () => {
           if (isPlayingRef.current) {
-            togglePlayRef.current();
+            pausePlayback();
           }
         });
         mediaCommandListener = await PodcastAutoPlugin.addListener(
           'mediaCommand',
-          (data: { action: string; position?: number; mediaId?: string }) => {
+          async (data: { action: string; position?: number; mediaId?: string }) => {
             switch (data.action) {
               case 'play':
-                if (!isPlayingRef.current) togglePlayRef.current();
+                if (!isPlayingRef.current) {
+                  await resumePlayback();
+                }
                 break;
               case 'pause':
-                if (isPlayingRef.current) togglePlayRef.current();
+                if (isPlayingRef.current) {
+                  pausePlayback();
+                }
                 break;
               case 'toggle':
                 togglePlayRef.current();
@@ -345,6 +371,11 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
               case 'seek':
                 if (audioRef.current && data.position != null) {
                   audioRef.current.currentTime = data.position / 1000;
+                  syncMediaSessionPosition();
+                  await safeNativeCall('updatePlaybackState', {
+                    isPlaying: isPlayingRef.current,
+                    position: Math.round(audioRef.current.currentTime * 1000),
+                  });
                 }
                 break;
             }
@@ -362,7 +393,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         mediaCommandListener?.remove?.();
       } catch {}
     };
-  }, []);
+  }, [pausePlayback, resumePlayback, syncMediaSessionPosition]);
 
   const play = useCallback(async (episode: Episode) => {
     if (!episode.enclosureUrl) {
