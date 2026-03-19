@@ -3,7 +3,8 @@ import { useDownloads } from "@/contexts/DownloadContext";
 import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle } from "lucide-react";
+import { useCast } from "@/hooks/useCast";
+import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ export function FullScreenPlayer() {
   } = usePlayer();
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const { t } = useTranslation();
+  const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast } = useCast();
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
@@ -97,10 +99,23 @@ export function FullScreenPlayer() {
             <Download className="w-5 h-5 text-muted-foreground" />
           )}
         </button>
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
-        <button onClick={handleShare} className="p-2 -mr-2" aria-label="Share">
-          <Share2 className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {isCasting ? `📺 ${castDeviceName}` : t("player.nowPlaying")}
+        </span>
+        <div className="flex items-center gap-1">
+          {isCastAvailable && (
+            <button
+              onClick={isCasting ? stopCast : startCast}
+              className={cn("p-2", isCasting && "text-primary")}
+              aria-label="Cast"
+            >
+              <Cast className={cn("w-5 h-5", isCasting ? "text-primary" : "text-muted-foreground")} />
+            </button>
+          )}
+          <button onClick={handleShare} className="p-2 -mr-2" aria-label="Share">
+            <Share2 className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Artwork */}

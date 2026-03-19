@@ -4,6 +4,8 @@ import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 import { getPodcastById } from "@/services/PodcastService";
+import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
+import { notifyNativePlaybackState } from "@/plugins/PodcastAutoPlugin";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -57,6 +59,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
   const stateRef = useRef(state);
   stateRef.current = state;
+  const isPlayingRef = useRef(false);
+  isPlayingRef.current = state.isPlaying;
 
   // Time update listener + auto-save progress
   const saveCounterRef = useRef(0);
@@ -106,6 +110,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("canplay", onCanPlay);
 
+    // Setup background keep-alive (visibility recovery)
+    const cleanupVisibility = setupVisibilityRecovery(audio, isPlayingRef);
+
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
@@ -113,6 +120,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       audio.removeEventListener("error", onError);
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("canplay", onCanPlay);
+      cleanupVisibility();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -209,9 +217,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     try {
       await audio.play();
       if (resumeTime > 0) audio.currentTime = resumeTime;
+      isPlayingRef.current = true;
       setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+      // Start background keep-alive mechanisms
+      startSilentLoop();
+      requestWakeLock();
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
+      notifyNativePlaybackState(episode, true);
     } catch {
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
@@ -222,16 +235,25 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     const audio = audioRef.current;
     if (!stateRef.current.currentEpisode) return;
     if (stateRef.current.isPlaying) {
+      isPlayingRef.current = false;
       audio.pause();
       // Save progress on pause
       saveEpisodeProgress(stateRef.current.currentEpisode.id, audio.currentTime, audio.duration || 0);
       addToHistory(stateRef.current.currentEpisode, audio.currentTime, audio.duration || 0);
       setState(s => ({ ...s, isPlaying: false }));
       updateMediaSession(stateRef.current.currentEpisode, false);
+      // Stop background keep-alive
+      stopSilentLoop();
+      releaseWakeLock();
+      notifyNativePlaybackState(stateRef.current.currentEpisode, false);
     } else {
       audio.play().then(() => {
+        isPlayingRef.current = true;
         setState(s => ({ ...s, isPlaying: true }));
         updateMediaSession(stateRef.current.currentEpisode!, true);
+        startSilentLoop();
+        requestWakeLock();
+        notifyNativePlaybackState(stateRef.current.currentEpisode!, true);
       }).catch(() => {});
     }
   }, [updateMediaSession]);

@@ -78,12 +78,16 @@
     /* Bottom mini-player */
     .mini-player {
       display: flex;
-      align-items: center;
-      gap: 16px;
+      flex-direction: column;
       padding: 16px 48px;
       background: hsla(0,0%,100%,0.05);
       border-top: 1px solid hsla(0,0%,100%,0.1);
       backdrop-filter: blur(12px);
+    }
+    .mini-player-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
     .mini-player-icon {
       width: 48px;
@@ -112,6 +116,33 @@
     .mini-player-status {
       font-size: 13px;
       color: hsla(0,0%,100%,0.4);
+    }
+    /* Progress bar for podcasts */
+    .progress-container {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 4px;
+      background: hsla(0,0%,100%,0.15);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, hsl(220,90%,60%), hsl(280,80%,60%));
+      border-radius: 2px;
+      width: 0%;
+      transition: width 1s linear;
+    }
+    .progress-time {
+      font-size: 11px;
+      color: hsla(0,0%,100%,0.4);
+      font-family: monospace;
+      min-width: 45px;
     }
     /* Animated equalizer bars */
     .equalizer {
@@ -192,18 +223,28 @@
 
   <!-- Mini Player -->
   <div class="mini-player">
-    <div class="mini-player-icon" id="miniIcon">
-      <img id="miniIconImg" src="" alt="" style="display:none">
+    <div class="mini-player-row">
+      <div class="mini-player-icon" id="miniIcon">
+        <img id="miniIconImg" src="" alt="" style="display:none">
+      </div>
+      <div class="mini-player-info">
+        <div class="mini-player-name" id="miniName">--</div>
+        <div class="mini-player-status" id="miniStatus">En lecture</div>
+      </div>
+      <div class="equalizer">
+        <div class="eq-bar" style="height:12px"></div>
+        <div class="eq-bar" style="height:18px"></div>
+        <div class="eq-bar" style="height:8px"></div>
+        <div class="eq-bar" style="height:14px"></div>
+      </div>
     </div>
-    <div class="mini-player-info">
-      <div class="mini-player-name" id="miniName">--</div>
-      <div class="mini-player-status">En lecture</div>
-    </div>
-    <div class="equalizer">
-      <div class="eq-bar" style="height:12px"></div>
-      <div class="eq-bar" style="height:18px"></div>
-      <div class="eq-bar" style="height:8px"></div>
-      <div class="eq-bar" style="height:14px"></div>
+    <!-- Progress bar for podcasts -->
+    <div class="progress-container" id="progressContainer">
+      <span class="progress-time" id="progressCurrent">0:00</span>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-time" id="progressDuration">0:00</span>
     </div>
   </div>
 
@@ -426,6 +467,31 @@
         return request;
       }
     );
+
+    // Progress bar update for podcasts
+    function formatTime(s) {
+      if (!s || !isFinite(s)) return '0:00';
+      s = Math.floor(s);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+      return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    setInterval(() => {
+      try {
+        const media = playerManager.getMediaInformation();
+        if (!media) return;
+        const currentTime = playerManager.getCurrentTimeSec() || 0;
+        const duration = media.duration || 0;
+        document.getElementById('progressCurrent').textContent = formatTime(currentTime);
+        document.getElementById('progressDuration').textContent = formatTime(duration);
+        const pct = duration > 0 ? (currentTime / duration * 100) : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('miniStatus').textContent = duration > 0 ? 'Podcast' : 'En lecture';
+      } catch(e) {}
+    }, 1000);
 
     // Start receiver
     context.start();
