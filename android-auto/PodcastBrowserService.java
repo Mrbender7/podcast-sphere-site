@@ -161,7 +161,78 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     }
 
     @Override
-    public void onDestroy() {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+
+            if (ACTION_UPDATE_METADATA.equals(action)) {
+                String title = intent.getStringExtra("title");
+                String author = intent.getStringExtra("author");
+                String artworkUrl = intent.getStringExtra("artworkUrl");
+                long duration = intent.getLongExtra("duration", 0);
+
+                currentTitle = title != null ? title : "";
+                currentArtist = author != null ? author : "";
+                currentImageUrl = artworkUrl != null ? artworkUrl : "";
+
+                // Build metadata on background thread (artwork download)
+                new Thread(() -> {
+                    Bitmap artwork = null;
+                    if (artworkUrl != null && !artworkUrl.isEmpty()) {
+                        try {
+                            java.io.InputStream is = new URL(artworkUrl.replace("http://", "https://")).openStream();
+                            artwork = BitmapFactory.decodeStream(is);
+                            is.close();
+                        } catch (Exception e) {
+                            Log.w(TAG, "Artwork download failed", e);
+                        }
+                    }
+
+                    final Bitmap finalArt = artwork;
+                    handler.post(() -> {
+                        MediaMetadataCompat.Builder mb = new MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration);
+                        if (finalArt != null) {
+                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, finalArt);
+                            mb.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, finalArt);
+                        }
+                        mediaSession.setMetadata(mb.build());
+                        mediaSession.setActive(true);
+                        rebuildNotification();
+                    });
+                }).start();
+
+                return START_NOT_STICKY;
+            }
+
+            if (ACTION_UPDATE_PLAYBACK.equals(action)) {
+                boolean isPlaying = intent.getBooleanExtra("isPlaying", false);
+                long position = intent.getLongExtra("position", 0);
+
+                long actions = PlaybackStateCompat.ACTION_PLAY |
+                    PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE |
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
+                    PlaybackStateCompat.ACTION_SEEK_TO;
+
+                int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+                mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
+                    .setActions(actions)
+                    .setState(state, position, 1.0f)
+                    .build());
+                rebuildNotification();
+
+                return START_NOT_STICKY;
+            }
+        }
+
+        MediaButtonReceiver.handleIntent(mediaSession, intent);
+        return START_NOT_STICKY;
+    }
+
         super.onDestroy();
         instance = null;
         if (noisyReceiver != null) {
