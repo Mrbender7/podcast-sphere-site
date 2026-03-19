@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/api/podcast": {
+        target: "https://api.podcastindex.org/api/1.0",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/podcast/, ""),
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

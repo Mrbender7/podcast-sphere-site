@@ -47,14 +47,9 @@ async function generateAuthHeaders(): Promise<Record<string, string>> {
 async function apiFetch<T>(path: string, params?: Record<string, string>): Promise<T> {
   const headers = await generateAuthHeaders();
   const query = params ? "?" + new URLSearchParams(params).toString() : "";
-  const directUrl = `${DIRECT_URL}${path}${query}`;
+  const url = `${BASE_URL}${path}${query}`;
 
-  // On native platforms (Capacitor), call directly. In browsers, use CORS proxy.
-  const url = isNative ? directUrl : `${PROXY_URL}${encodeURIComponent(directUrl)}`;
-
-  const res = await fetch(url, {
-    headers: isNative ? headers : { ...headers },
-  });
+  const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`Podcast Index API error: ${res.status}`);
   return res.json();
 }
