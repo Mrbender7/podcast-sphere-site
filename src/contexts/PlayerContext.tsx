@@ -301,6 +301,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         startSilentLoop();
         requestWakeLock();
         safeNotifyNative(stateRef.current.currentEpisode!, true);
+        updateNativePlaybackState(true, Math.round(audio.currentTime * 1000));
       }).catch(e => console.error("[Player] Toggle play error:", e));
     }
   }, [updateMediaSession, syncMediaSessionPosition, safeNotifyNative]);
