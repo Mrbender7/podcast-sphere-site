@@ -151,9 +151,6 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             mediaSession.setActive(false);
             mediaSession.release();
         }
-        if (exoPlayer != null) {
-            exoPlayer.release();
-        }
         Log.d(TAG, "Service détruit");
     }
 
