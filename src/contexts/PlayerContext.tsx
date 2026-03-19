@@ -280,7 +280,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       // Stop background keep-alive
       stopSilentLoop();
       releaseWakeLock();
-      notifyNativePlaybackState(stateRef.current.currentEpisode, false);
+      try { notifyNativePlaybackState(stateRef.current.currentEpisode, false); } catch {}
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
@@ -288,8 +288,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         updateMediaSession(stateRef.current.currentEpisode!, true);
         startSilentLoop();
         requestWakeLock();
-        notifyNativePlaybackState(stateRef.current.currentEpisode!, true);
-      }).catch(() => {});
+        try { notifyNativePlaybackState(stateRef.current.currentEpisode!, true); } catch {}
+      }).catch((e) => { console.error('[Player] togglePlay failed:', e); });
     }
   }, [updateMediaSession]);
 
