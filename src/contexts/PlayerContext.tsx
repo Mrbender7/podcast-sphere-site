@@ -302,6 +302,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       releaseWakeLock();
       safeNotifyNative(stateRef.current.currentEpisode, false);
       updateNativePlaybackState(false, Math.round(audio.currentTime * 1000));
+      safeNativeCall('updatePlaybackState', {
+        isPlaying: false,
+        position: Math.round(audio.currentTime * 1000),
+      });
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
@@ -312,6 +316,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         requestWakeLock();
         safeNotifyNative(stateRef.current.currentEpisode!, true);
         updateNativePlaybackState(true, Math.round(audio.currentTime * 1000));
+        safeNativeCall('updatePlaybackState', {
+          isPlaying: true,
+          position: Math.round(audio.currentTime * 1000),
+        });
       }).catch(e => console.error("[Player] Toggle play error:", e));
     }
   }, [updateMediaSession, syncMediaSessionPosition, safeNotifyNative]);
