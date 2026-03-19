@@ -291,6 +291,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       stopSilentLoop();
       releaseWakeLock();
       safeNotifyNative(stateRef.current.currentEpisode, false);
+      updateNativePlaybackState(false, Math.round(audio.currentTime * 1000));
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
