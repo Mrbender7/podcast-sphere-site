@@ -110,6 +110,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("canplay", onCanPlay);
 
+    // Setup background keep-alive (visibility recovery)
+    const cleanupVisibility = setupVisibilityRecovery(audio, isPlayingRef);
+
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
@@ -117,6 +120,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       audio.removeEventListener("error", onError);
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("canplay", onCanPlay);
+      cleanupVisibility();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
