@@ -154,6 +154,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
         saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
         addToHistory(stateRef.current.currentEpisode, ct, dur);
+        // Sync native lock screen / notification position
+        updateNativePlaybackState(true, Math.round(ct * 1000));
       }
     };
 
