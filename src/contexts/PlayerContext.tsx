@@ -6,6 +6,16 @@ import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompl
 import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
 import { notifyNativePlaybackState, updateNativeNowPlaying, updateNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { Capacitor } from '@capacitor/core';
+
+const safeNativeCall = async (method: string, data: Record<string, unknown>) => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await (PodcastAutoPlugin.instance as any)[method](data);
+  } catch (e) {
+    console.warn('[PodcastAutoPlugin]', method, 'failed:', e);
+  }
+};
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -292,6 +302,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       releaseWakeLock();
       safeNotifyNative(stateRef.current.currentEpisode, false);
       updateNativePlaybackState(false, Math.round(audio.currentTime * 1000));
+      safeNativeCall('updatePlaybackState', {
+        isPlaying: false,
+        position: Math.round(audio.currentTime * 1000),
+      });
     } else {
       audio.play().then(() => {
         isPlayingRef.current = true;
@@ -302,6 +316,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         requestWakeLock();
         safeNotifyNative(stateRef.current.currentEpisode!, true);
         updateNativePlaybackState(true, Math.round(audio.currentTime * 1000));
+        safeNativeCall('updatePlaybackState', {
+          isPlaying: true,
+          position: Math.round(audio.currentTime * 1000),
+        });
       }).catch(e => console.error("[Player] Toggle play error:", e));
     }
   }, [updateMediaSession, syncMediaSessionPosition, safeNotifyNative]);
@@ -312,6 +330,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   useEffect(() => {
     let mediaToggleListener: any;
     let vehicleDisconnectListener: any;
+    let mediaCommandListener: any;
 
     try {
       mediaToggleListener = PodcastAutoPlugin.addListener("mediaToggle", () => {
@@ -326,10 +345,42 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       console.log("[Player] Native listeners not available (expected in browser):", e);
     }
 
+    // Listen for mediaCommand events from PodcastBrowserService
+    if (Capacitor.isNativePlatform()) {
+      (async () => {
+        try {
+          mediaCommandListener = await PodcastAutoPlugin.addListener(
+            'mediaCommand',
+            (data: { action: string; position?: number; mediaId?: string }) => {
+              switch (data.action) {
+                case 'play':
+                  if (!isPlayingRef.current) togglePlayRef.current();
+                  break;
+                case 'pause':
+                  if (isPlayingRef.current) togglePlayRef.current();
+                  break;
+                case 'toggle':
+                  togglePlayRef.current();
+                  break;
+                case 'seek':
+                  if (audioRef.current && data.position != null) {
+                    audioRef.current.currentTime = data.position / 1000;
+                  }
+                  break;
+              }
+            }
+          );
+        } catch (e) {
+          console.warn('[PodcastAutoPlugin] addListener mediaCommand failed:', e);
+        }
+      })();
+    }
+
     return () => {
       try {
         mediaToggleListener?.then?.((l: any) => l.remove());
         vehicleDisconnectListener?.then?.((l: any) => l.remove());
+        mediaCommandListener?.remove?.();
       } catch {}
     };
   }, []);
@@ -386,6 +437,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       safeNotifyNative(episode, true);
       updateNativeNowPlaying(episode);
       updateNativePlaybackState(true, Math.round(resumeTime * 1000));
+      // Sync native notification via safeNativeCall
+      await safeNativeCall('updateNowPlaying', {
+        title:      episode.title ?? '',
+        author:     episode.feedAuthor ?? episode.feedTitle ?? '',
+        artworkUrl: episode.feedImage ?? episode.image ?? '',
+        duration:   (episode.duration ?? 0) * 1000,
+      });
+      await safeNativeCall('updatePlaybackState', {
+        isPlaying: true,
+        position:  Math.round(resumeTime * 1000),
+      });
     } catch (e) {
       console.error("[Player] Playback failed:", e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
@@ -424,6 +486,18 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
   const openFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: true })), []);
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);
+
+  // Periodic native position sync every 5s during playback
+  useEffect(() => {
+    if (!state.isPlaying) return;
+    const interval = setInterval(() => {
+      safeNativeCall('updatePlaybackState', {
+        isPlaying: true,
+        position: Math.round((audioRef.current?.currentTime ?? 0) * 1000),
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [state.isPlaying]);
 
   const progress = state.duration > 0 ? state.currentTime / state.duration : 0;
 
