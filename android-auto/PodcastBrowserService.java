@@ -658,6 +658,66 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
         }
     }
 
+    /**
+     * Rebuilds the foreground notification with current metadata and playback state.
+     * Uses MediaStyle for lock screen and notification shade display.
+     */
+    private void rebuildNotification() {
+        boolean isPlaying = false;
+        PlaybackStateCompat pbState = mediaSession.getController().getPlaybackState();
+        if (pbState != null) {
+            isPlaying = pbState.getState() == PlaybackStateCompat.STATE_PLAYING;
+        }
+
+        // PendingIntents for prev, play/pause, next
+        Intent prevIntent = new Intent(MEDIA_TOGGLE_ACTION + ".PREV");
+        prevIntent.setPackage(getPackageName());
+        PendingIntent prevPI = PendingIntent.getBroadcast(this, 1, prevIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent toggleIntent = new Intent(MEDIA_TOGGLE_ACTION);
+        toggleIntent.setPackage(getPackageName());
+        PendingIntent togglePI = PendingIntent.getBroadcast(this, 0, toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent nextIntent = new Intent(MEDIA_TOGGLE_ACTION + ".NEXT");
+        nextIntent.setPackage(getPackageName());
+        PendingIntent nextPI = PendingIntent.getBroadcast(this, 2, nextIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(currentTitle)
+            .setContentText(currentArtist)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(android.R.drawable.ic_media_previous, "Prev", prevPI)
+            .addAction(isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
+                isPlaying ? "Pause" : "Play", togglePI)
+            .addAction(android.R.drawable.ic_media_next, "Next", nextPI)
+            .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                .setMediaSession(mediaSession.getSessionToken())
+                .setShowActionsInCompactView(0, 1, 2))
+            .setOngoing(isPlaying)
+            .setPriority(NotificationCompat.PRIORITY_LOW);
+
+        // Set large icon from current metadata artwork
+        MediaMetadataCompat meta = mediaSession.getController().getMetadata();
+        if (meta != null) {
+            Bitmap art = meta.getBitmap(MediaMetadataCompat.METADATA_KEY_ART);
+            if (art != null) {
+                builder.setLargeIcon(art);
+            }
+        }
+
+        Notification notification = builder.build();
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+    }
+
     // --- Data sync from WebView ---
 
     public void updateFavorites(String json) {

@@ -8,6 +8,8 @@ export interface PodcastAutoPluginInterface {
   syncFavorites(options: { podcasts: string }): Promise<void>;
   syncRecents(options: { podcasts: string }): Promise<void>;
   notifyPlaybackState(options: Record<string, any>): Promise<void>;
+  updateNowPlaying(options: { title: string; author: string; artworkUrl: string; duration: number }): Promise<void>;
+  updatePlaybackState2(options: { isPlaying: boolean; position: number }): Promise<void>;
   clearAppData(): Promise<void>;
   addListener(event: string, cb: (data: any) => void): Promise<any>;
 }
