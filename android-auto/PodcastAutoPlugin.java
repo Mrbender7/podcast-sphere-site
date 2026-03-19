@@ -1,6 +1,10 @@
 package com.fhm.podcastsphere;
 
-import android.content.SharedPreferences;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Build;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
@@ -10,153 +14,219 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
- * Capacitor plugin for syncing podcast data between WebView and native services.
- * Singleton pattern for bridge between notification BroadcastReceiver and JS.
+ * PodcastAutoPlugin — Bridge Capacitor entre React et les services natifs Android
+ *
+ * ┌──────────────────────────────────────────────────────────────────┐
+ * │  React (PlayerContext.tsx)                                       │
+ * │     │                                                            │
+ * │     ├─ updateNowPlaying()   ──→  PodcastBrowserService           │
+ * │     ├─ updatePlaybackState() ──→  (UPDATE_METADATA /             │
+ * │     ├─ syncFavorites()           UPDATE_PLAYBACK_STATE intents)  │
+ * │     └─ stopPlayback()                                            │
+ * │                                                                  │
+ * │  PodcastBrowserService  ──→  Broadcast WEBVIEW_COMMAND           │
+ * │     │                              │                             │
+ * │     └─ BroadcastReceiver ──→  notifyListeners("mediaCommand")    │
+ * │                                    │                             │
+ * │                               React écoute avec                  │
+ * │                               PodcastAutoPlugin.addListener()    │
+ * └──────────────────────────────────────────────────────────────────┘
  */
 @CapacitorPlugin(name = "PodcastAutoPlugin")
 public class PodcastAutoPlugin extends Plugin {
 
     private static final String TAG = "PodcastAutoPlugin";
-    private static final String PREFS_NAME = "podcastsphere_data";
 
-    private static PodcastAutoPlugin activeInstance;
+    // Singleton pour accès depuis d'autres classes Java si besoin
+    private static PodcastAutoPlugin instance;
+
+    // Écoute les commandes de retour depuis PodcastBrowserService
+    private BroadcastReceiver webViewCommandReceiver;
+
+    // ===============================================================
+    //  Initialisation du plugin
+    // ===============================================================
 
     @Override
     public void load() {
-        activeInstance = this;
-        Log.d(TAG, "PodcastAutoPlugin loaded (singleton registered)");
+        instance = this;
+        registerWebViewCommandReceiver();
+        Log.d(TAG, "PodcastAutoPlugin chargé");
     }
 
-    public static PodcastAutoPlugin getActiveInstance() {
-        return activeInstance;
-    }
-
-    /**
-     * Called by MediaToggleReceiver when notification play/pause is tapped.
-     * Emits a JS event that PlayerContext listens to.
-     */
-    public void notifyToggleFromNotification() {
-        notifyListeners("mediaToggle", new JSObject());
+    public static PodcastAutoPlugin getInstance() {
+        return instance;
     }
 
     /**
-     * Called by native service on vehicle disconnect.
-     * Emits event to force-pause WebView audio.
+     * Enregistre un BroadcastReceiver qui écoute les commandes envoyées
+     * par PodcastBrowserService (play, pause, next, previous, seek)
+     * et les transfère au layer React via notifyListeners().
      */
-    public void notifyVehicleDisconnected(String episodeId) {
-        JSObject data = new JSObject();
-        if (episodeId != null) data.put("episodeId", episodeId);
-        notifyListeners("vehicleDisconnected", data);
-    }
+    private void registerWebViewCommandReceiver() {
+        webViewCommandReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String command = intent.getStringExtra("command");
+                if (command == null) return;
 
-    /**
-     * Public wrapper for notifyListeners (which is protected in Capacitor Plugin).
-     */
-    public void notifyListenersExternal(String eventName, JSObject data) {
-        notifyListeners(eventName, data);
-    }
+                Log.d(TAG, "Commande reçue du service : " + command);
 
-    @PluginMethod
-    public void syncFavorites(PluginCall call) {
-        String json = call.getString("podcasts", "[]");
-        getPrefs().edit().putString("favorites", json).apply();
+                JSObject data = new JSObject();
 
-        // Update native browse tree if service is running
-        if (PodcastBrowserService.getInstance() != null) {
-            PodcastBrowserService.getInstance().updateFavorites(json);
+                if (command.startsWith("seek:")) {
+                    // Format : "seek:<position_ms>"
+                    String[] parts = command.split(":");
+                    data.put("action",   "seek");
+                    data.put("position", parts.length > 1 ? Long.parseLong(parts[1]) : 0L);
+                } else if (command.startsWith("playFromId:")) {
+                    // Android Auto : lecture d'un épisode par ID
+                    String[] parts = command.split(":", 2);
+                    data.put("action",  "playFromId");
+                    data.put("mediaId", parts.length > 1 ? parts[1] : "");
+                } else {
+                    // play | pause | stop | next | previous
+                    data.put("action", command);
+                }
+
+                // Notifie tous les listeners React enregistrés avec
+                // PodcastAutoPlugin.addListener("mediaCommand", handler)
+                notifyListeners("mediaCommand", data);
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(PodcastBrowserService.ACTION_WEBVIEW_COMMAND);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getContext().registerReceiver(webViewCommandReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            getContext().registerReceiver(webViewCommandReceiver, filter);
         }
-
-        Log.d(TAG, "Favorites synced (" + json.length() + " chars)");
-        call.resolve();
     }
 
-    @PluginMethod
-    public void syncRecents(PluginCall call) {
-        String json = call.getString("podcasts", "[]");
-        getPrefs().edit().putString("recents", json).apply();
-
-        if (PodcastBrowserService.getInstance() != null) {
-            PodcastBrowserService.getInstance().updateRecents(json);
+    @Override
+    protected void handleOnDestroy() {
+        if (webViewCommandReceiver != null) {
+            try {
+                getContext().unregisterReceiver(webViewCommandReceiver);
+            } catch (Exception e) {
+                Log.w(TAG, "Receiver déjà désenregistré");
+            }
         }
-
-        Log.d(TAG, "Recents synced (" + json.length() + " chars)");
-        call.resolve();
+        super.handleOnDestroy();
     }
 
-    @PluginMethod
-    public void notifyPlaybackState(PluginCall call) {
-        String episodeId = call.getString("episodeId", "");
-        String title = call.getString("title", "");
-        String artist = call.getString("artist", "");
-        String imageUrl = call.getString("imageUrl", "");
-        boolean isPlaying = call.getBoolean("isPlaying", false);
-        double currentTime = call.getDouble("currentTime", 0.0);
-        double duration = call.getDouble("duration", 0.0);
-
-        SharedPreferences.Editor editor = getPrefs().edit();
-        editor.putString("current_episode_id", episodeId);
-        editor.putString("current_title", title);
-        editor.putString("current_artist", artist);
-        editor.putString("current_image", imageUrl);
-        editor.putBoolean("is_playing", isPlaying);
-        editor.putFloat("current_time", (float) currentTime);
-        editor.putFloat("duration", (float) duration);
-        editor.apply();
-
-        Log.d(TAG, "Playback state: " + title + " playing=" + isPlaying);
-        call.resolve();
-    }
+    // ===============================================================
+    //  PluginMethods — appelés depuis React via Capacitor
+    // ===============================================================
 
     /**
-     * Updates the native MediaSession metadata (title, artist, artwork, duration)
-     * so the lock screen and notification display current episode info.
+     * Met à jour les métadonnées de la notification et du lock screen.
+     *
+     * Appeler quand un nouvel épisode commence à jouer.
+     *
+     * @param title      Titre de l'épisode
+     * @param author     Nom du podcast / auteur
+     * @param artworkUrl URL de l'image de couverture
+     * @param duration   Durée totale en millisecondes
      */
     @PluginMethod
     public void updateNowPlaying(PluginCall call) {
-        String title = call.getString("title", "");
-        String author = call.getString("author", "");
+        String title      = call.getString("title",      "");
+        String author     = call.getString("author",     "");
         String artworkUrl = call.getString("artworkUrl", "");
-        long duration = call.getInt("duration", 0); // duration in ms
+        Long   duration   = call.getLong("duration");
+        if (duration == null) duration = 0L;
+
+        Log.d(TAG, "updateNowPlaying → " + title + " | " + author);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
-        intent.setAction("UPDATE_METADATA");
-        intent.putExtra("title", title);
-        intent.putExtra("author", author);
+        intent.setAction(PodcastBrowserService.ACTION_UPDATE_METADATA);
+        intent.putExtra("title",      title);
+        intent.putExtra("author",     author);
         intent.putExtra("artworkUrl", artworkUrl);
-        intent.putExtra("duration", duration);
-        getContext().startService(intent);
+        intent.putExtra("duration",   duration);
 
-        Log.d(TAG, "updateNowPlaying: " + title + " by " + author);
+        startService(intent);
         call.resolve();
     }
 
     /**
-     * Updates the native MediaSession playback state (playing/paused + position)
-     * so the lock screen progress bar and play/pause icon stay in sync.
+     * Met à jour l'état play/pause et la position dans la notification et le lock screen.
+     *
+     * Appeler à chaque toggle play/pause et régulièrement (toutes les 5s) pendant la lecture.
+     *
+     * @param isPlaying true si lecture en cours
+     * @param position  Position actuelle en millisecondes
      */
     @PluginMethod
-    public void updatePlaybackState2(PluginCall call) {
-        boolean isPlaying = call.getBoolean("isPlaying", false);
-        long position = call.getInt("position", 0); // position in ms
+    public void updatePlaybackState(PluginCall call) {
+        Boolean isPlaying = call.getBoolean("isPlaying");
+        Long    position  = call.getLong("position");
+        if (isPlaying == null) isPlaying = false;
+        if (position  == null) position  = 0L;
+
+        Log.d(TAG, "updatePlaybackState → isPlaying=" + isPlaying + " | position=" + position);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
-        intent.setAction("UPDATE_PLAYBACK_STATE");
+        intent.setAction(PodcastBrowserService.ACTION_UPDATE_PLAYBACK_STATE);
         intent.putExtra("isPlaying", isPlaying);
-        intent.putExtra("position", position);
+        intent.putExtra("position",  position);
+
+        startService(intent);
+        call.resolve();
+    }
+
+    /**
+     * Synchronise les favoris/abonnements dans les SharedPreferences
+     * pour les exposer dans le browse tree Android Auto.
+     *
+     * @param favorites  JSON string : "[\"Titre|feedId\", ...]"
+     * @param recent     JSON string : "[\"Titre|episodeId\", ...]"
+     */
+    @PluginMethod
+    public void syncFavorites(PluginCall call) {
+        String favorites = call.getString("favorites", "[]");
+        String recent    = call.getString("recent",    "[]");
+
+        getContext()
+            .getSharedPreferences("podcast_auto_data", Context.MODE_PRIVATE)
+            .edit()
+            .putString("subscriptions_items", favorites)
+            .putString("recent_items",        recent)
+            .apply();
+
+        Log.d(TAG, "syncFavorites → " + favorites.length() + " chars");
+        call.resolve();
+    }
+
+    /**
+     * Arrête proprement le foreground service et retire la notification.
+     */
+    @PluginMethod
+    public void stopPlayback(PluginCall call) {
+        Log.d(TAG, "stopPlayback");
+
+        Intent intent = new Intent(getContext(), PodcastBrowserService.class);
+        intent.setAction(PodcastBrowserService.ACTION_STOP_SERVICE);
         getContext().startService(intent);
 
-        Log.d(TAG, "updatePlaybackState2: playing=" + isPlaying + " pos=" + position);
         call.resolve();
     }
 
-    @PluginMethod
-    public void clearAppData(PluginCall call) {
-        getPrefs().edit().clear().apply();
-        Log.d(TAG, "App data cleared");
-        call.resolve();
-    }
+    // ===============================================================
+    //  Helpers privés
+    // ===============================================================
 
-    private SharedPreferences getPrefs() {
-        return getContext().getSharedPreferences(PREFS_NAME, 0);
+    /**
+     * Démarre le service en Foreground si API >= 26, sinon startService normal.
+     * Évite le crash "startForegroundService called but not became foreground".
+     */
+    private void startService(Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getContext().startForegroundService(intent);
+        } else {
+            getContext().startService(intent);
+        }
     }
 }
