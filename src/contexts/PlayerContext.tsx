@@ -220,14 +220,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     if (!("mediaSession" in navigator)) return;
 
     navigator.mediaSession.setActionHandler("play", () => {
-      audioRef.current.play().catch(e => console.error("[Player] Play action error:", e));
-      setState(s => ({ ...s, isPlaying: true }));
-      syncMediaSessionPosition();
+      void resumePlayback();
     });
     navigator.mediaSession.setActionHandler("pause", () => {
-      audioRef.current.pause();
-      setState(s => ({ ...s, isPlaying: false }));
-      syncMediaSessionPosition();
+      pausePlayback();
     });
     navigator.mediaSession.setActionHandler("seekbackward", () => {
       audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
@@ -251,7 +247,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       navigator.mediaSession.setActionHandler("seekforward", null);
       navigator.mediaSession.setActionHandler("seekto", null);
     };
-  }, [syncMediaSessionPosition]);
+  }, [pausePlayback, resumePlayback, syncMediaSessionPosition]);
 
   // --- Native event listeners (guarded by platform check) ---
 
