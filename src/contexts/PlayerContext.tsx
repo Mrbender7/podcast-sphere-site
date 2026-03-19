@@ -5,7 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
-import { notifyNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { notifyNativePlaybackState, updateNativeNowPlaying, updateNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
