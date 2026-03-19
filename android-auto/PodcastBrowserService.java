@@ -24,9 +24,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.app.NotificationCompat.MediaStyle;
 
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.Player;
-
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
@@ -69,7 +66,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     // État courant (mis à jour par le WebView via Intents)
     // ---------------------------------------------------------------
     private MediaSessionCompat mediaSession;
-    private ExoPlayer          exoPlayer;
+    
 
     private String  currentTitle    = "";
     private String  currentAuthor   = "";
@@ -86,25 +83,6 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     public void onCreate() {
         super.onCreate();
 
-        // --- ExoPlayer (lecture Android Auto / Chromecast) ---
-        exoPlayer = new ExoPlayer.Builder(this).build();
-        exoPlayer.addListener(new Player.Listener() {
-            @Override
-            public void onIsPlayingChanged(boolean playing) {
-                // Synchronisation avec l'état ExoPlayer (lecture Android Auto)
-                isPlaying = playing;
-                applyPlaybackState(playing, exoPlayer.getCurrentPosition());
-                rebuildNotification();
-            }
-
-            @Override
-            public void onPlaybackStateChanged(int state) {
-                if (state == Player.STATE_ENDED) {
-                    applyPlaybackState(false, 0);
-                    rebuildNotification();
-                }
-            }
-        });
 
         // --- MediaSession ---
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
@@ -172,9 +150,6 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
         if (mediaSession != null) {
             mediaSession.setActive(false);
             mediaSession.release();
-        }
-        if (exoPlayer != null) {
-            exoPlayer.release();
         }
         Log.d(TAG, "Service détruit");
     }

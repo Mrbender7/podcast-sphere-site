@@ -5,9 +5,10 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
 import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
-import { notifyNativePlaybackState, updateNativeNowPlaying, updateNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 import { Capacitor } from '@capacitor/core';
 
+// Single unified helper for all native calls — no-op on web
 const safeNativeCall = async (method: string, data: Record<string, unknown>) => {
   if (!Capacitor.isNativePlatform()) return;
   try {
@@ -59,7 +60,6 @@ function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 10000): Promise<vo
     const timeout = setTimeout(() => {
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("error", onError);
-      // Timeout reached — try to play anyway
       audio.play().then(resolve).catch(reject);
     }, timeoutMs);
 
@@ -77,7 +77,6 @@ function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 10000): Promise<vo
       reject(new Error("Audio load error"));
     };
 
-    // If already ready, play immediately
     if (audio.readyState >= 3) {
       clearTimeout(timeout);
       audio.play().then(resolve).catch(reject);
@@ -108,16 +107,6 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   isPlayingRef.current = state.isPlaying;
 
   const saveCounterRef = useRef(0);
-
-  // --- Extracted helpers ---
-
-  const safeNotifyNative = useCallback((episode: Episode | null, playing: boolean) => {
-    try {
-      notifyNativePlaybackState(episode as Episode, playing);
-    } catch (e) {
-      console.error("[Player] Error notifying native state:", e);
-    }
-  }, []);
 
   const syncMediaSessionPosition = useCallback(() => {
     const audio = audioRef.current;
@@ -164,8 +153,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
         saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
         addToHistory(stateRef.current.currentEpisode, ct, dur);
-        // Sync native lock screen / notification position
-        updateNativePlaybackState(true, Math.round(ct * 1000));
+        // NOTE: native position sync is handled by the periodic useEffect below
       }
     };
 
@@ -179,7 +167,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (stateRef.current.currentEpisode) {
         markEpisodeCompleted(stateRef.current.currentEpisode.id);
         addToHistory(stateRef.current.currentEpisode, audio.duration || 0, audio.duration || 0);
-        safeNotifyNative(stateRef.current.currentEpisode, false);
+        safeNativeCall('updatePlaybackState', { isPlaying: false, position: Math.round((audio.duration || 0) * 1000) });
       }
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     };
@@ -265,7 +253,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     };
   }, [syncMediaSessionPosition]);
 
-  // --- Native event listeners (using existing singleton) ---
+  // --- Native event listeners (guarded by platform check) ---
 
   const togglePlayRef = useRef<() => void>(() => {});
 
@@ -300,8 +288,6 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       syncMediaSessionPosition();
       stopSilentLoop();
       releaseWakeLock();
-      safeNotifyNative(stateRef.current.currentEpisode, false);
-      updateNativePlaybackState(false, Math.round(audio.currentTime * 1000));
       safeNativeCall('updatePlaybackState', {
         isPlaying: false,
         position: Math.round(audio.currentTime * 1000),
@@ -314,72 +300,65 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         syncMediaSessionPosition();
         startSilentLoop();
         requestWakeLock();
-        safeNotifyNative(stateRef.current.currentEpisode!, true);
-        updateNativePlaybackState(true, Math.round(audio.currentTime * 1000));
         safeNativeCall('updatePlaybackState', {
           isPlaying: true,
           position: Math.round(audio.currentTime * 1000),
         });
       }).catch(e => console.error("[Player] Toggle play error:", e));
     }
-  }, [updateMediaSession, syncMediaSessionPosition, safeNotifyNative]);
+  }, [updateMediaSession, syncMediaSessionPosition]);
 
   // Keep togglePlayRef in sync for native listeners
   togglePlayRef.current = togglePlay;
 
   useEffect(() => {
+    // Only register native listeners on Android
+    if (!Capacitor.isNativePlatform()) return;
+
     let mediaToggleListener: any;
     let vehicleDisconnectListener: any;
     let mediaCommandListener: any;
 
-    try {
-      mediaToggleListener = PodcastAutoPlugin.addListener("mediaToggle", () => {
-        togglePlayRef.current();
-      });
-      vehicleDisconnectListener = PodcastAutoPlugin.addListener("vehicleDisconnected", () => {
-        if (isPlayingRef.current) {
+    (async () => {
+      try {
+        mediaToggleListener = await PodcastAutoPlugin.addListener("mediaToggle", () => {
           togglePlayRef.current();
-        }
-      });
-    } catch (e) {
-      console.log("[Player] Native listeners not available (expected in browser):", e);
-    }
-
-    // Listen for mediaCommand events from PodcastBrowserService
-    if (Capacitor.isNativePlatform()) {
-      (async () => {
-        try {
-          mediaCommandListener = await PodcastAutoPlugin.addListener(
-            'mediaCommand',
-            (data: { action: string; position?: number; mediaId?: string }) => {
-              switch (data.action) {
-                case 'play':
-                  if (!isPlayingRef.current) togglePlayRef.current();
-                  break;
-                case 'pause':
-                  if (isPlayingRef.current) togglePlayRef.current();
-                  break;
-                case 'toggle':
-                  togglePlayRef.current();
-                  break;
-                case 'seek':
-                  if (audioRef.current && data.position != null) {
-                    audioRef.current.currentTime = data.position / 1000;
-                  }
-                  break;
-              }
+        });
+        vehicleDisconnectListener = await PodcastAutoPlugin.addListener("vehicleDisconnected", () => {
+          if (isPlayingRef.current) {
+            togglePlayRef.current();
+          }
+        });
+        mediaCommandListener = await PodcastAutoPlugin.addListener(
+          'mediaCommand',
+          (data: { action: string; position?: number; mediaId?: string }) => {
+            switch (data.action) {
+              case 'play':
+                if (!isPlayingRef.current) togglePlayRef.current();
+                break;
+              case 'pause':
+                if (isPlayingRef.current) togglePlayRef.current();
+                break;
+              case 'toggle':
+                togglePlayRef.current();
+                break;
+              case 'seek':
+                if (audioRef.current && data.position != null) {
+                  audioRef.current.currentTime = data.position / 1000;
+                }
+                break;
             }
-          );
-        } catch (e) {
-          console.warn('[PodcastAutoPlugin] addListener mediaCommand failed:', e);
-        }
-      })();
-    }
+          }
+        );
+      } catch (e) {
+        console.log("[Player] Native listeners not available:", e);
+      }
+    })();
 
     return () => {
       try {
-        mediaToggleListener?.then?.((l: any) => l.remove());
-        vehicleDisconnectListener?.then?.((l: any) => l.remove());
+        mediaToggleListener?.remove?.();
+        vehicleDisconnectListener?.remove?.();
         mediaCommandListener?.remove?.();
       } catch {}
     };
@@ -434,10 +413,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       requestWakeLock();
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
-      safeNotifyNative(episode, true);
-      updateNativeNowPlaying(episode);
-      updateNativePlaybackState(true, Math.round(resumeTime * 1000));
-      // Sync native notification via safeNativeCall
+
+      // Single native sync — updateNowPlaying then updatePlaybackState
       await safeNativeCall('updateNowPlaying', {
         title:      episode.title ?? '',
         author:     episode.feedAuthor ?? episode.feedTitle ?? '',
@@ -453,7 +430,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     }
-  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, t, safeNotifyNative]);
+  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, t]);
 
   const setVolume = useCallback((v: number) => {
     audioRef.current.volume = v;
