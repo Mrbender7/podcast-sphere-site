@@ -74,13 +74,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       const dur = audio.duration || 0;
       setState(s => ({ ...s, currentTime: ct, duration: dur }));
 
-      // Envoi de la position au lockscreen Android
-      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0) {
+      // Envoi de la position au lockscreen Android — clamp position to [0, duration]
+      if ("mediaSession" in navigator && !isNaN(dur) && dur > 0 && !isNaN(ct)) {
         try {
+          const safePosition = Math.max(0, Math.min(ct, dur));
           navigator.mediaSession.setPositionState({
             duration: dur,
             playbackRate: audio.playbackRate || 1,
-            position: ct,
+            position: safePosition,
           });
         } catch (e) { /* Ignore les erreurs de synchronisation natives */ }
       }
