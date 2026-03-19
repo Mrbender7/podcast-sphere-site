@@ -5,7 +5,12 @@ import { Podcast, Episode } from "@/types/podcast";
 // Obfuscated with simple encoding to prevent casual extraction.
 // ============================================================
 
-const BASE_URL = "https://api.podcastindex.org/api/1.0";
+// Use a CORS proxy in browser environments (dev/preview).
+// On native (Capacitor) the request goes directly without CORS issues.
+const isNative = typeof (window as any)?.Capacitor !== "undefined";
+const DIRECT_URL = "https://api.podcastindex.org/api/1.0";
+const PROXY_URL = "https://api.allorigins.win/raw?url=";
+const BASE_URL = DIRECT_URL;
 
 // Simple decode function
 function _d(s: string): string {
