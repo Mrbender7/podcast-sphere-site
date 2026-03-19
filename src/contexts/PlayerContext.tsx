@@ -6,6 +6,16 @@ import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompl
 import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
 import { notifyNativePlaybackState, updateNativeNowPlaying, updateNativePlaybackState, PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { Capacitor } from '@capacitor/core';
+
+const safeNativeCall = async (method: string, data: Record<string, unknown>) => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await (PodcastAutoPlugin.instance as any)[method](data);
+  } catch (e) {
+    console.warn('[PodcastAutoPlugin]', method, 'failed:', e);
+  }
+};
 
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
