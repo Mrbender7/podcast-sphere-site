@@ -437,6 +437,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       safeNotifyNative(episode, true);
       updateNativeNowPlaying(episode);
       updateNativePlaybackState(true, Math.round(resumeTime * 1000));
+      // Sync native notification via safeNativeCall
+      await safeNativeCall('updateNowPlaying', {
+        title:      episode.title ?? '',
+        author:     episode.feedAuthor ?? episode.feedTitle ?? '',
+        artworkUrl: episode.feedImage ?? episode.image ?? '',
+        duration:   (episode.duration ?? 0) * 1000,
+      });
+      await safeNativeCall('updatePlaybackState', {
+        isPlaying: true,
+        position:  Math.round(resumeTime * 1000),
+      });
     } catch (e) {
       console.error("[Player] Playback failed:", e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
