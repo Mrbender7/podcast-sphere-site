@@ -214,43 +214,6 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     navigator.mediaSession.playbackState = playing ? "playing" : "paused";
   }, []);
 
-  // --- MediaSession action handlers ---
-
-  useEffect(() => {
-    if (!("mediaSession" in navigator)) return;
-
-    navigator.mediaSession.setActionHandler("play", () => {
-      void resumePlayback();
-    });
-    navigator.mediaSession.setActionHandler("pause", () => {
-      pausePlayback();
-    });
-    navigator.mediaSession.setActionHandler("seekbackward", () => {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
-      syncMediaSessionPosition();
-    });
-    navigator.mediaSession.setActionHandler("seekforward", () => {
-      audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 30);
-      syncMediaSessionPosition();
-    });
-    navigator.mediaSession.setActionHandler("seekto", (details) => {
-      if (details.seekTime != null && !isNaN(details.seekTime)) {
-        audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration || 0, details.seekTime));
-        syncMediaSessionPosition();
-      }
-    });
-
-    return () => {
-      navigator.mediaSession.setActionHandler("play", null);
-      navigator.mediaSession.setActionHandler("pause", null);
-      navigator.mediaSession.setActionHandler("seekbackward", null);
-      navigator.mediaSession.setActionHandler("seekforward", null);
-      navigator.mediaSession.setActionHandler("seekto", null);
-    };
-  }, [pausePlayback, resumePlayback, syncMediaSessionPosition]);
-
-  // --- Native event listeners (guarded by platform check) ---
-
   const togglePlayRef = useRef<() => void>(() => {});
 
   const hydrateEpisodeMetadata = useCallback(async (episode: Episode): Promise<Episode> => {
@@ -329,8 +292,44 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   // Keep togglePlayRef in sync for native listeners
   togglePlayRef.current = togglePlay;
 
+  // --- MediaSession action handlers ---
+
   useEffect(() => {
-    // Only register native listeners on Android
+    if (!("mediaSession" in navigator)) return;
+
+    navigator.mediaSession.setActionHandler("play", () => {
+      void resumePlayback();
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      pausePlayback();
+    });
+    navigator.mediaSession.setActionHandler("seekbackward", () => {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
+      syncMediaSessionPosition();
+    });
+    navigator.mediaSession.setActionHandler("seekforward", () => {
+      audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 30);
+      syncMediaSessionPosition();
+    });
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (details.seekTime != null && !isNaN(details.seekTime)) {
+        audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration || 0, details.seekTime));
+        syncMediaSessionPosition();
+      }
+    });
+
+    return () => {
+      navigator.mediaSession.setActionHandler("play", null);
+      navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("seekbackward", null);
+      navigator.mediaSession.setActionHandler("seekforward", null);
+      navigator.mediaSession.setActionHandler("seekto", null);
+    };
+  }, [pausePlayback, resumePlayback, syncMediaSessionPosition]);
+
+  // --- Native event listeners (guarded by platform check) ---
+
+  useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
     let mediaToggleListener: any;
