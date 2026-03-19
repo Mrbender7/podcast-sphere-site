@@ -223,18 +223,28 @@
 
   <!-- Mini Player -->
   <div class="mini-player">
-    <div class="mini-player-icon" id="miniIcon">
-      <img id="miniIconImg" src="" alt="" style="display:none">
+    <div class="mini-player-row">
+      <div class="mini-player-icon" id="miniIcon">
+        <img id="miniIconImg" src="" alt="" style="display:none">
+      </div>
+      <div class="mini-player-info">
+        <div class="mini-player-name" id="miniName">--</div>
+        <div class="mini-player-status" id="miniStatus">En lecture</div>
+      </div>
+      <div class="equalizer">
+        <div class="eq-bar" style="height:12px"></div>
+        <div class="eq-bar" style="height:18px"></div>
+        <div class="eq-bar" style="height:8px"></div>
+        <div class="eq-bar" style="height:14px"></div>
+      </div>
     </div>
-    <div class="mini-player-info">
-      <div class="mini-player-name" id="miniName">--</div>
-      <div class="mini-player-status">En lecture</div>
-    </div>
-    <div class="equalizer">
-      <div class="eq-bar" style="height:12px"></div>
-      <div class="eq-bar" style="height:18px"></div>
-      <div class="eq-bar" style="height:8px"></div>
-      <div class="eq-bar" style="height:14px"></div>
+    <!-- Progress bar for podcasts -->
+    <div class="progress-container" id="progressContainer">
+      <span class="progress-time" id="progressCurrent">0:00</span>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-time" id="progressDuration">0:00</span>
     </div>
   </div>
 
