@@ -217,9 +217,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     try {
       await audio.play();
       if (resumeTime > 0) audio.currentTime = resumeTime;
+      isPlayingRef.current = true;
       setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+      // Start background keep-alive mechanisms
+      startSilentLoop();
+      requestWakeLock();
       onEpisodePlay?.(episode);
       addToHistory(episode, resumeTime, saved?.duration || 0);
+      notifyNativePlaybackState(episode, true);
     } catch {
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
