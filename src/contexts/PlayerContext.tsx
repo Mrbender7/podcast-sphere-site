@@ -167,7 +167,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 30);
     });
     navigator.mediaSession.setActionHandler("seekto", (details) => {
-      if (details.seekTime) audioRef.current.currentTime = details.seekTime;
+      if (details.seekTime != null && !isNaN(details.seekTime)) {
+        audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration || 0, details.seekTime));
+      }
     });
 
     return () => {
