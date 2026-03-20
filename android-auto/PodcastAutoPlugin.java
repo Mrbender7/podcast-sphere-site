@@ -18,58 +18,27 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-/**
- * PodcastAutoPlugin — Bridge Capacitor entre React et les services natifs Android
- *
- * ┌──────────────────────────────────────────────────────────────────┐
- * │  React (PlayerContext.tsx)                                       │
- * │     │                                                            │
- * │     ├─ updateNowPlaying()   ──→  PodcastBrowserService           │
- * │     ├─ updatePlaybackState() ──→  (UPDATE_METADATA /             │
- * │     ├─ syncFavorites()           UPDATE_PLAYBACK_STATE intents)  │
- * │     └─ stopPlayback()                                            │
- * │                                                                  │
- * │  PodcastBrowserService  ──→  Broadcast WEBVIEW_COMMAND           │
- * │     │                              │                             │
- * │     └─ BroadcastReceiver ──→  notifyListeners("mediaCommand")    │
- * │                                    │                             │
- * │                               React écoute avec                  │
- * │                               PodcastAutoPlugin.addListener()    │
- * └──────────────────────────────────────────────────────────────────┘
- */
 @CapacitorPlugin(name = "PodcastAutoPlugin")
 public class PodcastAutoPlugin extends Plugin {
 
     private static final String TAG = "PodcastAutoPlugin";
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1101;
 
-    // Singleton pour accès depuis d'autres classes Java si besoin
     private static PodcastAutoPlugin instance;
-
-    // Écoute les commandes de retour depuis PodcastBrowserService
     private BroadcastReceiver webViewCommandReceiver;
-
-    // ===============================================================
-    //  Initialisation du plugin
-    // ===============================================================
 
     @Override
     public void load() {
         instance = this;
         requestNotificationPermissionIfNeeded();
         registerWebViewCommandReceiver();
-        Log.d(TAG, "PodcastAutoPlugin chargé");
+        Log.d(TAG, "PodcastAutoPlugin chargé et prêt");
     }
 
     public static PodcastAutoPlugin getInstance() {
         return instance;
     }
 
-    /**
-     * Enregistre un BroadcastReceiver qui écoute les commandes envoyées
-     * par PodcastBrowserService (play, pause, next, previous, seek)
-     * et les transfère au layer React via notifyListeners().
-     */
     private void registerWebViewCommandReceiver() {
         webViewCommandReceiver = new BroadcastReceiver() {
             @Override
@@ -77,33 +46,23 @@ public class PodcastAutoPlugin extends Plugin {
                 String command = intent.getStringExtra("command");
                 if (command == null) return;
 
-                Log.d(TAG, "Commande reçue du service : " + command);
+                Log.d(TAG, "Envoi commande vers React : " + command);
 
                 JSObject data = new JSObject();
-
                 if (command.startsWith("seek:")) {
-                    // Format : "seek:<position_ms>"
                     String[] parts = command.split(":");
                     data.put("action",   "seek");
                     data.put("position", parts.length > 1 ? Long.parseLong(parts[1]) : 0L);
-                } else if (command.startsWith("playFromId:")) {
-                    // Android Auto : lecture d'un épisode par ID
-                    String[] parts = command.split(":", 2);
-                    data.put("action",  "playFromId");
-                    data.put("mediaId", parts.length > 1 ? parts[1] : "");
                 } else {
-                    // play | pause | stop | next | previous
                     data.put("action", command);
                 }
 
-                // Notifie tous les listeners React enregistrés avec
-                // PodcastAutoPlugin.addListener("mediaCommand", handler)
+                // Important : on notifie TOUS les listeners
                 notifyListeners("mediaCommand", data);
             }
         };
 
         IntentFilter filter = new IntentFilter(PodcastBrowserService.ACTION_WEBVIEW_COMMAND);
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getContext().registerReceiver(webViewCommandReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -111,42 +70,17 @@ public class PodcastAutoPlugin extends Plugin {
         }
     }
 
-    @Override
-    protected void handleOnDestroy() {
-        if (webViewCommandReceiver != null) {
-            try {
-                getContext().unregisterReceiver(webViewCommandReceiver);
-            } catch (Exception e) {
-                Log.w(TAG, "Receiver déjà désenregistré");
-            }
-        }
-        super.handleOnDestroy();
-    }
-
-    // ===============================================================
-    //  PluginMethods — appelés depuis React via Capacitor
-    // ===============================================================
-
-    /**
-     * Met à jour les métadonnées de la notification et du lock screen.
-     *
-     * Appeler quand un nouvel épisode commence à jouer.
-     *
-     * @param title      Titre de l'épisode
-     * @param author     Nom du podcast / auteur
-     * @param artworkUrl URL de l'image de couverture
-     * @param duration   Durée totale en millisecondes
-     */
     @PluginMethod
     public void updateNowPlaying(PluginCall call) {
         String title      = call.getString("title",      "");
         String author     = call.getString("author",     "");
         String artworkUrl = call.getString("artworkUrl", "");
-        Long   duration   = call.getLong("duration");
-        if (duration == null) duration = 0L;
+        
+        // Utilisation de Double pour être sûr de récupérer la valeur du JS
+        Double durationDouble = call.getDouble("duration", 0.0);
+        long duration = durationDouble.longValue();
 
-        requestNotificationPermissionIfNeeded();
-        Log.d(TAG, "updateNowPlaying → " + title + " | " + author);
+        Log.d(TAG, "updateNowPlaying → " + title + " | Durée: " + duration);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_UPDATE_METADATA);
@@ -159,22 +93,14 @@ public class PodcastAutoPlugin extends Plugin {
         call.resolve();
     }
 
-    /**
-     * Met à jour l'état play/pause et la position dans la notification et le lock screen.
-     *
-     * Appeler à chaque toggle play/pause et régulièrement (toutes les 5s) pendant la lecture.
-     *
-     * @param isPlaying true si lecture en cours
-     * @param position  Position actuelle en millisecondes
-     */
     @PluginMethod
     public void updatePlaybackState(PluginCall call) {
-        Boolean isPlaying = call.getBoolean("isPlaying");
-        Long    position  = call.getLong("position");
-        if (isPlaying == null) isPlaying = false;
-        if (position  == null) position  = 0L;
+        Boolean isPlaying = call.getBoolean("isPlaying", false);
+        
+        // Utilisation de Double pour éviter les problèmes de cast JS/Java
+        Double positionDouble = call.getDouble("position", 0.0);
+        long position = positionDouble.longValue();
 
-        requestNotificationPermissionIfNeeded();
         Log.d(TAG, "updatePlaybackState → isPlaying=" + isPlaying + " | position=" + position);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
@@ -186,75 +112,36 @@ public class PodcastAutoPlugin extends Plugin {
         call.resolve();
     }
 
-    /**
-     * Synchronise les favoris/abonnements dans les SharedPreferences
-     * pour les exposer dans le browse tree Android Auto.
-     *
-     * @param favorites  JSON string : "[\"Titre|feedId\", ...]"
-     * @param recent     JSON string : "[\"Titre|episodeId\", ...]"
-     */
-    @PluginMethod
-    public void syncFavorites(PluginCall call) {
-        String favorites = call.getString("favorites", "[]");
-        String recent    = call.getString("recent",    "[]");
-
-        getContext()
-            .getSharedPreferences("podcast_auto_data", Context.MODE_PRIVATE)
-            .edit()
-            .putString("subscriptions_items", favorites)
-            .putString("recent_items",        recent)
-            .apply();
-
-        Log.d(TAG, "syncFavorites → " + favorites.length() + " chars");
-        call.resolve();
-    }
-
-    /**
-     * Arrête proprement le foreground service et retire la notification.
-     */
     @PluginMethod
     public void stopPlayback(PluginCall call) {
-        Log.d(TAG, "stopPlayback");
-
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_STOP_SERVICE);
         startService(intent);
-
         call.resolve();
     }
-
-    // ===============================================================
-    //  Helpers privés
-    // ===============================================================
 
     private void requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
         if (getActivity() == null) return;
-
         try {
             if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    getActivity(),
-                    new String[]{ Manifest.permission.POST_NOTIFICATIONS },
-                    NOTIFICATION_PERMISSION_REQUEST_CODE
-                );
-                Log.d(TAG, "Permission POST_NOTIFICATIONS demandée");
+                ActivityCompat.requestPermissions(getActivity(), new String[]{ Manifest.permission.POST_NOTIFICATIONS }, NOTIFICATION_PERMISSION_REQUEST_CODE);
             }
         } catch (Exception e) {
-            Log.w(TAG, "Impossible de demander POST_NOTIFICATIONS", e);
+            Log.w(TAG, "Permission error", e);
         }
     }
 
-    /**
-     * Démarre le service en Foreground si API >= 26, sinon startService normal.
-     * Évite le crash "startForegroundService called but not became foreground".
-     */
     private void startService(Intent intent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getContext().startForegroundService(intent);
-        } else {
-            getContext().startService(intent);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getContext().startForegroundService(intent);
+            } else {
+                getContext().startService(intent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Erreur démarrage service: " + e.getMessage());
         }
     }
 }
