@@ -57,7 +57,6 @@ public class PodcastAutoPlugin extends Plugin {
                     data.put("action", command);
                 }
 
-                // Important : on notifie TOUS les listeners
                 notifyListeners("mediaCommand", data);
             }
         };
@@ -76,7 +75,6 @@ public class PodcastAutoPlugin extends Plugin {
         String author     = call.getString("author",     "");
         String artworkUrl = call.getString("artworkUrl", "");
         
-        // Utilisation de Double pour être sûr de récupérer la valeur du JS
         Double durationDouble = call.getDouble("duration", 0.0);
         long duration = durationDouble.longValue();
 
@@ -89,7 +87,8 @@ public class PodcastAutoPlugin extends Plugin {
         intent.putExtra("artworkUrl", artworkUrl);
         intent.putExtra("duration",   duration);
 
-        startService(intent);
+        // Metadata update: use startForegroundService to ensure service is alive
+        safeStartForegroundService(intent);
         call.resolve();
     }
 
@@ -97,7 +96,6 @@ public class PodcastAutoPlugin extends Plugin {
     public void updatePlaybackState(PluginCall call) {
         Boolean isPlaying = call.getBoolean("isPlaying", false);
         
-        // Utilisation de Double pour éviter les problèmes de cast JS/Java
         Double positionDouble = call.getDouble("position", 0.0);
         long position = positionDouble.longValue();
 
@@ -108,7 +106,13 @@ public class PodcastAutoPlugin extends Plugin {
         intent.putExtra("isPlaying", isPlaying);
         intent.putExtra("position",  position);
 
-        startService(intent);
+        if (Boolean.TRUE.equals(isPlaying)) {
+            // Starting playback: must use startForegroundService
+            safeStartForegroundService(intent);
+        } else {
+            // Pause / position update: regular startService to avoid ForegroundServiceDidNotStartInTimeException
+            safeStartService(intent);
+        }
         call.resolve();
     }
 
@@ -116,7 +120,7 @@ public class PodcastAutoPlugin extends Plugin {
     public void stopPlayback(PluginCall call) {
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_STOP_SERVICE);
-        startService(intent);
+        safeStartService(intent);
         call.resolve();
     }
 
@@ -133,7 +137,8 @@ public class PodcastAutoPlugin extends Plugin {
         }
     }
 
-    private void startService(Intent intent) {
+    /** Use for play state or initial metadata — ensures service can call startForeground() */
+    private void safeStartForegroundService(Intent intent) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 getContext().startForegroundService(intent);
@@ -141,7 +146,22 @@ public class PodcastAutoPlugin extends Plugin {
                 getContext().startService(intent);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Erreur démarrage service: " + e.getMessage());
+            Log.e(TAG, "startForegroundService failed: " + e.getMessage());
+            // Fallback: try regular startService
+            try {
+                getContext().startService(intent);
+            } catch (Exception e2) {
+                Log.e(TAG, "startService fallback also failed: " + e2.getMessage());
+            }
+        }
+    }
+
+    /** Use for pause, position updates, stop — no foreground requirement */
+    private void safeStartService(Intent intent) {
+        try {
+            getContext().startService(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "startService failed: " + e.getMessage());
         }
     }
 }

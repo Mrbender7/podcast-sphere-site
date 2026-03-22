@@ -106,6 +106,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const isPlayingRef = useRef(false);
   isPlayingRef.current = state.isPlaying;
 
+  // Concurrency guard: incremented on each play() call, stale calls are ignored
+  const playTokenRef = useRef(0);
+
   const saveCounterRef = useRef(0);
 
   const syncMediaSessionPosition = useCallback(() => {
@@ -124,6 +127,20 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         console.error("[Player] Sync position error:", e);
       }
     }
+  }, []);
+
+  // --- Full rollback helper for error states ---
+  const rollbackPlayback = useCallback(() => {
+    const audio = audioRef.current;
+    try { audio.pause(); } catch {}
+    isPlayingRef.current = false;
+    setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+    stopSilentLoop();
+    releaseWakeLock();
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = "paused";
+    }
+    safeNativeCall('updatePlaybackState', { isPlaying: false, position: 0 });
   }, []);
 
   // --- Audio event listeners ---
@@ -153,7 +170,6 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (saveCounterRef.current % 5 === 0 && stateRef.current.currentEpisode) {
         saveEpisodeProgress(stateRef.current.currentEpisode.id, ct, dur);
         addToHistory(stateRef.current.currentEpisode, ct, dur);
-        // NOTE: native position sync is handled by the periodic useEffect below
       }
     };
 
@@ -164,17 +180,20 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
     const onEnded = () => {
       setState(s => ({ ...s, isPlaying: false }));
+      isPlayingRef.current = false;
       if (stateRef.current.currentEpisode) {
         markEpisodeCompleted(stateRef.current.currentEpisode.id);
         addToHistory(stateRef.current.currentEpisode, audio.duration || 0, audio.duration || 0);
         safeNativeCall('updatePlaybackState', { isPlaying: false, position: Math.round((audio.duration || 0) * 1000) });
       }
+      stopSilentLoop();
+      releaseWakeLock();
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     };
 
     const onError = () => {
       console.error("[Player] Stream error encountered.");
-      setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+      rollbackPlayback();
       toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
     };
 
@@ -275,9 +294,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       });
     } catch (e) {
       console.error("[Player] Resume/toggle play error:", e);
-      setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+      rollbackPlayback();
     }
-  }, [updateMediaSession, syncMediaSessionPosition]);
+  }, [updateMediaSession, syncMediaSessionPosition, rollbackPlayback]);
 
   const togglePlay = useCallback(() => {
     if (!stateRef.current.currentEpisode) return;
@@ -395,8 +414,14 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       toast({ title: t("player.error"), description: t("player.streamUnavailable"), variant: "destructive" });
       return;
     }
+
+    // Concurrency guard: invalidate any in-flight play request
+    const token = ++playTokenRef.current;
+
     const audio = audioRef.current;
     audio.pause();
+    stopSilentLoop();
+    releaseWakeLock();
 
     let audioSrc = episode.enclosureUrl;
     try {
@@ -408,6 +433,9 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     } catch {
       console.warn("[Player] Local check failed, falling back to stream.");
     }
+
+    // Check if a newer play() was called while we were resolving the source
+    if (token !== playTokenRef.current) return;
 
     audio.src = audioSrc;
     audio.playbackRate = stateRef.current.playbackRate;
@@ -431,6 +459,13 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
     try {
       await playWithTimeout(audio);
+
+      // Stale guard: if user tapped another episode during load, bail out
+      if (token !== playTokenRef.current) {
+        audio.pause();
+        return;
+      }
+
       if (resumeTime > 0) audio.currentTime = resumeTime;
       isPlayingRef.current = true;
       setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
@@ -453,10 +488,13 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       });
     } catch (e) {
       console.error("[Player] Playback failed:", e);
-      setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
-      toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
+      // Only rollback if this is still the active play request
+      if (token === playTokenRef.current) {
+        rollbackPlayback();
+        toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
+      }
     }
-  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, t]);
+  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, rollbackPlayback, t]);
 
   const setVolume = useCallback((v: number) => {
     audioRef.current.volume = v;

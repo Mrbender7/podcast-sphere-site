@@ -36,7 +36,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
 
     private static final String TAG = "PodcastBrowserService";
     private static final int    NOTIFICATION_ID = 998877;
-    private static final String CHANNEL_ID      = "podcast_playback_v2";
+    private static final String CHANNEL_ID      = "podcast_playback";
     private static final int    ARTWORK_MAX_SIZE = 512;
     private static final String MEDIA_ROOT_ID = "root";
 
@@ -52,6 +52,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private long    currentDuration = 0L;
     private boolean isPlaying       = false;
     private long    currentPosition = 0L;
+    private boolean foregroundStarted = false;
 
     @Override
     public void onCreate() {
@@ -85,10 +86,11 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null && nm.getNotificationChannel(CHANNEL_ID) == null) {
-                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Lecture Podcast", NotificationManager.IMPORTANCE_LOW);
+                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Lecture Podcast", NotificationManager.IMPORTANCE_DEFAULT);
                 channel.setDescription("Contrôles de lecture");
                 channel.setShowBadge(false);
                 channel.setSound(null, null);
+                channel.enableVibration(false);
                 nm.createNotificationChannel(channel);
             }
         }
@@ -98,6 +100,13 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String action = intent.getAction();
+
+            // If started via startForegroundService, we MUST call startForeground quickly
+            // Build a minimal notification immediately to satisfy the system requirement
+            if (ACTION_UPDATE_METADATA.equals(action) || ACTION_UPDATE_PLAYBACK_STATE.equals(action)) {
+                ensureForeground();
+            }
+
             if (ACTION_UPDATE_METADATA.equals(action)) {
                 handleUpdateMetadata(
                     intent.getStringExtra("title"),
@@ -117,6 +126,22 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             }
         }
         return START_STICKY;
+    }
+
+    /** Ensure startForeground has been called at least once to avoid ANR / crash */
+    private void ensureForeground() {
+        if (foregroundStarted) return;
+        try {
+            Notification n = buildNotification();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(NOTIFICATION_ID, n);
+            }
+            foregroundStarted = true;
+        } catch (Exception e) {
+            Log.e(TAG, "ensureForeground failed: " + e.getMessage());
+        }
     }
 
     private void handleUpdateMetadata(String title, String author, String artworkUrl, long duration) {
@@ -185,11 +210,10 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private void applyPlaybackState(boolean playing, long position) {
         int state = playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
         
+        // Only play/pause and seek — no skip next/previous
         long actions = PlaybackStateCompat.ACTION_PLAY | 
                       PlaybackStateCompat.ACTION_PAUSE | 
                       PlaybackStateCompat.ACTION_PLAY_PAUSE | 
-                      PlaybackStateCompat.ACTION_SKIP_TO_NEXT | 
-                      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | 
                       PlaybackStateCompat.ACTION_SEEK_TO | 
                       PlaybackStateCompat.ACTION_STOP;
 
@@ -200,8 +224,11 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
         mediaSession.setPlaybackState(ps);
     }
 
-    private void rebuildNotification() {
+    private Notification buildNotification() {
+        // Explicit play or pause action based on current state
         int playPauseIcon = isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
+        long playPauseAction = isPlaying ? PlaybackStateCompat.ACTION_PAUSE : PlaybackStateCompat.ACTION_PLAY;
+        String playPauseLabel = isPlaying ? "Pause" : "Play";
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent contentIntent = null;
@@ -216,17 +243,16 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             .setContentText(currentAuthor)
             .setContentIntent(contentIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setOngoing(isPlaying)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setShowWhen(false)
             .setSilent(true)
             .setStyle(new MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2))
-            .addAction(android.R.drawable.ic_media_previous, "Précédent", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS))
-            .addAction(playPauseIcon, isPlaying ? "Pause" : "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE))
-            .addAction(android.R.drawable.ic_media_next, "Suivant", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT));
+                .setShowActionsInCompactView(0))  // Only show play/pause in compact
+            .addAction(playPauseIcon, playPauseLabel,
+                MediaButtonReceiver.buildMediaButtonPendingIntent(this, playPauseAction));
 
         Bitmap art = currentArtwork;
         if (art == null) {
@@ -236,7 +262,11 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             nb.setLargeIcon(art);
         }
 
-        Notification notification = nb.build();
+        return nb.build();
+    }
+
+    private void rebuildNotification() {
+        Notification notification = buildNotification();
         
         try {
             if (isPlaying) {
@@ -245,8 +275,12 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
                 } else {
                     startForeground(NOTIFICATION_ID, notification);
                 }
+                foregroundStarted = true;
             } else {
-                stopForeground(false);
+                if (foregroundStarted) {
+                    stopForeground(false);
+                    foregroundStarted = false;
+                }
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (nm != null) {
                     nm.notify(NOTIFICATION_ID, notification);
@@ -260,6 +294,7 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
     private void handleStop() {
         Log.d(TAG, "handleStop");
         isPlaying = false;
+        foregroundStarted = false;
         mediaSession.setActive(false);
         stopForeground(true);
         stopSelf();
@@ -281,8 +316,6 @@ public class PodcastBrowserService extends MediaBrowserServiceCompat {
             Log.d(TAG, "Callback onPause reçu");
             sendWebViewCommand("pause"); 
         }
-        @Override public void onSkipToNext() { sendWebViewCommand("next"); }
-        @Override public void onSkipToPrevious() { sendWebViewCommand("previous"); }
         @Override public void onSeekTo(long pos) { 
             Log.d(TAG, "Callback onSeekTo reçu: " + pos);
             sendWebViewCommand("seek:" + pos); 
