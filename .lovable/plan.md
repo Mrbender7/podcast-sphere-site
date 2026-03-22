@@ -1,50 +1,92 @@
 
+Objectif: rétablir d’abord une lecture Android stable, puis corriger le play/pause natif sans réintroduire les crashs.
 
-## Diagnostic -- Pourquoi l'app Android crash/tourne dans le vide
+Do I know what the issue is? Oui, probablement en grande partie.
+Le problème semble venir de 3 causes couplées :
 
-Apres audit complet des fichiers Java, TypeScript et du script PS1, voici les problemes identifies :
+1. La lecture HTML5 peut échouer ou rester en attente, mais le nettoyage n’est pas complet dans `PlayerContext.tsx`.
+Quand un flux démarre mal, l’état React repasse partiellement à faux, mais la boucle silencieuse, le WakeLock, l’état natif et la session peuvent rester incohérents. C’est typiquement ce qui peut laisser l’app “bloquée” puis difficile à rouvrir.
 
-### Problemes critiques (crash / ecran noir)
+2. Le bridge natif Android est encore trop agressif.
+`PodcastAutoPlugin.java` démarre le service avec `startForegroundService(...)` pour toutes les mises à jour, y compris les updates de position/pause. Sur Android récents, ça peut provoquer un comportement instable si le service n’entre pas rapidement en foreground ou si on le relance trop souvent.
 
-**1. Methode Java inexistante appelee depuis React**
-`PodcastAutoPlugin.ts` exporte `notifyNativePlaybackState()` qui appelle `getPlugin().notifyPlaybackState(...)`. Or cette methode n'existe PAS dans `PodcastAutoPlugin.java` (les methodes sont `updateNowPlaying`, `updatePlaybackState`, `syncFavorites`, `stopPlayback`). Chaque fois qu'un episode joue ou se met en pause, cet appel echoue cote Android, generant potentiellement un crash ou un blocage du bridge Capacitor.
+3. Le play/pause notification/lock screen n’est pas fiable car le service utilise un toggle générique.
+Dans `PodcastBrowserService.java`, le bouton principal envoie `ACTION_PLAY_PAUSE`. Pour un pilotage stable du lecteur React, il vaut mieux envoyer une action explicite selon l’état courant: `ACTION_PLAY` quand c’est en pause, `ACTION_PAUSE` quand ça joue. Comme tu ne veux pas next/previous, on peut aussi simplifier la notification autour de ce seul contrôle.
 
-**2. Double appels natifs concurrents dans PlayerContext.tsx**
-Les fonctions `play()` et `togglePlay()` appellent DEUX fois le service natif :
-- Les anciens wrappers : `notifyNativePlaybackState()`, `updateNativeNowPlaying()`, `updateNativePlaybackState()`
-- Les nouveaux : `safeNativeCall('updateNowPlaying', ...)`, `safeNativeCall('updatePlaybackState', ...)`
+Plan de correction
 
-Cela bombarde le PodcastBrowserService avec des intents simultanes, causant des problemes de timing `startForeground`.
+1. Sécuriser totalement le cycle d’échec de lecture dans `src/contexts/PlayerContext.tsx`
+- Ajouter un vrai helper de rollback sur erreur:
+  - `audio.pause()`
+  - remettre `isPlaying=false`, `isBuffering=false`
+  - arrêter `startSilentLoop`
+  - libérer `WakeLock`
+  - remettre la MediaSession web sur `paused`
+  - notifier le natif en pause si nécessaire
+- Utiliser ce helper dans:
+  - `onError`
+  - le `catch` de `play()`
+  - le `catch` de `resumePlayback()`
+- Éviter les courses entre plusieurs taps rapides sur des épisodes:
+  - introduire un identifiant de requête / garde anti-concurrence pour ignorer les anciens `playWithTimeout()` terminés en retard.
 
-**3. Canal de notification IMPORTANCE_LOW (PS1 ligne 403)**
-Le script PS1 cree le canal `podcast_playback` avec `IMPORTANCE_LOW`. Sur Android 13+, si la notification n'est pas suffisamment visible, le systeme peut tuer le foreground service. L'agent Android Studio recommandait `IMPORTANCE_DEFAULT`.
+2. Réduire le bridge Android au strict nécessaire dans `android-auto/PodcastAutoPlugin.java`
+- Garder `updateNowPlaying` et `updatePlaybackState`, mais rendre le démarrage du service plus sûr:
+  - `startForegroundService(...)` seulement quand on passe en lecture active
+  - `startService(...)` pour metadata, pause et updates périodiques de position
+- Ajouter des garde-fous/logs autour des exceptions de démarrage de service Android 13-15.
+- Ne jamais laisser un appel natif faire échouer l’expérience React.
 
-**4. Listeners non proteges sur web (erreur visible dans les logs)**
-Lignes 336-343 de PlayerContext.tsx : `PodcastAutoPlugin.addListener("mediaToggle", ...)` et `addListener("vehicleDisconnected", ...)` sont appeles SANS verification `Capacitor.isNativePlatform()`. Sur web, ca provoque des rejections de Promise non gerees. Sur Android, ca fonctionne, mais ca pollue les logs web.
+3. Simplifier et fiabiliser `android-auto/PodcastBrowserService.java`
+- Remplacer le bouton notification dynamique pour envoyer:
+  - `ACTION_PAUSE` si `isPlaying=true`
+  - `ACTION_PLAY` si `isPlaying=false`
+- Supprimer les actions `next/previous` de la notification compacte puisque tu n’en as pas besoin.
+- Garder la notification publique lock screen, mais avec une seule action centrale vraiment fiable.
+- Unifier le canal de notification avec le reste du projet:
+  - éviter `podcast_playback_v2`
+  - revenir à `podcast_playback`
+  - importance par défaut
+- Vérifier que le service reconstruit toujours une notification minimale valide avant toute opération potentiellement lente.
 
-**5. Mismatch syncFavorites**
-Le Java attend `favorites` et `recent` comme params, mais le TS envoie `podcasts`. Et `syncRecents` n'existe pas en Java.
+4. Réaligner le script Android de génération
+- Vérifier dans `podcastsphere_v1_0_0.ps1` que:
+  - le canal créé est bien `podcast_playback`
+  - importance = `IMPORTANCE_DEFAULT`
+  - les fichiers `android-auto/*.java` restent la source de vérité copiée dans le projet Android local
 
-### Plan de corrections
+5. Validation prévue après correction
+- Cas 1: épisode qui démarre normalement → lecture OK
+- Cas 2: épisode lent / invalide → toast d’erreur, mais app toujours utilisable
+- Cas 3: relance de l’app après échec → pas d’écran noir
+- Cas 4: bouton play/pause notification → pilote bien le lecteur React
+- Cas 5: lock screen → état lecture/pause cohérent
 
-#### Fichier 1 : `src/plugins/PodcastAutoPlugin.ts`
-- Supprimer la fonction `notifyNativePlaybackState()` (methode Java inexistante)
-- Corriger `syncFavoritesToNative` pour envoyer `favorites` au lieu de `podcasts`
-- Supprimer `syncRecentsToNative` (pas de methode Java correspondante)
+Fichiers à modifier
+- `src/contexts/PlayerContext.tsx`
+- `android-auto/PodcastAutoPlugin.java`
+- `android-auto/PodcastBrowserService.java`
+- `podcastsphere_v1_0_0.ps1`
 
-#### Fichier 2 : `src/contexts/PlayerContext.tsx`
-- Supprimer TOUS les appels aux anciens wrappers (`notifyNativePlaybackState`, `updateNativeNowPlaying`, `updateNativePlaybackState`) et l'import correspondant
-- Ne garder QUE les appels `safeNativeCall()` (une seule voie de communication)
-- Supprimer le `safeNotifyNative` callback devenu inutile
-- Proteger les `addListener` lignes 336-343 avec `if (Capacitor.isNativePlatform())`
-- Supprimer `updateNativePlaybackState` de l'intervalle `onTimeUpdate` (ligne 168) -- deja couvert par le useEffect periodique ligne 490
+Détail technique
+```text
+React HTML5 Audio
+   ↓ succès uniquement
+safeNativeCall(updateNowPlaying / updatePlaybackState)
+   ↓
+PodcastAutoPlugin.java
+   ↓ démarrage service plus sélectif
+PodcastBrowserService.java
+   ↓
+Notification / lock screen / Bluetooth
+   ↓
+retour via mediaCommand
+   ↓
+PlayerContext.tsx
+```
 
-#### Fichier 3 : `podcastsphere_v1_0_0.ps1`
-- Changer `NotificationManager.IMPORTANCE_LOW` en `NotificationManager.IMPORTANCE_DEFAULT` pour le canal `podcast_playback` (ligne 403)
-
-#### Fichier 4 : `android-auto/PodcastBrowserService.java`
-- Supprimer l'initialisation ExoPlayer dans `onCreate()` (inutile, la lecture se fait dans le WebView). Cela libere de la memoire et evite des conflits d'AudioFocus.
-
-### Resume
-Le probleme principal est que **chaque action de lecture declenche un appel a une methode Java inexistante** (`notifyPlaybackState`), ce qui bloque ou crashe le bridge Capacitor. Combine avec les doubles appels et le canal IMPORTANCE_LOW, le service foreground ne peut pas demarrer correctement, d'ou le spinning puis ecran noir.
-
+Résultat attendu
+- plus de plantage quand un épisode ne démarre pas
+- plus de service Android relancé inutilement
+- play/pause natif fiable
+- notification simplifiée et cohérente avec ton besoin réel
