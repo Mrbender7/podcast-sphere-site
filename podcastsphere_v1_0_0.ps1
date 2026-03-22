@@ -75,8 +75,15 @@ Write-Host ">>> Build Vite..." -ForegroundColor Yellow
 npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR: le build a echoue" -ForegroundColor Red; exit 1 }
 
-Write-Host ">>> Ajout de la plateforme Android..." -ForegroundColor Yellow
+# -- LA CORRECTION EST ICI --
+Write-Host ">>> Nettoyage et ajout de la plateforme Android..." -ForegroundColor Yellow
+if (Test-Path "android") {
+    Write-Host "    Dossier 'android' detecte depuis Git. Suppression pour un build propre..." -ForegroundColor DarkGray
+    Remove-Item -Recurse -Force "android"
+}
+
 npx cap add android
+if ($LASTEXITCODE -ne 0) { Write-Host "ERREUR CRITIQUE: npx cap add android a echoue" -ForegroundColor Red; exit 1 }
 
 # ===================================================================
 # 3. Icones de notification
@@ -264,7 +271,7 @@ if (Test-Path $ManifestPath) {
         $AppInjections += "`n"
     }
 
-    # MediaButtonReceiver (hardware media buttons: headsets, car steering wheel)
+    # MediaButtonReceiver
     if ($ManifestContent -notmatch 'MediaButtonReceiver') {
         $AppInjections += @(
             '',
@@ -318,7 +325,6 @@ if (Test-Path $BuildGradlePath) {
     $GradleContent = Get-Content $BuildGradlePath -Raw
     $GradleContent = $GradleContent -replace 'targetSdk\s*=?\s*\d+', 'targetSdk = 34'
 
-    # Add native dependencies for Cast, Android Auto, ExoPlayer
     $NativeDeps = @(
         "implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'",
         "implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'",
@@ -340,20 +346,23 @@ if (Test-Path $BuildGradlePath) {
 }
 
 # ===================================================================
-# 6. MainActivity -- WebView settings + notification channel + plugin registration
+# 6. MainActivity -- WebView settings + notification channel
 # ===================================================================
 Write-Host ">>> Generation MainActivity.java..." -ForegroundColor Yellow
 
 $JavaSrcBase = "android/app/src/main/java"
 $MainActFile = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
-$PackageDir = $MainActFile.DirectoryName
 
+if (-Not $MainActFile) {
+    Write-Host "ERREUR CRITIQUE: MainActivity introuvable. Le projet Android ne s'est pas genere correctement." -ForegroundColor Red
+    exit 1
+}
+
+$PackageDir = $MainActFile.DirectoryName
 $ActualPackage = "com.fhm.podcastsphere"
-if ($MainActFile) {
-    $MainContent = Get-Content $MainActFile.FullName -Raw
-    if ($MainContent -match 'package\s+([\w.]+)') {
-        $ActualPackage = $Matches[1]
-    }
+$MainContent = Get-Content $MainActFile.FullName -Raw
+if ($MainContent -match 'package\s+([\w.]+)') {
+    $ActualPackage = $Matches[1]
 }
 
 $MainActivityJava = @(
@@ -400,7 +409,7 @@ $MainActivityJava = @(
     '            NotificationChannel playback = new NotificationChannel(',
     '                "podcast_playback",',
     '                "Lecture Podcast",',
-    '                NotificationManager.IMPORTANCE_DEFAULT',
+    '                NotificationManager.IMPORTANCE_LOW',
     '            );',
     '            playback.setDescription("Controles de lecture Podcast Sphere");',
     '            playback.setSound(null, null);',
@@ -411,7 +420,7 @@ $MainActivityJava = @(
     '            NotificationChannel downloads = new NotificationChannel(',
     '                "podcast_downloads",',
     '                "Telechargements",',
-    '                NotificationManager.IMPORTANCE_DEFAULT',
+    '                NotificationManager.IMPORTANCE_LOW',
     '            );',
     '            downloads.setDescription("Telechargement des episodes");',
     '            downloads.setSound(null, null);',
