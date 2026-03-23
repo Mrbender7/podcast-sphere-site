@@ -161,14 +161,18 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   }, []);
 
   // --- Voice enhancer (lazy init on first toggle) ---
-  const toggleVoiceBoost = useCallback(() => {
+  const toggleVoiceBoost = useCallback(async () => {
     const next = !stateRef.current.isVoiceBoostEnabled;
-    // Init only on first activation — avoids routing audio through a suspended AudioContext at mount
     if (next) {
-      voiceEnhancer.init(audioRef.current);
+      const initialized = voiceEnhancer.init(audioRef.current);
+      if (!initialized) {
+        setState(s => ({ ...s, isVoiceBoostEnabled: false }));
+        toast({ title: "Voice Enhancer indisponible", description: "Ce flux ou cet appareil ne permet pas l'amélioration vocale locale.", variant: "destructive" });
+        return;
+      }
     }
-    voiceEnhancer.toggle(next);
-    setState(s => ({ ...s, isVoiceBoostEnabled: next }));
+    const enabled = await voiceEnhancer.toggle(next);
+    setState(s => ({ ...s, isVoiceBoostEnabled: enabled }));
   }, []);
 
   // --- Audio event listeners ---
