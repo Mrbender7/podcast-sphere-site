@@ -65,7 +65,7 @@ export function usePlayer() {
 }
 
 // Helper: wait for audio to be playable with timeout
-function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 8000): Promise<void> {
+function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 15000): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const settle = (fn: () => void) => {
