@@ -176,18 +176,19 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               Podcast Sphere
             </h1>
           </div>
-          {isCastAvailable && (
-            <button
-              onClick={isCasting ? stopCast : startCast}
-              className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-full bg-accent transition-colors",
-                isCasting ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              )}
-              aria-label="Cast"
-            >
-              <Cast className="h-5 w-5" />
-            </button>
-          )}
+          <button
+            onClick={isCasting ? stopCast : startCast}
+            disabled={!isCastAvailable}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full bg-accent transition-colors",
+              isCasting ? "text-primary" : 
+              isCastAvailable ? "text-muted-foreground hover:text-foreground" : 
+              "text-muted-foreground/30 cursor-not-allowed"
+            )}
+            aria-label="Cast"
+          >
+            <Cast className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
