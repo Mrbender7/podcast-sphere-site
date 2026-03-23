@@ -5,6 +5,7 @@ class VoiceEnhancer {
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private compressorNode: DynamicsCompressorNode | null = null;
   private eqNode: BiquadFilterNode | null = null;
+  private highPassNode: BiquadFilterNode | null = null;
   private gainNode: GainNode | null = null;
   private attachedElement: HTMLAudioElement | null = null;
   private sourceSupportCache = new Map<string, boolean>();
