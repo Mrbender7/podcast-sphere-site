@@ -32,27 +32,39 @@ export const NewEpisodesService = {
       return this.getNewEpisodesFromCache();
     }
 
+    // Delay sync start to let the UI render first
+    await new Promise((r) => setTimeout(r, 3000));
+
     console.log("Syncing new episodes...");
     let allNewEpisodes: Episode[] = [];
 
-    for (const feed of subscribedFeeds) {
-      try {
-        const { episodes } = await getEpisodesByFeedId(feed.id, 5);
+    // Process feeds in batches of 3 to avoid network saturation
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < subscribedFeeds.length; i += BATCH_SIZE) {
+      const batch = subscribedFeeds.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (feed) => {
+          const { episodes } = await getEpisodesByFeedId(feed.id, 5);
+          return episodes.filter((ep) => {
+            if (lastSyncTime === 0) return true;
+            const pubDateMs = ep.datePublished * 1000;
+            return pubDateMs > lastSyncTime;
+          });
+        })
+      );
 
-        const newForFeed = episodes.filter((ep) => {
-          if (lastSyncTime === 0) return true;
-          const pubDateMs = ep.datePublished * 1000;
-          return pubDateMs > lastSyncTime;
-        });
-
-        // On first sync, only take the latest episode per feed
-        if (lastSyncTime === 0 && newForFeed.length > 0) {
-          allNewEpisodes.push(newForFeed[0]);
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        if (result.status === "fulfilled") {
+          const newForFeed = result.value;
+          if (lastSyncTime === 0 && newForFeed.length > 0) {
+            allNewEpisodes.push(newForFeed[0]);
+          } else {
+            allNewEpisodes = [...allNewEpisodes, ...newForFeed];
+          }
         } else {
-          allNewEpisodes = [...allNewEpisodes, ...newForFeed];
+          console.error(`Sync error for feed ${batch[j]?.id}`, result.reason);
         }
-      } catch (error) {
-        console.error(`Sync error for feed ${feed.id}`, error);
       }
     }
 

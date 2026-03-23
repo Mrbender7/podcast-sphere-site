@@ -23,7 +23,8 @@ const createManagedAudio = () => {
   const audio = new Audio();
   (audio as any).playsInline = true;
   audio.preload = "auto";
-  audio.crossOrigin = "anonymous";
+  // NOTE: crossOrigin removed — blocks playback on Android WebView
+  // when podcast CDNs don't return CORS headers.
   return audio;
 };
 
@@ -64,7 +65,7 @@ export function usePlayer() {
 }
 
 // Helper: wait for audio to be playable with timeout
-function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 8000): Promise<void> {
+function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 15000): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const settle = (fn: () => void) => {
@@ -577,11 +578,33 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         position:  Math.round(resumeTime * 1000),
       });
     } catch (e) {
-      console.error("[Player] Playback failed:", e);
-      // Only rollback if this is still the active play request
+      console.warn("[Player] First play attempt failed, retrying...", e);
+      // Only retry if this is still the active play request
       if (token === playTokenRef.current) {
-        rollbackPlayback();
-        toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
+        try {
+          // Replace audio element and retry once
+          audio = replaceAudioElement();
+          audio.src = audioSrc;
+          audio.playbackRate = stateRef.current.playbackRate;
+          audio.load();
+          await playWithTimeout(audio);
+
+          if (token !== playTokenRef.current) { audio.pause(); return; }
+
+          if (resumeTime > 0) audio.currentTime = resumeTime;
+          isPlayingRef.current = true;
+          setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+          syncMediaSessionPosition();
+          startSilentLoop();
+          requestWakeLock();
+          onEpisodePlay?.(episode);
+        } catch (retryErr) {
+          console.error("[Player] Retry also failed:", retryErr);
+          if (token === playTokenRef.current) {
+            rollbackPlayback();
+            toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
+          }
+        }
       }
     }
   }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, rollbackPlayback, replaceAudioElement, t]);

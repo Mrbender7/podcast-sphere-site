@@ -3,7 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { evictOldEntries } from "@/services/ImageCacheService";
 
-// Clean up old cached artworks on startup
-evictOldEntries();
+// Defer IndexedDB cleanup to avoid competing with initial render
+setTimeout(() => evictOldEntries(), 5000);
 
 createRoot(document.getElementById("root")!).render(<App />);

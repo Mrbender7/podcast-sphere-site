@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { getCachedImage, cacheImage } from "@/services/ImageCacheService";
+import { getCachedImage, preCacheImages } from "@/services/ImageCacheService";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 interface CachedImageProps {
@@ -11,7 +11,7 @@ interface CachedImageProps {
 
 /**
  * Image component that checks IndexedDB cache first,
- * falls back to network (and caches the result), then placeholder on error.
+ * falls back to network URL directly, and defers caching to the background queue.
  */
 export const CachedImage = memo(function CachedImage({
   src,
@@ -34,14 +34,10 @@ export const CachedImage = memo(function CachedImage({
         revoke = cached;
         setDisplaySrc(cached);
       } else {
-        // Show original while caching in background
+        // Show original URL directly — no inline fetch+cache storm
         setDisplaySrc(src);
-        cacheImage(src).then((objectUrl) => {
-          if (objectUrl) {
-            revoke = objectUrl;
-            setDisplaySrc(objectUrl);
-          }
-        });
+        // Defer caching to background queue at low priority
+        preCacheImages([src], 1);
       }
     });
 

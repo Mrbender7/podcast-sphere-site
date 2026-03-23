@@ -10,8 +10,11 @@ const DB_NAME = "ps_image_cache";
 const DB_VERSION = 1;
 const STORE_NAME = "artworks";
 const MAX_ENTRIES = 500;
+const MAX_CONCURRENT = 2; // max parallel downloads
+const STARTUP_DELAY_MS = 3000; // wait before processing queue
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+const startTime = Date.now();
 
 function openDB(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
@@ -73,7 +76,7 @@ export async function cacheImage(url: string): Promise<string | null> {
   if (!url) return null;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 4000);
     const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeout);
     if (!response.ok) return null;
@@ -110,6 +113,7 @@ type CacheJob = { url: string; priority: number };
 
 let queue: CacheJob[] = [];
 let processing = false;
+let activeDownloads = 0;
 
 const requestIdle =
   typeof window !== "undefined" && "requestIdleCallback" in window
@@ -118,18 +122,35 @@ const requestIdle =
 
 async function processQueue() {
   if (processing || queue.length === 0) return;
+
+  // Wait for startup delay before processing
+  const elapsed = Date.now() - startTime;
+  if (elapsed < STARTUP_DELAY_MS) {
+    setTimeout(() => processQueue(), STARTUP_DELAY_MS - elapsed);
+    return;
+  }
+
   processing = true;
 
   // Sort by priority (higher = sooner)
   queue.sort((a, b) => b.priority - a.priority);
 
   while (queue.length > 0) {
-    const job = queue.shift()!;
+    // Respect concurrency limit
+    while (activeDownloads >= MAX_CONCURRENT && queue.length > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+    }
+
+    const job = queue.shift();
+    if (!job) break;
+
     // Yield to main thread between each fetch to avoid jank
     await new Promise<void>((resolve) => requestIdle(() => resolve()));
+
     const already = await isCached(job.url);
     if (!already) {
-      await cacheImage(job.url);
+      activeDownloads++;
+      cacheImage(job.url).finally(() => { activeDownloads--; });
     }
   }
 
