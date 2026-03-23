@@ -122,13 +122,19 @@ class VoiceEnhancer {
       this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
       this.compressorNode = this.audioContext.createDynamicsCompressor();
       this.eqNode = this.audioContext.createBiquadFilter();
+      this.highPassNode = this.audioContext.createBiquadFilter();
       this.gainNode = this.audioContext.createGain();
 
       this.eqNode.type = "peaking";
       this.eqNode.frequency.value = 3000;
-      this.eqNode.Q.value = 1;
+      this.eqNode.Q.value = 1.2;
 
-      this.sourceNode.connect(this.compressorNode);
+      this.highPassNode.type = "highpass";
+      this.highPassNode.frequency.value = 85;
+      this.highPassNode.Q.value = 0.7;
+
+      this.sourceNode.connect(this.highPassNode);
+      this.highPassNode.connect(this.compressorNode);
       this.compressorNode.connect(this.eqNode);
       this.eqNode.connect(this.gainNode);
       this.gainNode.connect(this.audioContext.destination);
