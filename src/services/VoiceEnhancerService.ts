@@ -6,81 +6,79 @@ class VoiceEnhancer {
   private compressorNode: DynamicsCompressorNode | null = null;
   private eqNode: BiquadFilterNode | null = null;
   private gainNode: GainNode | null = null;
-  private isEnabled: boolean = false;
+  private isEnabled = false;
 
   init(audioElement: HTMLAudioElement) {
-    // Ne créer le contexte qu'une seule fois pour éviter l'erreur InvalidStateError
     if (this.audioContext) return;
 
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       this.audioContext = new AudioContextClass();
-
-      // 1. Source (le lecteur audio global)
       this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
-
-      // 2. Compresseur Dynamique (Niveleur de volume)
       this.compressorNode = this.audioContext.createDynamicsCompressor();
-      this.compressorNode.threshold.value = -24;
-      this.compressorNode.knee.value = 30;
-      this.compressorNode.ratio.value = 12;
-      this.compressorNode.attack.value = 0.003;
-      this.compressorNode.release.value = 0.25;
-
-      // 3. Égaliseur (EQ) pour la clarté vocale
       this.eqNode = this.audioContext.createBiquadFilter();
-      this.eqNode.type = 'peaking';
+      this.gainNode = this.audioContext.createGain();
+
+      this.eqNode.type = "peaking";
       this.eqNode.frequency.value = 3000;
       this.eqNode.Q.value = 1;
-      this.eqNode.gain.value = 0;
 
-      // 4. Gain de compensation (Makeup Gain)
-      this.gainNode = this.audioContext.createGain();
-      this.gainNode.gain.value = 1;
+      // Chaîne audio stable: on connecte une seule fois, puis on ajuste seulement les paramètres.
+      this.sourceNode.connect(this.compressorNode);
+      this.compressorNode.connect(this.eqNode);
+      this.eqNode.connect(this.gainNode);
+      this.gainNode.connect(this.audioContext.destination);
 
-      // Routage par défaut (Bypass : Source -> Destination)
-      this.sourceNode.connect(this.audioContext.destination);
-
+      this.applyDisabledSettings();
       console.log("[VoiceEnhancer] Initialisé avec succès");
     } catch (e) {
       console.error("[VoiceEnhancer] Web Audio API non supportée ou erreur d'initialisation", e);
     }
   }
 
-  toggle(enable: boolean) {
+  private applyDisabledSettings() {
+    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
+    this.compressorNode.threshold.value = 0;
+    this.compressorNode.knee.value = 0;
+    this.compressorNode.ratio.value = 1;
+    this.compressorNode.attack.value = 0.003;
+    this.compressorNode.release.value = 0.25;
+    this.eqNode.gain.value = 0;
+    this.gainNode.gain.value = 1;
+  }
+
+  private applyEnabledSettings() {
+    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
+    this.compressorNode.threshold.value = -24;
+    this.compressorNode.knee.value = 30;
+    this.compressorNode.ratio.value = 12;
+    this.compressorNode.attack.value = 0.003;
+    this.compressorNode.release.value = 0.25;
+    this.eqNode.gain.value = 8;
+    this.gainNode.gain.value = 2;
+  }
+
+  async toggle(enable: boolean) {
     if (!this.audioContext || !this.sourceNode || !this.compressorNode || !this.eqNode || !this.gainNode) return;
 
-    this.isEnabled = enable;
-
-    // Déconnexion de la route audio actuelle
-    this.sourceNode.disconnect();
-    this.compressorNode.disconnect();
-    this.eqNode.disconnect();
-    this.gainNode.disconnect();
-
-    if (enable) {
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume();
+    try {
+      if (this.audioContext.state === "suspended") {
+        await this.audioContext.resume();
       }
 
-      // Activation des filtres
-      this.eqNode.gain.value = 8;
-      this.gainNode.gain.value = 2.0;
+      this.isEnabled = enable;
 
-      // Routage Premium : Source -> Compresseur -> EQ -> Gain -> Sortie
-      this.sourceNode.connect(this.compressorNode);
-      this.compressorNode.connect(this.eqNode);
-      this.eqNode.connect(this.gainNode);
-      this.gainNode.connect(this.audioContext.destination);
-
-      console.log("[VoiceEnhancer] Activé");
-    } else {
-      // Retour à la normale
-      this.eqNode.gain.value = 0;
-      this.gainNode.gain.value = 1;
-      this.sourceNode.connect(this.audioContext.destination);
-
-      console.log("[VoiceEnhancer] Désactivé");
+      if (enable) {
+        this.applyEnabledSettings();
+        console.log("[VoiceEnhancer] Activé");
+      } else {
+        this.applyDisabledSettings();
+        console.log("[VoiceEnhancer] Désactivé");
+      }
+    } catch (e) {
+      this.isEnabled = false;
+      this.applyDisabledSettings();
+      console.error("[VoiceEnhancer] Échec du basculement", e);
     }
   }
 
