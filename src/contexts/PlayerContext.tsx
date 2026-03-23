@@ -23,7 +23,8 @@ const createManagedAudio = () => {
   const audio = new Audio();
   (audio as any).playsInline = true;
   audio.preload = "auto";
-  audio.crossOrigin = "anonymous";
+  // NOTE: crossOrigin removed — blocks playback on Android WebView
+  // when podcast CDNs don't return CORS headers.
   return audio;
 };
 
