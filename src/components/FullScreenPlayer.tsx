@@ -141,9 +141,11 @@ export function FullScreenPlayer() {
             <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
           </button>
         </div>
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {isCasting ? `📺 ${castDeviceName}` : t("player.nowPlaying")}
-        </span>
+        {isCasting && (
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            📺 {castDeviceName}
+          </span>
+        )}
         <div className="flex items-center gap-1">
           {isCastAvailable && (
             <button
