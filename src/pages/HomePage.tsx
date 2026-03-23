@@ -58,7 +58,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showAllResume, setShowAllResume] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
-  const { play } = usePlayer();
+  const { play, currentEpisode, isPlaying, isBuffering, togglePlay } = usePlayer();
+  const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
 
   // New episodes state
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
