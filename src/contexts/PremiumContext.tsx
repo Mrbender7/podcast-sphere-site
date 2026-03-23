@@ -25,13 +25,8 @@ function verifyPassword(input: string): boolean {
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(() => {
-    // On native, start false and let queryPurchases determine the real status
-    if (isNative) return false;
-    // On web, check localStorage (debug mode)
-    try {
-      const stored = localStorage.getItem("podcastsphere_premium");
-      return stored === PREMIUM_HASH;
-    } catch { return false; }
+    // TEMP: unlock all premium features for development
+    return true;
   });
   const [isLoading, setIsLoading] = useState(isNative);
 

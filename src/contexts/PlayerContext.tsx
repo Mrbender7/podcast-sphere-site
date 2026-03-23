@@ -7,6 +7,7 @@ import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
 import { PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 import { Capacitor } from '@capacitor/core';
+import { voiceEnhancer } from "@/services/VoiceEnhancerService";
 
 // Single unified helper for all native calls — no-op on web
 const safeNativeCall = async (method: string, data: Record<string, unknown>) => {
