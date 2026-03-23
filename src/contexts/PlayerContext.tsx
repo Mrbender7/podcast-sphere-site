@@ -32,6 +32,7 @@ interface PlayerState {
   currentTime: number;
   duration: number;
   playbackRate: number;
+  isVoiceBoostEnabled: boolean;
 }
 
 interface PlayerContextType extends PlayerState {
