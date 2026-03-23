@@ -30,17 +30,25 @@ function HistoryRow({
   entry,
   onPlay,
   onRemove,
+  isCurrent,
+  isCurrentPlaying,
+  isCurrentBuffering,
+  onTogglePlay,
 }: {
   entry: HistoryEntry;
   onPlay: (entry: HistoryEntry) => void;
   onRemove?: (episodeId: number) => void;
+  isCurrent: boolean;
+  isCurrentPlaying: boolean;
+  isCurrentBuffering: boolean;
+  onTogglePlay: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group">
       <div
         className="flex items-center gap-3 flex-1 min-w-0"
-        onClick={() => onPlay(entry)}
+        onClick={() => isCurrent ? onTogglePlay() : onPlay(entry)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
           <CachedImage
@@ -55,9 +63,11 @@ function HistoryRow({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold truncate ${entry.completed ? "text-muted-foreground" : "text-foreground"}`}>
-            {entry.episode.title}
-          </p>
+          <MarqueeText
+            text={entry.episode.title}
+            active={isCurrentPlaying}
+            className={`text-sm font-semibold ${entry.completed ? "text-muted-foreground" : "text-foreground"}`}
+          />
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs text-muted-foreground truncate">{entry.episode.feedTitle}</span>
             <span className="text-xs text-muted-foreground">•</span>
@@ -76,8 +86,14 @@ function HistoryRow({
           {!entry.completed && entry.progress > 0 && (
             <span className="text-[10px] text-primary font-semibold">{Math.round(entry.progress * 100)}%</span>
           )}
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-            <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isCurrentPlaying ? "bg-primary" : "bg-accent")}>
+            {isCurrentBuffering ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+            ) : isCurrentPlaying ? (
+              <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+            ) : (
+              <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+            )}
           </div>
         </div>
       </div>
