@@ -45,6 +45,7 @@ interface PlayerContextType extends PlayerState {
   skipForward: () => void;
   skipBackward: () => void;
   setPlaybackRate: (rate: number) => void;
+  toggleVoiceBoost: () => void;
   progress: number;
 }
 
