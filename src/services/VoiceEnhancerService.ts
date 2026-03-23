@@ -64,8 +64,8 @@ class VoiceEnhancer {
       }
 
       // Activation des filtres
-      this.eqNode.gain.value = 4;
-      this.gainNode.gain.value = 1.5;
+      this.eqNode.gain.value = 8;
+      this.gainNode.gain.value = 2.0;
 
       // Routage Premium : Source -> Compresseur -> EQ -> Gain -> Sortie
       this.sourceNode.connect(this.compressorNode);
