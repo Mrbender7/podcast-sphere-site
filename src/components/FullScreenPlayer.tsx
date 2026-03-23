@@ -4,7 +4,9 @@ import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCast } from "@/hooks/useCast";
-import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast, Scissors } from "lucide-react";
+import { SnippetService } from "@/services/SnippetService";
+import { usePremium } from "@/contexts/PremiumContext";
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -33,6 +35,7 @@ export function FullScreenPlayer() {
   const { t } = useTranslation();
   const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast } = useCast();
   const { isSubscribed, toggleSubscription } = useFavoritesContext();
+  const { isPremium } = usePremium();
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
@@ -80,6 +83,18 @@ export function FullScreenPlayer() {
     else toast.error(t("download.error"));
   };
 
+  const handleClip = () => {
+    if (!currentEpisode || currentTime <= 0) return;
+    if (!isPremium) {
+      toast.error("✂️ Fonctionnalité Premium", { description: "Débloquez Premium pour créer des clips." });
+      return;
+    }
+    const snippet = SnippetService.saveSnippet(currentEpisode, currentTime, 30);
+    if (snippet) {
+      toast.success("✂️ Clip sauvegardé !", { description: `${SnippetService.formatTime(snippet.startTime)} → ${SnippetService.formatTime(snippet.endTime)}` });
+    }
+  };
+
   const artwork = currentEpisode.image || currentEpisode.feedImage;
   const epDownloaded = currentEpisode ? isEpisodeDownloaded(currentEpisode.id) : false;
   const epDownloading = currentEpisode ? downloading[currentEpisode.id] !== undefined : false;
@@ -121,6 +136,9 @@ export function FullScreenPlayer() {
             ) : (
               <Download className="w-5 h-5 text-muted-foreground" />
             )}
+          </button>
+          <button onClick={handleClip} className="p-2" aria-label="Clip">
+            <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
           </button>
         </div>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
