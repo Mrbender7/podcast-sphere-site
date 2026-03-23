@@ -29,7 +29,7 @@ export function FullScreenPlayer() {
     currentEpisode, isPlaying, isBuffering, togglePlay,
     volume, setVolume, isFullScreen, closeFullScreen,
     currentTime, duration, seek, skipForward, skipBackward,
-    playbackRate, setPlaybackRate,
+    playbackRate, setPlaybackRate, isVoiceBoostEnabled, toggleVoiceBoost,
   } = usePlayer();
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const { t } = useTranslation();
