@@ -592,7 +592,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const progress = state.duration > 0 ? state.currentTime / state.duration : 0;
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, progress }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, toggleVoiceBoost, progress }}>
       {children}
     </PlayerContext.Provider>
   );
