@@ -213,6 +213,22 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     const onWaiting = () => setState(s => ({ ...s, isBuffering: true }));
     const onCanPlay = () => setState(s => ({ ...s, isBuffering: false }));
 
+    // Stall watchdog: if we stay stuck buffering for 20s, rollback
+    let stallTimer: ReturnType<typeof setTimeout> | null = null;
+    const onStalled = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        if (stateRef.current.isBuffering && isPlayingRef.current) {
+          console.warn("[Player] Stall watchdog triggered after 20s");
+          rollbackPlayback();
+          toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
+        }
+      }, 20000);
+    };
+    const onPlaying = () => {
+      if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+    };
+
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
     audio.addEventListener("ended", onEnded);
