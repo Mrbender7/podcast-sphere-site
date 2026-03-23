@@ -145,7 +145,7 @@ export function LibraryPage() {
   // Pre-cache artworks for subscriptions
   useEffect(() => {
     const urls = subscriptions.map(p => p.image).filter(Boolean);
-    if (urls.length) preCacheImages(urls);
+    if (urls.length) preCacheImages(urls, 3);
   }, [subscriptions]);
 
   const handleScroll = useCallback(() => {
