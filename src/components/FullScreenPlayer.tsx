@@ -141,9 +141,11 @@ export function FullScreenPlayer() {
             <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
           </button>
         </div>
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {isCasting ? `📺 ${castDeviceName}` : t("player.nowPlaying")}
-        </span>
+        {isCasting && (
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            📺 {castDeviceName}
+          </span>
+        )}
         <div className="flex items-center gap-1">
           {isCastAvailable && (
             <button
@@ -177,12 +179,16 @@ export function FullScreenPlayer() {
 
       {/* Info & Controls */}
       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+6rem)] space-y-4">
+        {/* Spectrograph */}
+        <div className="flex justify-center">
+          <EqBars barCount={20} size="md" animate={isPlaying} className="flex-shrink-0" />
+        </div>
+
         {/* Title + Volume */}
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0 space-y-4">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2 flex items-center gap-2">
-                {isPlaying && <EqBars size="md" className="flex-shrink-0" />}
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent line-clamp-2">
                 <span>{currentEpisode.feedTitle || currentEpisode.feedAuthor || currentEpisode.title}</span>
               </h2>
               {(currentEpisode.feedTitle || currentEpisode.feedAuthor) && (

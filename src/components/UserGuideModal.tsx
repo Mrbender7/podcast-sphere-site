@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { BookOpen, Home, Search, Bookmark, Settings, ChevronDown, Moon, Crown, ShieldAlert, RefreshCw } from "lucide-react";
+import { BookOpen, Home, Search, Bookmark, Settings, ChevronDown, Moon, Crown, ShieldAlert, RefreshCw, Scissors, AudioLines } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestAllPermissions } from "@/utils/permissions";
 
@@ -12,6 +12,8 @@ const SECTIONS = [
   { id: "settings", icon: Settings, titleKey: "guide.settings", contentKey: "guide.settingsContent" },
   { id: "permissions", icon: ShieldAlert, titleKey: "guide.permissions", contentKey: "guide.permissionsContent" },
   { id: "sleepTimer", icon: Moon, titleKey: "guide.sleepTimer", contentKey: "guide.sleepTimerContent", premium: true },
+  { id: "snippets", icon: Scissors, titleKey: "guide.snippets", contentKey: "guide.snippetsContent", premium: true },
+  { id: "voiceEnhancer", icon: AudioLines, titleKey: "guide.voiceEnhancer", contentKey: "guide.voiceEnhancerContent", premium: true },
 ] as const;
 
 interface UserGuideModalProps {

@@ -3,7 +3,7 @@ import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive, Globe } from "lucide-react";
+import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive, Globe, Scissors, AudioLines } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -85,6 +85,8 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
 
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
+    { icon: Scissors, title: t("premium.snippets"), desc: t("premium.snippetsDesc") },
+    { icon: AudioLines, title: t("premium.voiceEnhancer"), desc: t("premium.voiceEnhancerDesc") },
   ];
 
   return (
@@ -244,7 +246,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       </div>
 
       {/* Privacy Policy */}
-      <a href="https://mrbender7.github.io/privacy-policy-podcastsphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
+      <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
       </a>
 
