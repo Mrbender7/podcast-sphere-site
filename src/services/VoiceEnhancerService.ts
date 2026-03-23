@@ -151,7 +151,7 @@ class VoiceEnhancer {
   }
 
   private applyDisabledSettings() {
-    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
+    if (!this.compressorNode || !this.eqNode || !this.gainNode || !this.highPassNode) return;
     this.compressorNode.threshold.value = 0;
     this.compressorNode.knee.value = 0;
     this.compressorNode.ratio.value = 1;
