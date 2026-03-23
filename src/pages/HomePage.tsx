@@ -13,7 +13,8 @@ import { useDownloads } from "@/contexts/DownloadContext";
 import { getListenHistory } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, Pause, ChevronDown, Sparkles, X, Loader2, Download, CheckCircle } from "lucide-react";
+import { useCast } from "@/hooks/useCast";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, Pause, ChevronDown, Sparkles, X, Loader2, Download, CheckCircle, Cast } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { CachedImage } from "@/components/CachedImage";
 import { MarqueeText } from "@/components/MarqueeText";
@@ -59,6 +60,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [showAllResume, setShowAllResume] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
   const { play, currentEpisode, isPlaying, isBuffering, togglePlay } = usePlayer();
+  const { isCastAvailable, isCasting, startCast, stopCast } = useCast();
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
 
   // New episodes state
@@ -167,11 +169,25 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="bg-background px-4 pt-6 pb-4">
-        <div className="flex items-center gap-3">
-          <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
-          <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">
-            Podcast Sphere
-          </h1>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
+            <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">
+              Podcast Sphere
+            </h1>
+          </div>
+          {isCastAvailable && (
+            <button
+              onClick={isCasting ? stopCast : startCast}
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-full bg-accent transition-colors",
+                isCasting ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-label="Cast"
+            >
+              <Cast className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 

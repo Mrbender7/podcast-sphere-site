@@ -6,17 +6,74 @@ class VoiceEnhancer {
   private compressorNode: DynamicsCompressorNode | null = null;
   private eqNode: BiquadFilterNode | null = null;
   private gainNode: GainNode | null = null;
+  private attachedElement: HTMLAudioElement | null = null;
   private isEnabled = false;
   private isSupported = false;
 
+  private getSourceUrl(audioElement: HTMLAudioElement): string {
+    return audioElement.currentSrc || audioElement.src || "";
+  }
+
+  private canProcessSource(audioElement: HTMLAudioElement): boolean {
+    const sourceUrl = this.getSourceUrl(audioElement);
+    if (!sourceUrl) return false;
+
+    try {
+      const parsedUrl = new URL(sourceUrl, window.location.href);
+      return (
+        parsedUrl.origin === window.location.origin ||
+        parsedUrl.protocol === "blob:" ||
+        parsedUrl.protocol === "data:" ||
+        parsedUrl.protocol === "file:" ||
+        parsedUrl.protocol === "capacitor:" ||
+        parsedUrl.protocol === "content:" ||
+        parsedUrl.protocol === "filesystem:"
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private resetNodes() {
+    this.isEnabled = false;
+    this.isSupported = false;
+    this.attachedElement = null;
+
+    try {
+      this.sourceNode?.disconnect();
+      this.compressorNode?.disconnect();
+      this.eqNode?.disconnect();
+      this.gainNode?.disconnect();
+    } catch {
+      // no-op
+    }
+
+    if (this.audioContext && this.audioContext.state !== "closed") {
+      void this.audioContext.close().catch(() => {});
+    }
+
+    this.audioContext = null;
+    this.sourceNode = null;
+    this.compressorNode = null;
+    this.eqNode = null;
+    this.gainNode = null;
+  }
+
   init(audioElement: HTMLAudioElement): boolean {
-    if (this.audioContext && this.isSupported) return true;
+    if (this.audioContext && this.isSupported && this.attachedElement === audioElement) return true;
+
+    if (!this.canProcessSource(audioElement)) {
+      console.warn("[VoiceEnhancer] Flux non compatible avec le traitement local", this.getSourceUrl(audioElement));
+      this.resetNodes();
+      return false;
+    }
 
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) return false;
 
       this.audioContext = new AudioContextClass();
+      this.attachedElement = audioElement;
       this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
       this.compressorNode = this.audioContext.createDynamicsCompressor();
       this.eqNode = this.audioContext.createBiquadFilter();
@@ -36,13 +93,7 @@ class VoiceEnhancer {
       console.log("[VoiceEnhancer] Initialisé avec succès");
       return true;
     } catch (e) {
-      this.isSupported = false;
-      this.isEnabled = false;
-      this.audioContext = null;
-      this.sourceNode = null;
-      this.compressorNode = null;
-      this.eqNode = null;
-      this.gainNode = null;
+      this.resetNodes();
       console.error("[VoiceEnhancer] Non disponible sur ce flux/appareil", e);
       return false;
     }
