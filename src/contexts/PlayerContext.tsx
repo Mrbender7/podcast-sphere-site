@@ -19,9 +19,15 @@ const safeNativeCall = async (method: string, data: Record<string, unknown>) => 
   }
 };
 
-const globalAudio = new Audio();
-(globalAudio as any).playsInline = true;
-globalAudio.preload = "auto";
+const createManagedAudio = () => {
+  const audio = new Audio();
+  (audio as any).playsInline = true;
+  audio.preload = "auto";
+  audio.crossOrigin = "anonymous";
+  return audio;
+};
+
+const globalAudio = createManagedAudio();
 
 interface PlayerState {
   currentEpisode: Episode | null;
@@ -105,7 +111,8 @@ function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 8000): Promise<voi
 
 export function PlayerProvider({ children, onEpisodePlay }: { children: React.ReactNode; onEpisodePlay?: (episode: Episode) => void }) {
   const { t } = useTranslation();
-  const audioRef = useRef<HTMLAudioElement>(globalAudio);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement>(() => globalAudio);
+  const audioRef = useRef<HTMLAudioElement>(audioElement);
   const [state, setState] = useState<PlayerState>({
     currentEpisode: null,
     isPlaying: false,
@@ -127,6 +134,10 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const playTokenRef = useRef(0);
 
   const saveCounterRef = useRef(0);
+
+  useEffect(() => {
+    audioRef.current = audioElement;
+  }, [audioElement]);
 
   const syncMediaSessionPosition = useCallback(() => {
     const audio = audioRef.current;
@@ -160,11 +171,33 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     safeNativeCall('updatePlaybackState', { isPlaying: false, position: 0 });
   }, []);
 
+  const replaceAudioElement = useCallback(() => {
+    const previousAudio = audioRef.current;
+    const freshAudio = createManagedAudio();
+
+    freshAudio.volume = stateRef.current.volume;
+    freshAudio.playbackRate = stateRef.current.playbackRate;
+
+    try {
+      previousAudio.pause();
+      previousAudio.removeAttribute("src");
+      previousAudio.load();
+    } catch {
+      // no-op
+    }
+
+    audioRef.current = freshAudio;
+    setAudioElement(freshAudio);
+    voiceEnhancer.release();
+
+    return freshAudio;
+  }, []);
+
   // --- Voice enhancer (lazy init on first toggle) ---
   const toggleVoiceBoost = useCallback(async () => {
     const next = !stateRef.current.isVoiceBoostEnabled;
     if (next) {
-      const initialized = voiceEnhancer.init(audioRef.current);
+      const initialized = await voiceEnhancer.init(audioRef.current);
       if (!initialized) {
         setState(s => ({ ...s, isVoiceBoostEnabled: false }));
         toast({ title: "Voice Enhancer indisponible", description: "Ce flux ou cet appareil ne permet pas l'amélioration vocale locale.", variant: "destructive" });
@@ -178,7 +211,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   // --- Audio event listeners ---
 
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = audioElement;
     audio.volume = state.volume;
 
     const onTimeUpdate = () => {
@@ -271,8 +304,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       if (stallTimer) clearTimeout(stallTimer);
       cleanupVisibility();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [audioElement, rollbackPlayback, syncMediaSessionPosition, t, state.volume]);
 
   const updateMediaSession = useCallback((episode: Episode, playing: boolean) => {
     if (!("mediaSession" in navigator)) return;
@@ -471,7 +503,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     // Concurrency guard: invalidate any in-flight play request
     const token = ++playTokenRef.current;
 
-    const audio = audioRef.current;
+    let audio = audioRef.current;
     audio.pause();
     stopSilentLoop();
     releaseWakeLock();
@@ -489,6 +521,11 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
 
     // Check if a newer play() was called while we were resolving the source
     if (token !== playTokenRef.current) return;
+
+    if (voiceEnhancer.canUse()) {
+      audio = replaceAudioElement();
+      setState(s => ({ ...s, isVoiceBoostEnabled: false }));
+    }
 
     audio.src = audioSrc;
     audio.playbackRate = stateRef.current.playbackRate;
@@ -547,7 +584,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         toast({ title: t("player.streamError"), description: t("player.streamErrorDesc"), variant: "destructive" });
       }
     }
-  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, rollbackPlayback, t]);
+  }, [hydrateEpisodeMetadata, updateMediaSession, onEpisodePlay, syncMediaSessionPosition, rollbackPlayback, replaceAudioElement, t]);
 
   const setVolume = useCallback((v: number) => {
     audioRef.current.volume = v;

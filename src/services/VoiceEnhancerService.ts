@@ -7,6 +7,7 @@ class VoiceEnhancer {
   private eqNode: BiquadFilterNode | null = null;
   private gainNode: GainNode | null = null;
   private attachedElement: HTMLAudioElement | null = null;
+  private sourceSupportCache = new Map<string, boolean>();
   private isEnabled = false;
   private isSupported = false;
 
@@ -14,8 +15,7 @@ class VoiceEnhancer {
     return audioElement.currentSrc || audioElement.src || "";
   }
 
-  private canProcessSource(audioElement: HTMLAudioElement): boolean {
-    const sourceUrl = this.getSourceUrl(audioElement);
+  private isUrlLocallySafe(sourceUrl: string): boolean {
     if (!sourceUrl) return false;
 
     try {
@@ -31,6 +31,50 @@ class VoiceEnhancer {
       );
     } catch {
       return false;
+    }
+  }
+
+  private async canProcessSource(audioElement: HTMLAudioElement): Promise<boolean> {
+    const sourceUrl = this.getSourceUrl(audioElement);
+    if (!sourceUrl) return false;
+
+    if (this.sourceSupportCache.has(sourceUrl)) {
+      return this.sourceSupportCache.get(sourceUrl) ?? false;
+    }
+
+    if (this.isUrlLocallySafe(sourceUrl)) {
+      this.sourceSupportCache.set(sourceUrl, true);
+      return true;
+    }
+
+    try {
+      const headResponse = await fetch(sourceUrl, {
+        method: "HEAD",
+        mode: "cors",
+        cache: "no-store",
+      });
+
+      const supported = headResponse.ok;
+      this.sourceSupportCache.set(sourceUrl, supported);
+      return supported;
+    } catch {
+      try {
+        const rangedResponse = await fetch(sourceUrl, {
+          method: "GET",
+          mode: "cors",
+          cache: "no-store",
+          headers: {
+            Range: "bytes=0-1",
+          },
+        });
+
+        const supported = rangedResponse.ok || rangedResponse.status === 206;
+        this.sourceSupportCache.set(sourceUrl, supported);
+        return supported;
+      } catch {
+        this.sourceSupportCache.set(sourceUrl, false);
+        return false;
+      }
     }
   }
 
@@ -59,10 +103,10 @@ class VoiceEnhancer {
     this.gainNode = null;
   }
 
-  init(audioElement: HTMLAudioElement): boolean {
+  async init(audioElement: HTMLAudioElement): Promise<boolean> {
     if (this.audioContext && this.isSupported && this.attachedElement === audioElement) return true;
 
-    if (!this.canProcessSource(audioElement)) {
+    if (!(await this.canProcessSource(audioElement))) {
       console.warn("[VoiceEnhancer] Flux non compatible avec le traitement local", this.getSourceUrl(audioElement));
       this.resetNodes();
       return false;
@@ -153,6 +197,10 @@ class VoiceEnhancer {
 
   getState() {
     return this.isEnabled;
+  }
+
+  release() {
+    this.resetNodes();
   }
 
   canUse() {
