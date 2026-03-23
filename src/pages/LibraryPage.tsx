@@ -6,12 +6,13 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Trash2, ChevronDown, X, Download, Sparkles } from "lucide-react";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2 } from "lucide-react";
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { CachedImage } from "@/components/CachedImage";
 import { preCacheImages } from "@/services/ImageCacheService";
+import { MarqueeText } from "@/components/MarqueeText";
 
 const INITIAL_VISIBLE = 3;
 
@@ -29,17 +30,25 @@ function HistoryRow({
   entry,
   onPlay,
   onRemove,
+  isCurrent,
+  isCurrentPlaying,
+  isCurrentBuffering,
+  onTogglePlay,
 }: {
   entry: HistoryEntry;
   onPlay: (entry: HistoryEntry) => void;
   onRemove?: (episodeId: number) => void;
+  isCurrent: boolean;
+  isCurrentPlaying: boolean;
+  isCurrentBuffering: boolean;
+  onTogglePlay: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group">
       <div
         className="flex items-center gap-3 flex-1 min-w-0"
-        onClick={() => onPlay(entry)}
+        onClick={() => isCurrent ? onTogglePlay() : onPlay(entry)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent relative">
           <CachedImage
@@ -54,9 +63,11 @@ function HistoryRow({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold truncate ${entry.completed ? "text-muted-foreground" : "text-foreground"}`}>
-            {entry.episode.title}
-          </p>
+          <MarqueeText
+            text={entry.episode.title}
+            active={isCurrentPlaying}
+            className={`text-sm font-semibold ${entry.completed ? "text-muted-foreground" : "text-foreground"}`}
+          />
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs text-muted-foreground truncate">{entry.episode.feedTitle}</span>
             <span className="text-xs text-muted-foreground">•</span>
@@ -75,8 +86,14 @@ function HistoryRow({
           {!entry.completed && entry.progress > 0 && (
             <span className="text-[10px] text-primary font-semibold">{Math.round(entry.progress * 100)}%</span>
           )}
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-            <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isCurrentPlaying ? "bg-primary" : "bg-accent")}>
+            {isCurrentBuffering ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+            ) : isCurrentPlaying ? (
+              <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+            ) : (
+              <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+            )}
           </div>
         </div>
       </div>
@@ -96,8 +113,8 @@ function HistoryRow({
 export function LibraryPage() {
   const { t } = useTranslation();
   const { subscriptions, hasNewEpisodes } = useFavoritesContext();
-  const { play } = usePlayer();
-  const { downloaded, removeDownload } = useDownloads();
+  const { play, currentEpisode, isPlaying, isBuffering, togglePlay } = usePlayer();
+  const { downloaded, removeDownload, isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -219,9 +236,13 @@ export function LibraryPage() {
             </span>
           </h2>
           <div className="space-y-1">
-            {visibleDownloads.map((dl) => (
+            {visibleDownloads.map((dl) => {
+              const isCurrent = currentEpisode?.id === dl.episode.id;
+              const isThisPlaying = isCurrent && isPlaying;
+              const isThisBuffering = isCurrent && isBuffering;
+              return (
               <div key={dl.episode.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group">
-                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => play(dl.episode)}>
+                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => isCurrent ? togglePlay() : play(dl.episode)}>
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
                     <CachedImage
                       src={dl.episode.image || dl.episode.feedImage}
@@ -230,11 +251,17 @@ export function LibraryPage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{dl.episode.title}</p>
-                    <span className="text-xs text-muted-foreground truncate">{dl.episode.feedTitle}</span>
+                    <MarqueeText text={dl.episode.title} active={isThisPlaying} className="text-sm font-semibold text-foreground" />
+                    <span className="text-xs text-muted-foreground truncate block">{dl.episode.feedTitle}</span>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", isThisPlaying ? "bg-primary" : "bg-accent")}>
+                    {isThisBuffering ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+                    ) : isThisPlaying ? (
+                      <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                    )}
                   </div>
                 </div>
                 <button
@@ -245,7 +272,8 @@ export function LibraryPage() {
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
           {downloaded.length > INITIAL_VISIBLE && (
             <button
@@ -271,7 +299,15 @@ export function LibraryPage() {
           </h2>
           <div className="space-y-1">
             {visibleInProgress.map((entry) => (
-              <HistoryRow key={entry.episode.id} entry={entry} onPlay={handlePlayFromHistory} />
+              <HistoryRow
+                key={entry.episode.id}
+                entry={entry}
+                onPlay={handlePlayFromHistory}
+                isCurrent={currentEpisode?.id === entry.episode.id}
+                isCurrentPlaying={currentEpisode?.id === entry.episode.id && isPlaying}
+                isCurrentBuffering={currentEpisode?.id === entry.episode.id && isBuffering}
+                onTogglePlay={togglePlay}
+              />
             ))}
           </div>
           {inProgress.length > INITIAL_VISIBLE && (
@@ -297,44 +333,74 @@ export function LibraryPage() {
             </span>
           </h2>
           <div className="space-y-1">
-            {visibleNewEpisodes.map((ep) => (
-              <div
-                key={ep.id}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group"
-                onClick={() => {
-                  play(ep);
-                  NewEpisodesService.markAsSeen(ep.id);
-                  setNewEpisodes(prev => prev.filter(e => e.id !== ep.id));
-                }}
-              >
-                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-                  <CachedImage
-                    src={ep.image || ep.feedImage}
-                    alt={ep.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate text-foreground">{ep.title}</p>
-                  <span className="text-xs text-muted-foreground truncate block">{ep.feedTitle}</span>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      NewEpisodesService.markAsSeen(ep.id);
-                      setNewEpisodes(prev => prev.filter(item => item.id !== ep.id));
-                    }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors sm:opacity-0 sm:group-hover:opacity-100"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+            {visibleNewEpisodes.map((ep) => {
+              const isCurrent = currentEpisode?.id === ep.id;
+              const isThisPlaying = isCurrent && isPlaying;
+              const isThisBuffering = isCurrent && isBuffering;
+              const epDownloaded = isEpisodeDownloaded(ep.id);
+              const epDownloading = downloading[ep.id] !== undefined;
+              return (
+                <div
+                  key={ep.id}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer group"
+                  onClick={() => {
+                    if (isCurrent) { togglePlay(); return; }
+                    play(ep);
+                    NewEpisodesService.markAsSeen(ep.id);
+                    setNewEpisodes(prev => prev.filter(e => e.id !== ep.id));
+                  }}
+                >
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                    <CachedImage
+                      src={ep.image || ep.feedImage}
+                      alt={ep.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <MarqueeText text={ep.title} active={isThisPlaying} className="text-sm font-semibold text-foreground" />
+                    <span className="text-xs text-muted-foreground truncate block">{ep.feedTitle}</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!epDownloaded && !epDownloading) startDownload(ep);
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                      disabled={epDownloaded || epDownloading}
+                    >
+                      {epDownloading ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : epDownloaded ? (
+                        <Download className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        NewEpisodesService.markAsSeen(ep.id);
+                        setNewEpisodes(prev => prev.filter(item => item.id !== ep.id));
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isThisPlaying ? "bg-primary" : "bg-accent")}>
+                      {isThisBuffering ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+                      ) : isThisPlaying ? (
+                        <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {newEpisodes.length > INITIAL_VISIBLE && (
             <button
@@ -379,6 +445,10 @@ export function LibraryPage() {
                   entry={entry}
                   onPlay={handlePlayFromHistory}
                   onRemove={handleRemoveHistoryEntry}
+                  isCurrent={currentEpisode?.id === entry.episode.id}
+                  isCurrentPlaying={currentEpisode?.id === entry.episode.id && isPlaying}
+                  isCurrentBuffering={currentEpisode?.id === entry.episode.id && isBuffering}
+                  onTogglePlay={togglePlay}
                 />
               ))}
             </div>

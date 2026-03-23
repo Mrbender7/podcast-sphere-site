@@ -3,7 +3,7 @@ import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive } from "lucide-react";
+import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive, Globe } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -223,6 +223,24 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
             <ExternalLink className="w-3 h-3" /> Mastodon / Social
           </a>
         </div>
+      </div>
+
+      {/* About / radiosphere.be */}
+      <div className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Globe className="w-5 h-5 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">À propos</h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+          Podcast Sphere fait partie de la famille{" "}
+          <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+            radiosphere.be
+          </a>
+          .
+        </p>
+        <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+          <ExternalLink className="w-3 h-3" /> radiosphere.be
+        </a>
       </div>
 
       {/* Privacy Policy */}

@@ -32,6 +32,7 @@ export function FullScreenPlayer() {
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const { t } = useTranslation();
   const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast } = useCast();
+  const { isSubscribed, toggleSubscription } = useFavoritesContext();
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
@@ -90,15 +91,38 @@ export function FullScreenPlayer() {
         <button onClick={closeFullScreen} className="p-2 -ml-2" aria-label={t("common.cancel")}>
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
-        <button onClick={handleDownload} className="p-2" disabled={epDownloaded || epDownloading} aria-label={t("download.download")}>
-          {epDownloading ? (
-            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
-          ) : epDownloaded ? (
-            <CheckCircle className="w-5 h-5 text-primary" />
-          ) : (
-            <Download className="w-5 h-5 text-muted-foreground" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              if (!currentEpisode) return;
+              const podcast = {
+                id: currentEpisode.feedId,
+                title: currentEpisode.feedTitle || currentEpisode.title,
+                author: currentEpisode.feedAuthor || "",
+                image: currentEpisode.feedImage || currentEpisode.image,
+                description: "",
+                url: "",
+                categories: [],
+                lastEpisodeDate: 0,
+                language: "",
+              };
+              toggleSubscription(podcast);
+            }}
+            className="p-2"
+            aria-label="Favorite"
+          >
+            <Bookmark className={cn("w-5 h-5", currentEpisode && isSubscribed(currentEpisode.feedId) ? "fill-primary text-primary" : "text-muted-foreground")} />
+          </button>
+          <button onClick={handleDownload} className="p-2" disabled={epDownloaded || epDownloading} aria-label={t("download.download")}>
+            {epDownloading ? (
+              <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+            ) : epDownloaded ? (
+              <CheckCircle className="w-5 h-5 text-primary" />
+            ) : (
+              <Download className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+        </div>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {isCasting ? `📺 ${castDeviceName}` : t("player.nowPlaying")}
         </span>

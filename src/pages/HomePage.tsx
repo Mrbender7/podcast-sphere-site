@@ -9,12 +9,14 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useDownloads } from "@/contexts/DownloadContext";
 import { getListenHistory } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, Sparkles, X, Loader2 } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, Pause, ChevronDown, Sparkles, X, Loader2, Download, CheckCircle } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { CachedImage } from "@/components/CachedImage";
+import { MarqueeText } from "@/components/MarqueeText";
 import { CATEGORY_IMAGES } from "@/components/CategoryImages";
 
 const CATEGORIES = [
@@ -56,7 +58,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showAllResume, setShowAllResume] = useState(false);
   const [trendingLang, setTrendingLang] = useState<string>(language);
-  const { play } = usePlayer();
+  const { play, currentEpisode, isPlaying, isBuffering, togglePlay } = usePlayer();
+  const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
 
   // New episodes state
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
@@ -222,37 +225,56 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(220,90%,60%)] text-white leading-none">{resumeEntries.length}</span>
             </h2>
             <div className="space-y-1">
-              {(showAllResume ? resumeEntries : resumeEntries.slice(0, 3)).map(entry => (
-                <div
-                  key={entry.episode.id}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer"
-                  onClick={() => play(entry.episode)}
-                >
-                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
-                    <CachedImage
-                      src={entry.episode.image || entry.episode.feedImage}
-                      alt={entry.episode.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{entry.episode.title}</p>
-                    <span className="text-xs text-muted-foreground truncate block">{entry.episode.feedTitle}</span>
-                    <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)]"
-                        style={{ width: `${Math.min(entry.progress * 100, 100)}%` }}
+              {(showAllResume ? resumeEntries : resumeEntries.slice(0, 3)).map(entry => {
+                const isCurrent = currentEpisode?.id === entry.episode.id;
+                const isThisPlaying = isCurrent && isPlaying;
+                const isThisBuffering = isCurrent && isBuffering;
+                return (
+                  <div
+                    key={entry.episode.id}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent transition-colors cursor-pointer"
+                    onClick={() => isCurrent ? togglePlay() : play(entry.episode)}
+                  >
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
+                      <CachedImage
+                        src={entry.episode.image || entry.episode.feedImage}
+                        alt={entry.episode.title}
+                        className="w-full h-full object-cover"
                       />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-[10px] text-primary font-semibold">{Math.round(entry.progress * 100)}%</span>
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                      <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <MarqueeText
+                        text={entry.episode.title}
+                        active={isThisPlaying}
+                        className="text-sm font-semibold text-foreground"
+                      />
+                      <MarqueeText
+                        text={entry.episode.feedTitle || ""}
+                        active={isThisPlaying}
+                        className="text-xs text-muted-foreground"
+                      />
+                      <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)]"
+                          style={{ width: `${Math.min(entry.progress * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className="text-[10px] text-primary font-semibold">{Math.round(entry.progress * 100)}%</span>
+                      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isThisPlaying ? "bg-primary" : "bg-accent")}>
+                        {isThisBuffering ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+                        ) : isThisPlaying ? (
+                          <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {resumeEntries.length > 3 && (
               <button
@@ -275,32 +297,71 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">{newEpisodes.length}</span>
             </h2>
             <ScrollableRow>
-              {newEpisodes.map(ep => (
-                <div
-                  key={ep.id}
-                  className="relative flex-shrink-0 w-32 cursor-pointer group"
-                  onClick={() => handlePlayNewEpisode(ep)}
-                >
-                  {/* Dismiss button */}
-                  <button
-                    onClick={(e) => handleDismissEpisode(e, ep.id)}
-                    className="absolute top-1 right-1 z-20 w-6 h-6 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-100"
-                    style={{ opacity: undefined }}
-                    onPointerDown={(e) => e.stopPropagation()}
+              {newEpisodes.map(ep => {
+                const isCurrent = currentEpisode?.id === ep.id;
+                const isThisPlaying = isCurrent && isPlaying;
+                const isThisBuffering = isCurrent && isBuffering;
+                const epDownloaded = isEpisodeDownloaded(ep.id);
+                const epDownloading = downloading[ep.id] !== undefined;
+                return (
+                  <div
+                    key={ep.id}
+                    className="relative flex-shrink-0 w-32 cursor-pointer group"
+                    onClick={() => isCurrent ? togglePlay() : handlePlayNewEpisode(ep)}
                   >
-                    <X className="w-3.5 h-3.5 text-foreground" />
-                  </button>
-                  <div className="w-32 h-32 rounded-xl overflow-hidden bg-accent mb-1.5">
-                    <CachedImage
-                      src={ep.image || ep.feedImage}
-                      alt={ep.title}
-                      className="w-full h-full object-cover"
-                    />
+                    {/* Dismiss button */}
+                    <button
+                      onClick={(e) => handleDismissEpisode(e, ep.id)}
+                      className="absolute top-1 right-1 z-20 w-6 h-6 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-100"
+                      style={{ opacity: undefined }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <X className="w-3.5 h-3.5 text-foreground" />
+                    </button>
+                    {/* Download button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!epDownloaded && !epDownloading) startDownload(ep);
+                      }}
+                      className="absolute top-1 left-1 z-20 w-6 h-6 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-100"
+                      style={{ opacity: undefined }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      disabled={epDownloaded || epDownloading}
+                    >
+                      {epDownloading ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-foreground" />
+                      ) : epDownloaded ? (
+                        <CheckCircle className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Download className="w-3 h-3 text-foreground" />
+                      )}
+                    </button>
+                    <div className="w-32 h-32 rounded-xl overflow-hidden bg-accent mb-1.5 relative">
+                      <CachedImage
+                        src={ep.image || ep.feedImage}
+                        alt={ep.title}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Play overlay */}
+                      <div className={cn(
+                        "absolute bottom-1 right-1 w-8 h-8 rounded-full flex items-center justify-center shadow-lg",
+                        isThisPlaying ? "bg-primary" : "bg-background/80 backdrop-blur-sm"
+                      )}>
+                        {isThisBuffering ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+                        ) : isThisPlaying ? (
+                          <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground truncate">{ep.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{ep.feedTitle}</p>
                   </div>
-                  <p className="text-xs font-semibold text-foreground truncate">{ep.title}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{ep.feedTitle}</p>
-                </div>
-              ))}
+                );
+              })}
             </ScrollableRow>
           </section>
         )}
