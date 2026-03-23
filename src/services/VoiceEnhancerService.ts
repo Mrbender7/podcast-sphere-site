@@ -5,6 +5,7 @@ class VoiceEnhancer {
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private compressorNode: DynamicsCompressorNode | null = null;
   private eqNode: BiquadFilterNode | null = null;
+  private highPassNode: BiquadFilterNode | null = null;
   private gainNode: GainNode | null = null;
   private attachedElement: HTMLAudioElement | null = null;
   private sourceSupportCache = new Map<string, boolean>();
@@ -85,6 +86,7 @@ class VoiceEnhancer {
 
     try {
       this.sourceNode?.disconnect();
+      this.highPassNode?.disconnect();
       this.compressorNode?.disconnect();
       this.eqNode?.disconnect();
       this.gainNode?.disconnect();
@@ -100,6 +102,7 @@ class VoiceEnhancer {
     this.sourceNode = null;
     this.compressorNode = null;
     this.eqNode = null;
+    this.highPassNode = null;
     this.gainNode = null;
   }
 
@@ -121,13 +124,19 @@ class VoiceEnhancer {
       this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
       this.compressorNode = this.audioContext.createDynamicsCompressor();
       this.eqNode = this.audioContext.createBiquadFilter();
+      this.highPassNode = this.audioContext.createBiquadFilter();
       this.gainNode = this.audioContext.createGain();
 
       this.eqNode.type = "peaking";
       this.eqNode.frequency.value = 3000;
-      this.eqNode.Q.value = 1;
+      this.eqNode.Q.value = 1.2;
 
-      this.sourceNode.connect(this.compressorNode);
+      this.highPassNode.type = "highpass";
+      this.highPassNode.frequency.value = 85;
+      this.highPassNode.Q.value = 0.7;
+
+      this.sourceNode.connect(this.highPassNode);
+      this.highPassNode.connect(this.compressorNode);
       this.compressorNode.connect(this.eqNode);
       this.eqNode.connect(this.gainNode);
       this.gainNode.connect(this.audioContext.destination);
@@ -144,7 +153,7 @@ class VoiceEnhancer {
   }
 
   private applyDisabledSettings() {
-    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
+    if (!this.compressorNode || !this.eqNode || !this.gainNode || !this.highPassNode) return;
     this.compressorNode.threshold.value = 0;
     this.compressorNode.knee.value = 0;
     this.compressorNode.ratio.value = 1;
@@ -155,14 +164,15 @@ class VoiceEnhancer {
   }
 
   private applyEnabledSettings() {
-    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
-    this.compressorNode.threshold.value = -24;
-    this.compressorNode.knee.value = 30;
-    this.compressorNode.ratio.value = 12;
+    if (!this.compressorNode || !this.eqNode || !this.gainNode || !this.highPassNode) return;
+    this.compressorNode.threshold.value = -18;
+    this.compressorNode.knee.value = 10;
+    this.compressorNode.ratio.value = 4;
     this.compressorNode.attack.value = 0.003;
     this.compressorNode.release.value = 0.25;
-    this.eqNode.gain.value = 8;
-    this.gainNode.gain.value = 2;
+    this.eqNode.gain.value = 4;
+    this.highPassNode.frequency.value = 85;
+    this.gainNode.gain.value = 1.3;
   }
 
   async toggle(enable: boolean): Promise<boolean> {
