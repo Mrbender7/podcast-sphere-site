@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCast } from "@/hooks/useCast";
-import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast, Scissors } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast, Scissors, AudioLines } from "lucide-react";
 import { SnippetService } from "@/services/SnippetService";
 import { usePremium } from "@/contexts/PremiumContext";
 import { EqBars } from "@/components/EqBars";
