@@ -264,8 +264,6 @@ export function LibraryPage() {
                     )}
                   </div>
                 </div>
-              );
-            })}
                 <button
                   onClick={() => removeDownload(dl.episode.id)}
                   className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
@@ -274,7 +272,8 @@ export function LibraryPage() {
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
           {downloaded.length > INITIAL_VISIBLE && (
             <button
