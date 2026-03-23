@@ -45,9 +45,18 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
       <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent mb-2 drop-shadow-[0_0_16px_hsla(250,80%,60%,0.4)]">
         Podcast Sphere
       </h1>
-      <p className="text-sm text-muted-foreground mb-8">
+      <p className="text-sm text-muted-foreground mb-2">
         {t("welcome.subtitle")}
       </p>
+      <a
+        href="https://radiosphere.be"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-muted-foreground hover:text-primary transition-colors mb-8 inline-block"
+      >
+        Un produit de{" "}
+        <span className="underline underline-offset-2">radiosphere.be</span>
+      </a>
 
       {/* Features grid */}
       <div className="grid grid-cols-2 gap-3 w-full max-w-xs mb-10">
