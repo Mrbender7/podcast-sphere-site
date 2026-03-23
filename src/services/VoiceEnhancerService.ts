@@ -86,6 +86,7 @@ class VoiceEnhancer {
 
     try {
       this.sourceNode?.disconnect();
+      this.highPassNode?.disconnect();
       this.compressorNode?.disconnect();
       this.eqNode?.disconnect();
       this.gainNode?.disconnect();
