@@ -55,31 +55,44 @@ export function usePlayer() {
 }
 
 // Helper: wait for audio to be playable with timeout
-function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 10000): Promise<void> {
+function playWithTimeout(audio: HTMLAudioElement, timeoutMs = 12000): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("error", onError);
-      audio.play().then(resolve).catch(reject);
+      fn();
+    };
+
+    const timeout = setTimeout(() => {
+      settle(() => {
+        // On timeout: try play once, but reject quickly if it also fails
+        const lastChance = audio.play();
+        if (lastChance && typeof lastChance.then === "function") {
+          const abortTimer = setTimeout(() => reject(new Error("Playback timeout")), 3000);
+          lastChance.then(() => { clearTimeout(abortTimer); resolve(); })
+                    .catch(() => { clearTimeout(abortTimer); reject(new Error("Playback timeout")); });
+        } else {
+          reject(new Error("Playback timeout"));
+        }
+      });
     }, timeoutMs);
 
     const onCanPlay = () => {
-      clearTimeout(timeout);
-      audio.removeEventListener("canplay", onCanPlay);
-      audio.removeEventListener("error", onError);
-      audio.play().then(resolve).catch(reject);
+      settle(() => {
+        audio.play().then(resolve).catch(reject);
+      });
     };
 
     const onError = () => {
-      clearTimeout(timeout);
-      audio.removeEventListener("canplay", onCanPlay);
-      audio.removeEventListener("error", onError);
-      reject(new Error("Audio load error"));
+      settle(() => reject(new Error("Audio load error")));
     };
 
     if (audio.readyState >= 3) {
-      clearTimeout(timeout);
-      audio.play().then(resolve).catch(reject);
+      settle(() => { audio.play().then(resolve).catch(reject); });
     } else {
       audio.addEventListener("canplay", onCanPlay);
       audio.addEventListener("error", onError);
