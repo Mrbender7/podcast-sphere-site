@@ -404,6 +404,10 @@ export function LibraryPage() {
                   entry={entry}
                   onPlay={handlePlayFromHistory}
                   onRemove={handleRemoveHistoryEntry}
+                  isCurrent={currentEpisode?.id === entry.episode.id}
+                  isCurrentPlaying={currentEpisode?.id === entry.episode.id && isPlaying}
+                  isCurrentBuffering={currentEpisode?.id === entry.episode.id && isBuffering}
+                  onTogglePlay={togglePlay}
                 />
               ))}
             </div>
