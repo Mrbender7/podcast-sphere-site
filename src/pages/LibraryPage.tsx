@@ -113,8 +113,8 @@ function HistoryRow({
 export function LibraryPage() {
   const { t } = useTranslation();
   const { subscriptions, hasNewEpisodes } = useFavoritesContext();
-  const { play } = usePlayer();
-  const { downloaded, removeDownload } = useDownloads();
+  const { play, currentEpisode, isPlaying, isBuffering, togglePlay } = usePlayer();
+  const { downloaded, removeDownload, isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
