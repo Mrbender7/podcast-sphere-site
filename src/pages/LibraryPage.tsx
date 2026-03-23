@@ -288,7 +288,15 @@ export function LibraryPage() {
           </h2>
           <div className="space-y-1">
             {visibleInProgress.map((entry) => (
-              <HistoryRow key={entry.episode.id} entry={entry} onPlay={handlePlayFromHistory} />
+              <HistoryRow
+                key={entry.episode.id}
+                entry={entry}
+                onPlay={handlePlayFromHistory}
+                isCurrent={currentEpisode?.id === entry.episode.id}
+                isCurrentPlaying={currentEpisode?.id === entry.episode.id && isPlaying}
+                isCurrentBuffering={currentEpisode?.id === entry.episode.id && isBuffering}
+                onTogglePlay={togglePlay}
+              />
             ))}
           </div>
           {inProgress.length > INITIAL_VISIBLE && (
