@@ -9,12 +9,14 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useDownloads } from "@/contexts/DownloadContext";
 import { getListenHistory } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
 import { cn } from "@/lib/utils";
-import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, ChevronDown, Sparkles, X, Loader2 } from "lucide-react";
+import { Bookmark, TrendingUp, ArrowUp, Headphones, Globe, Play, Pause, ChevronDown, Sparkles, X, Loader2, Download, CheckCircle } from "lucide-react";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { CachedImage } from "@/components/CachedImage";
+import { MarqueeText } from "@/components/MarqueeText";
 import { CATEGORY_IMAGES } from "@/components/CategoryImages";
 
 const CATEGORIES = [
