@@ -160,13 +160,13 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     safeNativeCall('updatePlaybackState', { isPlaying: false, position: 0 });
   }, []);
 
-  // --- Voice enhancer init ---
-  useEffect(() => {
-    voiceEnhancer.init(audioRef.current);
-  }, []);
-
+  // --- Voice enhancer (lazy init on first toggle) ---
   const toggleVoiceBoost = useCallback(() => {
     const next = !stateRef.current.isVoiceBoostEnabled;
+    // Init only on first activation — avoids routing audio through a suspended AudioContext at mount
+    if (next) {
+      voiceEnhancer.init(audioRef.current);
+    }
     voiceEnhancer.toggle(next);
     setState(s => ({ ...s, isVoiceBoostEnabled: next }));
   }, []);
