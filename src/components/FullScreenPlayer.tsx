@@ -241,7 +241,7 @@ export function FullScreenPlayer() {
               </button>
             </div>
 
-            {/* Playback speed selector */}
+            {/* Playback speed + Voice Boost */}
             <div className="flex items-center justify-center gap-2">
               {PLAYBACK_RATES.map(rate => (
                 <button
@@ -257,6 +257,19 @@ export function FullScreenPlayer() {
                   {rate}x
                 </button>
               ))}
+              <button
+                onClick={toggleVoiceBoost}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1",
+                  isVoiceBoostEnabled
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-accent text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="Voice Enhancer"
+              >
+                <AudioLines className="w-3.5 h-3.5" />
+                Voix
+              </button>
             </div>
           </div>
 
