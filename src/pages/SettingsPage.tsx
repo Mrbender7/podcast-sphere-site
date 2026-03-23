@@ -225,6 +225,24 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </div>
       </div>
 
+      {/* About / radiosphere.be */}
+      <div className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Globe className="w-5 h-5 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">À propos</h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+          Podcast Sphere fait partie de la famille{" "}
+          <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+            radiosphere.be
+          </a>
+          .
+        </p>
+        <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+          <ExternalLink className="w-3 h-3" /> radiosphere.be
+        </a>
+      </div>
+
       {/* Privacy Policy */}
       <a href="https://mrbender7.github.io/privacy-policy-podcastsphere/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
