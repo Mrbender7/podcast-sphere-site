@@ -236,9 +236,13 @@ export function LibraryPage() {
             </span>
           </h2>
           <div className="space-y-1">
-            {visibleDownloads.map((dl) => (
+            {visibleDownloads.map((dl) => {
+              const isCurrent = currentEpisode?.id === dl.episode.id;
+              const isThisPlaying = isCurrent && isPlaying;
+              const isThisBuffering = isCurrent && isBuffering;
+              return (
               <div key={dl.episode.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors group">
-                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => play(dl.episode)}>
+                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => isCurrent ? togglePlay() : play(dl.episode)}>
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent">
                     <CachedImage
                       src={dl.episode.image || dl.episode.feedImage}
@@ -247,13 +251,21 @@ export function LibraryPage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{dl.episode.title}</p>
-                    <span className="text-xs text-muted-foreground truncate">{dl.episode.feedTitle}</span>
+                    <MarqueeText text={dl.episode.title} active={isThisPlaying} className="text-sm font-semibold text-foreground" />
+                    <span className="text-xs text-muted-foreground truncate block">{dl.episode.feedTitle}</span>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                    <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", isThisPlaying ? "bg-primary" : "bg-accent")}>
+                    {isThisBuffering ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground" />
+                    ) : isThisPlaying ? (
+                      <Pause className="w-3.5 h-3.5 text-primary-foreground" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 ml-0.5 text-foreground" />
+                    )}
                   </div>
                 </div>
+              );
+            })}
                 <button
                   onClick={() => removeDownload(dl.episode.id)}
                   className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
