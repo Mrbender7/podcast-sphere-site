@@ -83,6 +83,18 @@ export function FullScreenPlayer() {
     else toast.error(t("download.error"));
   };
 
+  const handleClip = () => {
+    if (!currentEpisode || currentTime <= 0) return;
+    if (!isPremium) {
+      toast.error("✂️ Fonctionnalité Premium", { description: "Débloquez Premium pour créer des clips." });
+      return;
+    }
+    const snippet = SnippetService.saveSnippet(currentEpisode, currentTime, 30);
+    if (snippet) {
+      toast.success("✂️ Clip sauvegardé !", { description: `${SnippetService.formatTime(snippet.startTime)} → ${SnippetService.formatTime(snippet.endTime)}` });
+    }
+  };
+
   const artwork = currentEpisode.image || currentEpisode.feedImage;
   const epDownloaded = currentEpisode ? isEpisodeDownloaded(currentEpisode.id) : false;
   const epDownloading = currentEpisode ? downloading[currentEpisode.id] !== undefined : false;
