@@ -32,6 +32,7 @@ export function FullScreenPlayer() {
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
   const { t } = useTranslation();
   const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast } = useCast();
+  const { isSubscribed, toggleSubscription } = useFavoritesContext();
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
