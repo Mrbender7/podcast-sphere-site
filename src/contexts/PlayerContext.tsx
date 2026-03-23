@@ -160,6 +160,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     safeNativeCall('updatePlaybackState', { isPlaying: false, position: 0 });
   }, []);
 
+  // --- Voice enhancer init ---
+  useEffect(() => {
+    voiceEnhancer.init(audioRef.current);
+  }, []);
+
+  const toggleVoiceBoost = useCallback(() => {
+    const next = !stateRef.current.isVoiceBoostEnabled;
+    voiceEnhancer.toggle(next);
+    setState(s => ({ ...s, isVoiceBoostEnabled: next }));
+  }, []);
+
   // --- Audio event listeners ---
 
   useEffect(() => {
