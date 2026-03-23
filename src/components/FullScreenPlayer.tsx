@@ -137,6 +137,9 @@ export function FullScreenPlayer() {
               <Download className="w-5 h-5 text-muted-foreground" />
             )}
           </button>
+          <button onClick={handleClip} className="p-2" aria-label="Clip">
+            <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
+          </button>
         </div>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {isCasting ? `📺 ${castDeviceName}` : t("player.nowPlaying")}
