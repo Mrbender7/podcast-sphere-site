@@ -1,92 +1,59 @@
 
-Objectif: rétablir d’abord une lecture Android stable, puis corriger le play/pause natif sans réintroduire les crashs.
 
-Do I know what the issue is? Oui, probablement en grande partie.
-Le problème semble venir de 3 causes couplées :
+## Plan de corrections UI et fonctionnalites
 
-1. La lecture HTML5 peut échouer ou rester en attente, mais le nettoyage n’est pas complet dans `PlayerContext.tsx`.
-Quand un flux démarre mal, l’état React repasse partiellement à faux, mais la boucle silencieuse, le WakeLock, l’état natif et la session peuvent rester incohérents. C’est typiquement ce qui peut laisser l’app “bloquée” puis difficile à rouvrir.
+### 1. Branding "radiosphere.be"
 
-2. Le bridge natif Android est encore trop agressif.
-`PodcastAutoPlugin.java` démarre le service avec `startForegroundService(...)` pour toutes les mises à jour, y compris les updates de position/pause. Sur Android récents, ça peut provoquer un comportement instable si le service n’entre pas rapidement en foreground ou si on le relance trop souvent.
+**WelcomePage.tsx** : Ajouter sous le titre "Podcast Sphere" un lien "Un produit de radiosphere.be" pointant vers https://radiosphere.be.
 
-3. Le play/pause notification/lock screen n’est pas fiable car le service utilise un toggle générique.
-Dans `PodcastBrowserService.java`, le bouton principal envoie `ACTION_PLAY_PAUSE`. Pour un pilotage stable du lecteur React, il vaut mieux envoyer une action explicite selon l’état courant: `ACTION_PLAY` quand c’est en pause, `ACTION_PAUSE` quand ça joue. Comme tu ne veux pas next/previous, on peut aussi simplifier la notification autour de ce seul contrôle.
+**SettingsPage.tsx** : Ajouter une section "A propos" indiquant que l'app fait partie de la famille radiosphere.be, avec un lien externe.
 
-Plan de correction
+### 2. Synchro play/pause dans "Reprendre la lecture" (HomePage)
 
-1. Sécuriser totalement le cycle d’échec de lecture dans `src/contexts/PlayerContext.tsx`
-- Ajouter un vrai helper de rollback sur erreur:
-  - `audio.pause()`
-  - remettre `isPlaying=false`, `isBuffering=false`
-  - arrêter `startSilentLoop`
-  - libérer `WakeLock`
-  - remettre la MediaSession web sur `paused`
-  - notifier le natif en pause si nécessaire
-- Utiliser ce helper dans:
-  - `onError`
-  - le `catch` de `play()`
-  - le `catch` de `resumePlayback()`
-- Éviter les courses entre plusieurs taps rapides sur des épisodes:
-  - introduire un identifiant de requête / garde anti-concurrence pour ignorer les anciens `playWithTimeout()` terminés en retard.
+Le probleme : les items de "Reprendre la lecture" (lignes 224-254 de HomePage.tsx) utilisent un simple bouton Play statique sans verifier si l'episode est celui en cours de lecture. Il faut :
+- Importer `currentEpisode`, `isPlaying`, `isBuffering`, `togglePlay` depuis `usePlayer()`
+- Pour chaque entry, verifier si `currentEpisode?.id === entry.episode.id`
+- Si oui et en lecture : afficher Pause. Si oui et buffering : afficher Loader2. Sinon : Play.
+- Au clic : si c'est l'episode courant, appeler `togglePlay()`, sinon `play(entry.episode)`.
+- Meme logique pour les items de la LibraryPage (sections "En cours", "Telechargements", "Nouveaux episodes").
 
-2. Réduire le bridge Android au strict nécessaire dans `android-auto/PodcastAutoPlugin.java`
-- Garder `updateNowPlaying` et `updatePlaybackState`, mais rendre le démarrage du service plus sûr:
-  - `startForegroundService(...)` seulement quand on passe en lecture active
-  - `startService(...)` pour metadata, pause et updates périodiques de position
-- Ajouter des garde-fous/logs autour des exceptions de démarrage de service Android 13-15.
-- Ne jamais laisser un appel natif faire échouer l’expérience React.
+### 3. Titre podcast defilant dans "Reprendre la lecture" et favoris
 
-3. Simplifier et fiabiliser `android-auto/PodcastBrowserService.java`
-- Remplacer le bouton notification dynamique pour envoyer:
-  - `ACTION_PAUSE` si `isPlaying=true`
-  - `ACTION_PLAY` si `isPlaying=false`
-- Supprimer les actions `next/previous` de la notification compacte puisque tu n’en as pas besoin.
-- Garder la notification publique lock screen, mais avec une seule action centrale vraiment fiable.
-- Unifier le canal de notification avec le reste du projet:
-  - éviter `podcast_playback_v2`
-  - revenir à `podcast_playback`
-  - importance par défaut
-- Vérifier que le service reconstruit toujours une notification minimale valide avant toute opération potentiellement lente.
+Actuellement le titre du podcast est tronque (`truncate`). Quand l'episode est en cours de lecture, le titre doit defiler en marquee, comme dans le MiniPlayer.
+- Creer un petit composant `MarqueeText` reutilisable (mesure du debordement + animation conditionnelle).
+- L'appliquer au titre du podcast dans les rows de "Reprendre la lecture" (HomePage + LibraryPage) quand `isCurrent && isPlaying`.
 
-4. Réaligner le script Android de génération
-- Vérifier dans `podcastsphere_v1_0_0.ps1` que:
-  - le canal créé est bien `podcast_playback`
-  - importance = `IMPORTANCE_DEFAULT`
-  - les fichiers `android-auto/*.java` restent la source de vérité copiée dans le projet Android local
+### 4. Bouton favori (podcast) dans le FullScreenPlayer
 
-5. Validation prévue après correction
-- Cas 1: épisode qui démarre normalement → lecture OK
-- Cas 2: épisode lent / invalide → toast d’erreur, mais app toujours utilisable
-- Cas 3: relance de l’app après échec → pas d’écran noir
-- Cas 4: bouton play/pause notification → pilote bien le lecteur React
-- Cas 5: lock screen → état lecture/pause cohérent
+Ajouter un bouton Bookmark dans le header du FullScreenPlayer pour ajouter/retirer le podcast parent aux abonnements.
+- Utiliser `useFavoritesContext()` pour `isSubscribed` / `toggleSubscription`
+- Construire un objet Podcast minimal depuis `currentEpisode` (feedId, feedTitle, feedImage, feedAuthor)
+- Placer le bouton dans la barre du haut a cote du bouton download
 
-Fichiers à modifier
-- `src/contexts/PlayerContext.tsx`
-- `android-auto/PodcastAutoPlugin.java`
-- `android-auto/PodcastBrowserService.java`
-- `podcastsphere_v1_0_0.ps1`
+### 5. Alignement du bouton play dans les dernieres sorties (HomePage)
 
-Détail technique
-```text
-React HTML5 Audio
-   ↓ succès uniquement
-safeNativeCall(updateNowPlaying / updatePlaybackState)
-   ↓
-PodcastAutoPlugin.java
-   ↓ démarrage service plus sélectif
-PodcastBrowserService.java
-   ↓
-Notification / lock screen / Bluetooth
-   ↓
-retour via mediaCommand
-   ↓
-PlayerContext.tsx
-```
+Le carrousel "Dernieres sorties" (lignes 278-305) n'a pas de bouton play explicite — c'est un clic sur tout le bloc. Le probleme d'alignement vient probablement du fait que quand un episode est telecharge, un badge supplementaire decale le layout.
+- Ajouter un petit bouton play overlay en bas a droite de l'artwork (position absolute), coherent avec le reste de l'UI.
+- Afficher Pause si c'est l'episode en cours, Play sinon.
+- Ajouter le titre du podcast (feedTitle) visible sous le titre de l'episode (deja fait ligne 301, verifier que c'est bien present).
+- Ajouter un bouton download individuel (icone Download a cote du dismiss X).
 
-Résultat attendu
-- plus de plantage quand un épisode ne démarre pas
-- plus de service Android relancé inutilement
-- play/pause natif fiable
-- notification simplifiée et cohérente avec ton besoin réel
+### 6. Synchro globale play/pause
+
+Verifier que TOUS les endroits ou un bouton play apparait sur l'accueil respectent la meme logique :
+- Reprendre la lecture : Play/Pause synchro ✓ (correction #2)
+- Dernieres sorties : Play/Pause synchro ✓ (correction #5)
+- Telechargements (LibraryPage) : Play/Pause synchro (meme pattern)
+- Nouveaux episodes (LibraryPage) : Play/Pause synchro (meme pattern)
+
+### Fichiers a modifier
+- `src/pages/WelcomePage.tsx` — lien radiosphere.be
+- `src/pages/SettingsPage.tsx` — section "A propos" radiosphere.be
+- `src/pages/HomePage.tsx` — synchro play/pause + marquee titre dans Reprendre + bouton play/download dans Dernieres sorties
+- `src/components/FullScreenPlayer.tsx` — bouton favori podcast
+- `src/pages/LibraryPage.tsx` — synchro play/pause dans toutes les sections
+
+### Detail technique
+- Composant `MarqueeText` inline ou utilitaire pour eviter la duplication de la logique marquee
+- Le bouton play sera toujours positionne a droite, en `flex-shrink-0`, taille `w-8 h-8` ou `w-10 h-10` selon le contexte
+
