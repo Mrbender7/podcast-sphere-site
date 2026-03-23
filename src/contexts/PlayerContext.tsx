@@ -115,6 +115,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     currentTime: 0,
     duration: 0,
     playbackRate: 1,
+    isVoiceBoostEnabled: false,
   });
 
   const stateRef = useRef(state);
