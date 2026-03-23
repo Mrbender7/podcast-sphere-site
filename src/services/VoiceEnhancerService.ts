@@ -102,6 +102,7 @@ class VoiceEnhancer {
     this.sourceNode = null;
     this.compressorNode = null;
     this.eqNode = null;
+    this.highPassNode = null;
     this.gainNode = null;
   }
 
