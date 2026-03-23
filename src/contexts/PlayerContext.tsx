@@ -7,6 +7,7 @@ import { getPodcastById } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
 import { PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 import { Capacitor } from '@capacitor/core';
+import { voiceEnhancer } from "@/services/VoiceEnhancerService";
 
 // Single unified helper for all native calls — no-op on web
 const safeNativeCall = async (method: string, data: Record<string, unknown>) => {
@@ -31,6 +32,7 @@ interface PlayerState {
   currentTime: number;
   duration: number;
   playbackRate: number;
+  isVoiceBoostEnabled: boolean;
 }
 
 interface PlayerContextType extends PlayerState {
@@ -43,6 +45,7 @@ interface PlayerContextType extends PlayerState {
   skipForward: () => void;
   skipBackward: () => void;
   setPlaybackRate: (rate: number) => void;
+  toggleVoiceBoost: () => void;
   progress: number;
 }
 
@@ -112,6 +115,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     currentTime: 0,
     duration: 0,
     playbackRate: 1,
+    isVoiceBoostEnabled: false,
   });
 
   const stateRef = useRef(state);
@@ -154,6 +158,17 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       navigator.mediaSession.playbackState = "paused";
     }
     safeNativeCall('updatePlaybackState', { isPlaying: false, position: 0 });
+  }, []);
+
+  // --- Voice enhancer init ---
+  useEffect(() => {
+    voiceEnhancer.init(audioRef.current);
+  }, []);
+
+  const toggleVoiceBoost = useCallback(() => {
+    const next = !stateRef.current.isVoiceBoostEnabled;
+    voiceEnhancer.toggle(next);
+    setState(s => ({ ...s, isVoiceBoostEnabled: next }));
   }, []);
 
   // --- Audio event listeners ---
@@ -577,7 +592,7 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const progress = state.duration > 0 ? state.currentTime / state.duration : 0;
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, progress }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, toggleVoiceBoost, progress }}>
       {children}
     </PlayerContext.Provider>
   );
