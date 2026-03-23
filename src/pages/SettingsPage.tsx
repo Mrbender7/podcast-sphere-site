@@ -85,6 +85,8 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
 
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
+    { icon: Scissors, title: t("premium.snippets"), desc: t("premium.snippetsDesc") },
+    { icon: AudioLines, title: t("premium.voiceEnhancer"), desc: t("premium.voiceEnhancerDesc") },
   ];
 
   return (
