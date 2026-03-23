@@ -162,14 +162,15 @@ class VoiceEnhancer {
   }
 
   private applyEnabledSettings() {
-    if (!this.compressorNode || !this.eqNode || !this.gainNode) return;
-    this.compressorNode.threshold.value = -24;
-    this.compressorNode.knee.value = 30;
-    this.compressorNode.ratio.value = 12;
+    if (!this.compressorNode || !this.eqNode || !this.gainNode || !this.highPassNode) return;
+    this.compressorNode.threshold.value = -18;
+    this.compressorNode.knee.value = 10;
+    this.compressorNode.ratio.value = 4;
     this.compressorNode.attack.value = 0.003;
     this.compressorNode.release.value = 0.25;
-    this.eqNode.gain.value = 8;
-    this.gainNode.gain.value = 2;
+    this.eqNode.gain.value = 4;
+    this.highPassNode.frequency.value = 85;
+    this.gainNode.gain.value = 1.3;
   }
 
   async toggle(enable: boolean): Promise<boolean> {
