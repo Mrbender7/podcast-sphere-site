@@ -79,16 +79,15 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
         >
           <img
             src={radiosphereIcon}
-            alt="RadioSphere"
-            className="w-9 h-9 rounded-lg flex-shrink-0"
+            alt="RadioSphere.be"
+            className="w-11 h-11 rounded-lg flex-shrink-0"
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-semibold text-sidebar-foreground group-hover:text-primary transition-colors">RadioSphere</span>
+              <span className="text-sm font-bold text-primary transition-colors">RadioSphere.be</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 text-muted-foreground"><path d="M4.5 2A2.5 2.5 0 0 0 2 4.5v7A2.5 2.5 0 0 0 4.5 14h7a2.5 2.5 0 0 0 2.5-2.5v-3a.75.75 0 0 1 1.5 0v3A4 4 0 0 1 11.5 15.5h-7A4 4 0 0 1 .5 11.5v-7A4 4 0 0 1 4.5.5h3a.75.75 0 0 1 0 1.5h-3ZM9 .75A.75.75 0 0 1 9.75 0h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V2.56l-4.72 4.72a.75.75 0 0 1-1.06-1.06L13.44 1.5H9.75A.75.75 0 0 1 9 .75Z"/></svg>
             </div>
-            <p className="text-[10px] text-muted-foreground truncate">radiosphere.be</p>
-            <p className="text-[10px] text-primary/70 truncate">{t("sidebar.radioDescription") || "Écoutez la radio en direct"}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{t("sidebar.radioDescription") || "Écoutez la radio en direct"}</p>
           </div>
         </a>
         <a
