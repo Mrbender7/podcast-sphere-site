@@ -4,6 +4,7 @@ import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
 import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ function PodcastDescription({ description, t }: { description: string; t: (k: st
 export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const { t } = useTranslation();
   const { isSubscribed, toggleSubscription, markAsSeen } = useFavoritesContext();
+  const { setCurrentFeedEpisodes } = usePlayer();
   const subscribed = isSubscribed(podcast.id);
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
@@ -70,6 +72,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       .then((page) => {
         if (cancelled) return;
         setEpisodes(page.episodes);
+        setCurrentFeedEpisodes(page.episodes);
         setHasMore(page.hasMore);
         // Pre-cache episode artworks
         const urls = page.episodes.map(e => e.image || e.feedImage).filter(Boolean);

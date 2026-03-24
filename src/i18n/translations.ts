@@ -178,6 +178,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Stockage interne",
     "download.external": "Stockage externe (SD)",
     "download.destinationDesc": "Choisissez où enregistrer les épisodes téléchargés",
+    "auto.drivingWarning": "Attention : Ne naviguez jamais dans les menus en conduisant",
+    "auto.drivingWarningSubtitle": "Laissez cette tâche au passager",
+    "auto.subscriptions": "Abonnements",
+    "auto.inProgress": "En cours de lecture",
   },
   en: {
     "nav.home": "Home",
@@ -348,6 +352,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Internal storage",
     "download.external": "External storage (SD)",
     "download.destinationDesc": "Choose where to save downloaded episodes",
+    "auto.drivingWarning": "Warning: Never browse menus while driving",
+    "auto.drivingWarningSubtitle": "Leave this task to the passenger",
+    "auto.subscriptions": "Subscriptions",
+    "auto.inProgress": "In progress",
   },
   es: {
     "nav.home": "Inicio",
@@ -518,6 +526,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Almacenamiento interno",
     "download.external": "Almacenamiento externo (SD)",
     "download.destinationDesc": "Elige dónde guardar los episodios",
+    "auto.drivingWarning": "Atención: Nunca navegue por los menús mientras conduce",
+    "auto.drivingWarningSubtitle": "Deje esta tarea al pasajero",
+    "auto.subscriptions": "Suscripciones",
+    "auto.inProgress": "En curso",
   },
   de: {
     "nav.home": "Startseite",
@@ -688,6 +700,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Interner Speicher",
     "download.external": "Externer Speicher (SD)",
     "download.destinationDesc": "Speicherort für heruntergeladene Folgen",
+    "auto.drivingWarning": "Achtung: Navigieren Sie niemals während der Fahrt in Menüs",
+    "auto.drivingWarningSubtitle": "Überlassen Sie diese Aufgabe dem Beifahrer",
+    "auto.subscriptions": "Abonnements",
+    "auto.inProgress": "Läuft",
   },
   ja: {
     "nav.home": "ホーム",
@@ -858,6 +874,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "内部ストレージ",
     "download.external": "外部ストレージ (SD)",
     "download.destinationDesc": "ダウンロード先を選択",
+    "auto.drivingWarning": "警告：運転中にメニューを操作しないでください",
+    "auto.drivingWarningSubtitle": "この操作は同乗者に任せてください",
+    "auto.subscriptions": "登録済み",
+    "auto.inProgress": "再生中",
   },
 };
 

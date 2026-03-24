@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import translations, { type Language } from "@/i18n/translations";
+import { syncLanguageToNative } from "@/plugins/PodcastAutoPlugin";
 
 interface LanguageContextType {
   language: Language;
@@ -31,6 +32,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang);
     try { localStorage.setItem("podcastsphere_language", lang); } catch {}
   }, []);
+
+  // Sync language to native for Android Auto localized labels
+  useEffect(() => {
+    syncLanguageToNative(language);
+  }, [language]);
 
   const t = useCallback((key: string): string => {
     return translations[language][key] ?? key;

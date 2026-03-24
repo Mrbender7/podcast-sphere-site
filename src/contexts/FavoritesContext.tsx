@@ -1,7 +1,8 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useSubscriptions, useRecentEpisodes } from "@/hooks/useFavorites";
 import { Podcast } from "@/types/podcast";
 import { Episode } from "@/types/podcast";
+import { syncFavoritesToNative } from "@/plugins/PodcastAutoPlugin";
 
 interface FavoritesContextType {
   subscriptions: Podcast[];
@@ -18,6 +19,17 @@ const FavoritesContext = createContext<FavoritesContextType | null>(null);
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes } = useSubscriptions();
   const { recent, addRecent } = useRecentEpisodes();
+
+  // Sync subscriptions to native SharedPreferences for Android Auto
+  useEffect(() => {
+    const minimal = subscriptions.map(p => ({
+      id: p.id,
+      title: p.title,
+      author: p.author,
+      image: p.image,
+    }));
+    syncFavoritesToNative(minimal);
+  }, [subscriptions]);
 
   return (
     <FavoritesContext.Provider value={{ subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, recent, addRecent }}>
