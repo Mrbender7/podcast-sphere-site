@@ -39,6 +39,22 @@ export function useSubscriptions() {
     });
   }, []);
 
+  const importSubscriptions = useCallback((podcasts: Podcast[]) => {
+    let addedCount = 0;
+    setSubscriptions(prev => {
+      const existingIds = new Set(prev.map(p => p.id));
+      const newPodcasts = podcasts.filter(p => {
+        if (!existingIds.has(p.id)) {
+          addedCount++;
+          return true;
+        }
+        return false;
+      });
+      return [...prev, ...newPodcasts].sort((a, b) => a.title.localeCompare(b.title));
+    });
+    return addedCount;
+  }, []);
+
   const isSubscribed = useCallback((id: number) => subscriptions.some(p => p.id === id), [subscriptions]);
 
   const markAsSeen = useCallback((podcastId: number, episodeDate: number) => {
@@ -51,7 +67,7 @@ export function useSubscriptions() {
     return podcast.lastEpisodeDate > seen;
   }, [lastSeen]);
 
-  return { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes };
+  return { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, importSubscriptions };
 }
 
 export function useRecentEpisodes() {
