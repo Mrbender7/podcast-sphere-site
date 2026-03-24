@@ -646,6 +646,35 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const openFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: true })), []);
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);
 
+  // Keep playRef in sync
+  playRef.current = play;
+
+  const setCurrentFeedEpisodes = useCallback((episodes: Episode[]) => {
+    feedEpisodesRef.current = episodes;
+    // Sync to native for Android Auto browse tree
+    if (episodes.length > 0 && episodes[0]?.feedId) {
+      syncEpisodeListToNative(episodes[0].feedId, episodes);
+    }
+  }, []);
+
+  const playNext = useCallback(() => {
+    const eps = feedEpisodesRef.current;
+    const current = stateRef.current.currentEpisode;
+    if (!current || eps.length === 0) return;
+    const idx = eps.findIndex(e => e.id === current.id);
+    if (idx < 0 || idx >= eps.length - 1) return;
+    playRef.current(eps[idx + 1]);
+  }, []);
+
+  const playPrevious = useCallback(() => {
+    const eps = feedEpisodesRef.current;
+    const current = stateRef.current.currentEpisode;
+    if (!current || eps.length === 0) return;
+    const idx = eps.findIndex(e => e.id === current.id);
+    if (idx <= 0) return;
+    playRef.current(eps[idx - 1]);
+  }, []);
+
   // Periodic native position sync every 5s during playback
   useEffect(() => {
     if (!state.isPlaying) return;
@@ -658,10 +687,25 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
     return () => clearInterval(interval);
   }, [state.isPlaying]);
 
+  // Sync listen history to native periodically when playing
+  useEffect(() => {
+    if (!state.isPlaying) return;
+    const syncHistory = () => {
+      const history = getListenHistory();
+      syncListenHistoryToNative(history);
+    };
+    syncHistory();
+    const interval = setInterval(syncHistory, 30000);
+    return () => clearInterval(interval);
+  }, [state.isPlaying]);
+
   const progress = state.duration > 0 ? state.currentTime / state.duration : 0;
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, toggleVoiceBoost, progress }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, seek, skipForward, skipBackward, setPlaybackRate, toggleVoiceBoost, playNext, playPrevious, setCurrentFeedEpisodes, progress }}>
+      {children}
+    </PlayerContext.Provider>
+  );
       {children}
     </PlayerContext.Provider>
   );
