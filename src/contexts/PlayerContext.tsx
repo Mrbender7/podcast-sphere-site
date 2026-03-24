@@ -706,7 +706,4 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       {children}
     </PlayerContext.Provider>
   );
-      {children}
-    </PlayerContext.Provider>
-  );
 }
