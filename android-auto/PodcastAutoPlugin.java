@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
@@ -23,6 +24,7 @@ public class PodcastAutoPlugin extends Plugin {
 
     private static final String TAG = "PodcastAutoPlugin";
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1101;
+    private static final String PREFS_NAME = "PodcastAutoPrefs";
 
     private static PodcastAutoPlugin instance;
     private BroadcastReceiver webViewCommandReceiver;
@@ -32,11 +34,15 @@ public class PodcastAutoPlugin extends Plugin {
         instance = this;
         requestNotificationPermissionIfNeeded();
         registerWebViewCommandReceiver();
-        Log.d(TAG, "PodcastAutoPlugin chargé et prêt");
+        Log.d(TAG, "PodcastAutoPlugin loaded");
     }
 
     public static PodcastAutoPlugin getInstance() {
         return instance;
+    }
+
+    private SharedPreferences getPrefs() {
+        return getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     private void registerWebViewCommandReceiver() {
@@ -46,13 +52,16 @@ public class PodcastAutoPlugin extends Plugin {
                 String command = intent.getStringExtra("command");
                 if (command == null) return;
 
-                Log.d(TAG, "Envoi commande vers React : " + command);
+                Log.d(TAG, "Command to React: " + command);
 
                 JSObject data = new JSObject();
                 if (command.startsWith("seek:")) {
                     String[] parts = command.split(":");
                     data.put("action",   "seek");
                     data.put("position", parts.length > 1 ? Long.parseLong(parts[1]) : 0L);
+                } else if (command.startsWith("playMediaId:")) {
+                    data.put("action", "playMediaId");
+                    data.put("mediaId", command.substring("playMediaId:".length()));
                 } else {
                     data.put("action", command);
                 }
@@ -78,7 +87,7 @@ public class PodcastAutoPlugin extends Plugin {
         Double durationDouble = call.getDouble("duration", 0.0);
         long duration = durationDouble.longValue();
 
-        Log.d(TAG, "updateNowPlaying → " + title + " | Durée: " + duration);
+        Log.d(TAG, "updateNowPlaying → " + title + " | Duration: " + duration);
 
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_UPDATE_METADATA);
@@ -87,7 +96,6 @@ public class PodcastAutoPlugin extends Plugin {
         intent.putExtra("artworkUrl", artworkUrl);
         intent.putExtra("duration",   duration);
 
-        // Metadata update: use startForegroundService to ensure service is alive
         safeStartForegroundService(intent);
         call.resolve();
     }
@@ -107,10 +115,8 @@ public class PodcastAutoPlugin extends Plugin {
         intent.putExtra("position",  position);
 
         if (Boolean.TRUE.equals(isPlaying)) {
-            // Starting playback: must use startForegroundService
             safeStartForegroundService(intent);
         } else {
-            // Pause / position update: regular startService to avoid ForegroundServiceDidNotStartInTimeException
             safeStartService(intent);
         }
         call.resolve();
@@ -121,6 +127,39 @@ public class PodcastAutoPlugin extends Plugin {
         Intent intent = new Intent(getContext(), PodcastBrowserService.class);
         intent.setAction(PodcastBrowserService.ACTION_STOP_SERVICE);
         safeStartService(intent);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void syncFavorites(PluginCall call) {
+        String favorites = call.getString("favorites", "[]");
+        getPrefs().edit().putString("subscriptions", favorites).apply();
+        Log.d(TAG, "syncFavorites: saved " + favorites.length() + " chars");
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void syncListenHistory(PluginCall call) {
+        String history = call.getString("history", "[]");
+        getPrefs().edit().putString("listenHistory", history).apply();
+        Log.d(TAG, "syncListenHistory: saved " + history.length() + " chars");
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void syncEpisodeList(PluginCall call) {
+        String feedId = call.getString("feedId", "0");
+        String episodes = call.getString("episodes", "[]");
+        getPrefs().edit().putString("episodes_" + feedId, episodes).apply();
+        Log.d(TAG, "syncEpisodeList feed=" + feedId + ": saved " + episodes.length() + " chars");
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void syncLanguage(PluginCall call) {
+        String lang = call.getString("language", "fr");
+        getPrefs().edit().putString("appLanguage", lang).apply();
+        Log.d(TAG, "syncLanguage: " + lang);
         call.resolve();
     }
 
@@ -137,7 +176,6 @@ public class PodcastAutoPlugin extends Plugin {
         }
     }
 
-    /** Use for play state or initial metadata — ensures service can call startForeground() */
     private void safeStartForegroundService(Intent intent) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -147,7 +185,6 @@ public class PodcastAutoPlugin extends Plugin {
             }
         } catch (Exception e) {
             Log.e(TAG, "startForegroundService failed: " + e.getMessage());
-            // Fallback: try regular startService
             try {
                 getContext().startService(intent);
             } catch (Exception e2) {
@@ -156,7 +193,6 @@ public class PodcastAutoPlugin extends Plugin {
         }
     }
 
-    /** Use for pause, position updates, stop — no foreground requirement */
     private void safeStartService(Intent intent) {
         try {
             getContext().startService(intent);
