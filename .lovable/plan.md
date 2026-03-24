@@ -1,76 +1,68 @@
 
 
-## Android Auto Player — Plan complet
+## Audit identité du site podcast.radiosphere.be
 
-### Architecture actuelle
-- `PodcastBrowserService.java` gere le MediaSession + notifications mais `onLoadChildren()` retourne une liste vide — Android Auto n'affiche rien
-- `PodcastAutoPlugin.java` fait le bridge WebView ↔ Service natif (metadata, playback state, commandes)
-- `PlayerContext.tsx` gere toute la lecture via HTML5 Audio dans le WebView
-- Les abonnements sont dans `localStorage` (clé `podcastsphere_subscriptions`)
-- L'historique de lecture est dans `localStorage` (clé `ps_listen_history`)
-- Next/Previous n'existent pas encore — le player n'a que play/pause/seek
+### Problemes identifies
 
-### Ce qui doit être fait
+| Element | Statut | Probleme |
+|---------|--------|----------|
+| Favicon (onglet navigateur) | OK partiel | `favicon.png` + `.ico` existent, mais pas de lien vers les tailles 16/32 ni le `.ico` dans le HTML |
+| Apple Touch Icon | OK | Present dans public/ et reference dans HTML |
+| Web App Manifest | MANQUANT | Aucun `manifest.json` / `site.webmanifest` — pas d'icone si "Ajouter a l'ecran d'accueil" |
+| OG Image (partage reseaux) | PROBLEME | Pointe vers un screenshot Lovable temporaire (R2 CDN), pas une image maitrisee |
+| OG URL | MANQUANT | Pas de `og:url` — les reseaux sociaux ne canonicalisent pas correctement |
+| Canonical URL | MANQUANT | Pas de `<link rel="canonical">` — mauvais pour le SEO |
+| OG title/description | OK mais generique | "Podcast Sphere — Podcasts" — pourrait etre plus accrocheur |
+| Twitter Card | OK | `summary_large_image` present |
+| Cast SDK script | INUTILE pour le site web | Le script Chromecast est charge inutilement — a supprimer pour le site |
+| Sitemap | MANQUANT | Pas de `sitemap.xml` |
+| Robots.txt | OK | Bien configure |
+| `og:site_name` | MANQUANT | Utile pour Facebook/LinkedIn |
+| Favicon multi-tailles | PARTIEL | Les fichiers existent dans public/ mais ne sont pas references dans le HTML |
 
-#### 1. Browse Tree Android Auto (PodcastBrowserService.java)
-Construire l'arborescence de navigation pour Android Auto :
+### Plan de corrections
 
-```text
-ROOT
-├── 🎧 Now Playing (épisode en cours / dernier écouté)
-├── ⭐ Abonnements
-│   ├── Podcast A → liste épisodes
-│   ├── Podcast B → liste épisodes
-│   └── ...
-└── ▶️ En cours de lecture (historique non terminés)
+#### 1. Corriger `index.html` — meta tags complets
+- Ajouter liens favicon multi-tailles (16x16, 32x32, .ico)
+- Ajouter `<link rel="canonical" href="https://podcast.radiosphere.be/">`
+- Ajouter `<meta property="og:url" content="https://podcast.radiosphere.be/">`
+- Ajouter `<meta property="og:site_name" content="Podcast Sphere">`
+- Remplacer l'OG image par le logo ou une image de marque hebergee dans `public/` (ex: `https://podcast.radiosphere.be/og-image.png`)
+- Supprimer le script Cast SDK (inutile pour le site web)
+
+#### 2. Creer `public/site.webmanifest`
+```json
+{
+  "name": "Podcast Sphere",
+  "short_name": "Podcast Sphere",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#111111",
+  "background_color": "#111111",
+  "display": "standalone",
+  "start_url": "/"
+}
 ```
+Ajouter `<link rel="manifest" href="/site.webmanifest">` dans le HTML.
 
-- Les données (abonnements, historique) sont synchronisées depuis le WebView vers `SharedPreferences` via le plugin
-- `onLoadChildren()` lit les SharedPreferences pour construire les MediaItems
-- Chaque podcast dans "Abonnements" est BROWSABLE (ouvre ses épisodes)
-- Chaque épisode est PLAYABLE
-- L'artwork est chargé en arrière-plan via `IconCompat` avec `ContentResolver`
+#### 3. Creer une image OG dediee (`public/og-image.png`)
+Generer une image 1200x630 avec le logo Podcast Sphere + baseline "Podcasts du monde entier" sur fond sombre, a placer dans `public/`. Cela remplacera le screenshot Lovable temporaire.
 
-#### 2. Sync des données WebView → SharedPreferences (PodcastAutoPlugin.java)
-Ajouter une méthode `syncListenHistory()` au plugin pour synchroniser l'historique de lecture en plus des favoris existants (`syncFavorites`). Le WebView envoie les données JSON stringifiées.
+#### 4. Creer `public/sitemap.xml`
+Sitemap minimal avec l'URL unique `https://podcast.radiosphere.be/`.
 
-#### 3. Next/Previous dans le player (PlayerContext.tsx)
-- Ajouter `playNext()` et `playPrevious()` qui naviguent dans les épisodes de l'abonnement en cours
-- Logique : identifier le `feedId` de l'épisode en cours → charger les épisodes de ce feed → trouver l'index courant → jouer le suivant/précédent
-- Exposer via `navigator.mediaSession` handlers `nexttrack` / `previoustrack`
-- Exposer via le native listener `mediaCommand` (actions `next`, `previous`)
+#### 5. Mettre a jour `robots.txt`
+Ajouter la reference au sitemap : `Sitemap: https://podcast.radiosphere.be/sitemap.xml`
 
-#### 4. Message de sécurité conduite
-Quand un utilisateur ouvre un abonnement sur Android Auto, afficher un `MediaItem` non-playable en haut de la liste avec :
-- Titre : "Attention, ne naviguez jamais dans les menus en conduisant" (traduit)
-- Sous-titre : "Laissez cette tâche au passager" (traduit)
+### Fichiers modifies
 
-#### 5. Autoplay
-- Quand Android Auto se connecte et qu'aucun épisode n'est en lecture, reprendre automatiquement le dernier épisode en cours depuis l'historique
-- Le service envoie un `mediaCommand` avec `action: "autoplay"` au WebView
-
-#### 6. PlaybackState avec Skip Actions
-Activer `ACTION_SKIP_TO_NEXT` et `ACTION_SKIP_TO_PREVIOUS` dans `applyPlaybackState()` pour que les boutons apparaissent sur l'interface Android Auto.
-
-#### 7. Logo Podcast Sphere
-Utiliser l'icône de l'app (`ic_notification` / `ic_launcher`) comme icône du service dans les racines du browse tree.
-
----
-
-### Fichiers modifiés
-
-| Fichier | Changements |
-|---------|------------|
-| `android-auto/PodcastBrowserService.java` | Browse tree complet (3 sections), chargement depuis SharedPrefs, artwork, message sécurité, skip actions |
-| `android-auto/PodcastAutoPlugin.java` | Ajouter `syncListenHistory()`, `syncEpisodeList()` |
-| `src/plugins/PodcastAutoPlugin.ts` | Ajouter interfaces TS pour `syncListenHistory`, `syncEpisodeList` |
-| `src/contexts/PlayerContext.tsx` | Ajouter `playNext()`, `playPrevious()`, handlers mediaSession `nexttrack`/`previoustrack`, handler `mediaCommand` next/previous/autoplay, sync épisodes du feed courant vers native |
-| `src/contexts/FavoritesContext.tsx` | Sync automatique des abonnements vers native au changement |
-| `src/i18n/translations.ts` | Ajouter traductions "driving warning" dans les 5 langues |
-
-### Troubleshooting intégrés (leçons de RadioSphere)
-- Artwork redimensionné en 512x512 max (éviter `TransactionTooLargeException`)
-- `ensureForeground()` appelé avant tout `startForegroundService` (éviter crash Android 14+)
-- SharedPreferences en JSON string avec try/catch (données corrompues = fallback liste vide)
-- `onLoadChildren` avec `result.detach()` + thread background pour le chargement d'artwork (éviter ANR)
+| Fichier | Action |
+|---------|--------|
+| `index.html` | Ajout favicons multi-tailles, manifest, canonical, og:url, og:site_name, nouvelle OG image, suppression Cast SDK |
+| `public/site.webmanifest` | Creation |
+| `public/og-image.png` | Creation (image generee 1200x630) |
+| `public/sitemap.xml` | Creation |
+| `public/robots.txt` | Ajout ligne Sitemap |
 
