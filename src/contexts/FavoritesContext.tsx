@@ -10,6 +10,7 @@ interface FavoritesContextType {
   isSubscribed: (id: number) => boolean;
   markAsSeen: (podcastId: number, episodeDate: number) => void;
   hasNewEpisodes: (podcast: Podcast) => boolean;
+  importSubscriptions: (podcasts: Podcast[]) => number;
   recent: Episode[];
   addRecent: (episode: Episode) => void;
 }
@@ -17,7 +18,7 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes } = useSubscriptions();
+  const { subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, importSubscriptions } = useSubscriptions();
   const { recent, addRecent } = useRecentEpisodes();
 
   // Sync subscriptions to native SharedPreferences for Android Auto
@@ -32,7 +33,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   }, [subscriptions]);
 
   return (
-    <FavoritesContext.Provider value={{ subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, recent, addRecent }}>
+    <FavoritesContext.Provider value={{ subscriptions, toggleSubscription, isSubscribed, markAsSeen, hasNewEpisodes, importSubscriptions, recent, addRecent }}>
       {children}
     </FavoritesContext.Provider>
   );
