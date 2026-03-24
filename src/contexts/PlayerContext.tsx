@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { Episode } from "@/types/podcast";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted } from "@/services/PlaybackHistoryService";
-import { getPodcastById } from "@/services/PodcastService";
+import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted, getListenHistory } from "@/services/PlaybackHistoryService";
+import { getPodcastById, getEpisodesByFeedId } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
 import { PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
 import { Capacitor } from '@capacitor/core';
