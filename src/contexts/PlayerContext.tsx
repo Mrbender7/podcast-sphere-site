@@ -5,7 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { saveEpisodeProgress, getEpisodeProgress, addToHistory, markEpisodeCompleted, getListenHistory } from "@/services/PlaybackHistoryService";
 import { getPodcastById, getEpisodesByFeedId } from "@/services/PodcastService";
 import { startSilentLoop, stopSilentLoop, requestWakeLock, releaseWakeLock, setupVisibilityRecovery } from "@/utils/backgroundAudio";
-import { PodcastAutoPlugin } from "@/plugins/PodcastAutoPlugin";
+import { PodcastAutoPlugin, syncListenHistoryToNative, syncEpisodeListToNative } from "@/plugins/PodcastAutoPlugin";
 import { Capacitor } from '@capacitor/core';
 import { voiceEnhancer } from "@/services/VoiceEnhancerService";
 
