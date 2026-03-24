@@ -874,6 +874,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "内部ストレージ",
     "download.external": "外部ストレージ (SD)",
     "download.destinationDesc": "ダウンロード先を選択",
+    "auto.drivingWarning": "警告：運転中にメニューを操作しないでください",
+    "auto.drivingWarningSubtitle": "この操作は同乗者に任せてください",
+    "auto.subscriptions": "登録済み",
+    "auto.inProgress": "再生中",
   },
 };
 
