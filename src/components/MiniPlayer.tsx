@@ -37,7 +37,7 @@ export function MiniPlayer() {
 
   return (
     <div
-      className="fixed left-0 right-0 z-30 flex flex-col cursor-pointer"
+      className="fixed left-0 right-0 z-30 flex flex-col cursor-pointer lg:hidden"
       style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
       onClick={openFullScreen}
     >

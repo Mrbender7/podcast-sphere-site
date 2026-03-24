@@ -182,6 +182,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Laissez cette tâche au passager",
     "auto.subscriptions": "Abonnements",
     "auto.inProgress": "En cours de lecture",
+    "sidebar.description": "Découvrez et écoutez des milliers de podcasts du monde entier.",
+    "footer.createdBy": "Un produit de radiosphere.be",
+    "footer.poweredBy": "Propulsé par Podcast Index",
+    "player.selectEpisode": "Sélectionnez un épisode pour commencer",
   },
   en: {
     "nav.home": "Home",
@@ -356,6 +360,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Leave this task to the passenger",
     "auto.subscriptions": "Subscriptions",
     "auto.inProgress": "In progress",
+    "sidebar.description": "Discover and listen to thousands of podcasts from around the world.",
+    "footer.createdBy": "A product of radiosphere.be",
+    "footer.poweredBy": "Powered by Podcast Index",
+    "player.selectEpisode": "Select an episode to start listening",
   },
   es: {
     "nav.home": "Inicio",
@@ -530,6 +538,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Deje esta tarea al pasajero",
     "auto.subscriptions": "Suscripciones",
     "auto.inProgress": "En curso",
+    "sidebar.description": "Descubre y escucha miles de podcasts de todo el mundo.",
+    "footer.createdBy": "Un producto de radiosphere.be",
+    "footer.poweredBy": "Desarrollado por Podcast Index",
+    "player.selectEpisode": "Selecciona un episodio para empezar",
   },
   de: {
     "nav.home": "Startseite",
@@ -704,6 +716,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Überlassen Sie diese Aufgabe dem Beifahrer",
     "auto.subscriptions": "Abonnements",
     "auto.inProgress": "Läuft",
+    "sidebar.description": "Entdecken und hören Sie Tausende von Podcasts aus der ganzen Welt.",
+    "footer.createdBy": "Ein Produkt von radiosphere.be",
+    "footer.poweredBy": "Unterstützt von Podcast Index",
+    "player.selectEpisode": "Wählen Sie eine Folge zum Abspielen",
   },
   ja: {
     "nav.home": "ホーム",
@@ -878,6 +894,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "この操作は同乗者に任せてください",
     "auto.subscriptions": "登録済み",
     "auto.inProgress": "再生中",
+    "sidebar.description": "世界中の何千ものポッドキャストを発見して聴きましょう。",
+    "footer.createdBy": "radiosphere.beの製品",
+    "footer.poweredBy": "Podcast Indexを利用",
+    "player.selectEpisode": "エピソードを選択して再生を開始",
   },
 };
 
