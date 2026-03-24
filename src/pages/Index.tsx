@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense, lazy } from "react";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
@@ -9,16 +9,20 @@ import { DownloadProvider } from "@/contexts/DownloadContext";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { FullScreenPlayer } from "@/components/FullScreenPlayer";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { DesktopPlayerBar } from "@/components/DesktopPlayerBar";
+import { Footer } from "@/components/Footer";
 import { HomePage } from "@/pages/HomePage";
-import { SearchPage } from "@/pages/SearchPage";
-import { LibraryPage } from "@/pages/LibraryPage";
-import { SettingsPage } from "@/pages/SettingsPage";
 import { WelcomePage } from "@/pages/WelcomePage";
 import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
 import { SleepTimerIndicator } from "@/components/SleepTimerIndicator";
 import { useBackButton } from "@/hooks/useBackButton";
 import type { Language } from "@/i18n/translations";
 import type { Podcast } from "@/types/podcast";
+
+const SearchPage = lazy(() => import("@/pages/SearchPage").then(m => ({ default: m.SearchPage })));
+const LibraryPage = lazy(() => import("@/pages/LibraryPage").then(m => ({ default: m.LibraryPage })));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
 
 const ONBOARDING_KEY = "podcastsphere_onboarded";
 
@@ -28,6 +32,14 @@ function hasCompletedOnboarding(): boolean {
   } catch {
     return false;
   }
+}
+
+function PageLoader() {
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 }
 
 function AppContentInner() {
@@ -41,7 +53,6 @@ function AppContentInner() {
   const { setLanguage, t } = useTranslation();
 
   const handleCategoryClick = useCallback((category: string) => {
-    // Translate the category key for the search query
     const translated = t(`category.${category}`);
     setSelectedCategory(translated);
     setActiveTab("search");
@@ -99,35 +110,63 @@ function AppContentInner() {
     return <WelcomePage onComplete={handleWelcomeComplete} />;
   }
 
+  const renderContent = () => {
+    if (detailPodcast) {
+      return <PodcastDetailPage podcast={detailPodcast} onBack={() => setDetailPodcast(null)} />;
+    }
+    switch (activeTab) {
+      case "home":
+        return (
+          <HomePage
+            subscriptions={subscriptions}
+            onPodcastClick={handlePodcastClick}
+            onCategoryClick={handleCategoryClick}
+          />
+        );
+      case "search":
+        return <SearchPage initialCategory={selectedCategory} />;
+      case "library":
+        return <LibraryPage />;
+      case "settings":
+        return <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <PremiumProvider>
       <SleepTimerProvider>
         <DownloadProvider>
-        <SleepTimerIndicator />
-        <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
-          <div className={`flex-1 flex flex-col overflow-hidden ${currentEpisode ? 'pb-28' : 'pb-14'}`}>
-            {detailPodcast ? (
-              <PodcastDetailPage podcast={detailPodcast} onBack={() => setDetailPodcast(null)} />
-            ) : (
-              <>
-                {activeTab === "home" && (
-                  <HomePage
-                    subscriptions={subscriptions}
-                    onPodcastClick={handlePodcastClick}
-                    onCategoryClick={handleCategoryClick}
-                  />
-                )}
-                {activeTab === "search" && <SearchPage initialCategory={selectedCategory} />}
-                {activeTab === "library" && <LibraryPage />}
-                {activeTab === "settings" && <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />}
-              </>
-            )}
+          <SleepTimerIndicator />
+          <div className="flex h-full bg-background">
+            {/* Desktop sidebar */}
+            <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+
+            {/* Main area */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Content */}
+              <div
+                className={`flex-1 flex flex-col overflow-hidden ${currentEpisode ? 'pb-28 lg:pb-0' : 'pb-14 lg:pb-0'}`}
+                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+              >
+                <Suspense fallback={<PageLoader />}>
+                  {renderContent()}
+                </Suspense>
+              </div>
+
+              {/* Mobile: MiniPlayer + BottomNav */}
+              <MiniPlayer />
+              <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+
+              {/* Desktop: Player bar + Footer */}
+              <DesktopPlayerBar />
+              <Footer />
+            </div>
           </div>
-          <MiniPlayer />
-          <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+
           <FullScreenPlayer />
           <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
-        </div>
         </DownloadProvider>
       </SleepTimerProvider>
     </PremiumProvider>
