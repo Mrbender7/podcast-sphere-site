@@ -4,40 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest">
+
     <meta name="msapplication-TileColor" content="#111111" />
-    <title>Podcast Sphere — Podcasts du monde entier</title>
-    <meta name="description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier. Propulsé par Podcast Index.">
     <meta name="theme-color" content="#111111" />
-    
-    
+
+    <!-- SEO -->
+    <title>Podcast Sphere — Podcasts du monde entier</title>
+    <meta name="description" content="Découvrez et écoutez des milliers de podcasts du monde entier sur Podcast Sphere. Propulsé par Podcast Index.">
+    <link rel="canonical" href="https://podcast.radiosphere.be/">
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <script>
-      // Cast SDK bridge — only load on web browsers, not in Capacitor WebView
-      if (!window.Capacitor) {
-        window.__castSdkReady = false;
-        window['__onGCastApiAvailable'] = function(isAvailable) {
-          console.log('[PodcastSphere][Cast] Bridge: SDK available =', isAvailable);
-          if (isAvailable) {
-            window.__castSdkReady = true;
-            window.dispatchEvent(new Event('castSdkReady'));
-          }
-        };
-        var castScript = document.createElement('script');
-        castScript.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
-        castScript.async = true;
-        document.head.appendChild(castScript);
-      }
-    </script>
-    <meta property="og:title" content="Podcast Sphere — Podcasts">
-  <meta name="twitter:title" content="Podcast Sphere — Podcasts">
-  <meta property="og:description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier.">
-  <meta name="twitter:description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier.">
-  <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0695bda9-aaac-41f3-89d1-4acb415702e5/id-preview-702d6a4e--475f39da-d802-41de-8921-64f69d8ef0c5.lovable.app-1772290128630.png">
-  <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0695bda9-aaac-41f3-89d1-4acb415702e5/id-preview-702d6a4e--475f39da-d802-41de-8921-64f69d8ef0c5.lovable.app-1772290128630.png">
-  <meta name="twitter:card" content="summary_large_image">
-</head>
+    <meta property="og:url" content="https://podcast.radiosphere.be/">
+    <meta property="og:site_name" content="Podcast Sphere">
+    <meta property="og:title" content="Podcast Sphere — Podcasts du monde entier">
+    <meta property="og:description" content="Découvrez et écoutez des milliers de podcasts du monde entier sur Podcast Sphere.">
+    <meta property="og:image" content="https://podcast.radiosphere.be/og-image.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Podcast Sphere — Podcasts du monde entier">
+    <meta name="twitter:description" content="Découvrez et écoutez des milliers de podcasts du monde entier sur Podcast Sphere.">
+    <meta name="twitter:image" content="https://podcast.radiosphere.be/og-image.png">
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
