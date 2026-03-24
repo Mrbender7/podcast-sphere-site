@@ -72,6 +72,7 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       .then((page) => {
         if (cancelled) return;
         setEpisodes(page.episodes);
+        setCurrentFeedEpisodes(page.episodes);
         setHasMore(page.hasMore);
         // Pre-cache episode artworks
         const urls = page.episodes.map(e => e.image || e.feedImage).filter(Boolean);
