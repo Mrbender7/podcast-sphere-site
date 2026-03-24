@@ -894,6 +894,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "この操作は同乗者に任せてください",
     "auto.subscriptions": "登録済み",
     "auto.inProgress": "再生中",
+    "sidebar.description": "世界中の何千ものポッドキャストを発見して聴きましょう。",
+    "footer.createdBy": "radiosphere.beの製品",
+    "footer.poweredBy": "Podcast Indexを利用",
+    "player.selectEpisode": "エピソードを選択して再生を開始",
   },
 };
 
