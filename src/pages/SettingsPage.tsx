@@ -71,6 +71,8 @@ interface SettingsPageProps {
 export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps) {
   const { language, setLanguage, t } = useTranslation();
   const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
+  const { subscriptions, importSubscriptions } = useFavoritesContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [customMinutes, setCustomMinutes] = useState("");
 
   return (
@@ -127,6 +129,105 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         )}
       </CollapsibleSection>
 
+      {/* Favorites Export/Import */}
+      <CollapsibleSection icon={Heart} title={t("favorites.manage")}>
+        <div className="space-y-2">
+          <Button
+            onClick={() => {
+              if (subscriptions.length === 0) {
+                toast({ title: t("favorites.noFavoritesToExport") });
+                return;
+              }
+              const header = "id,title,author,image,url,categories,language";
+              const rows = subscriptions.map(s =>
+                [s.id, s.title, s.author, s.image, s.url, s.categories.join(";"), s.language]
+                  .map(v => `"${String(v || "").replace(/"/g, '""')}"`)
+                  .join(",")
+              );
+              const csv = [header, ...rows].join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "podcastsphere_subscriptions.csv";
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              toast({ title: `✅ ${t("favorites.exported")}` });
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {t("favorites.export")}
+          </Button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                try {
+                  const text = ev.target?.result as string;
+                  const lines = text.split("\n").filter(l => l.trim());
+                  const dataLines = lines.slice(1);
+                  const podcasts: Podcast[] = dataLines.map((line) => {
+                    const cols: string[] = [];
+                    let current = "";
+                    let inQuotes = false;
+                    for (let j = 0; j < line.length; j++) {
+                      const ch = line[j];
+                      if (inQuotes) {
+                        if (ch === '"' && line[j + 1] === '"') { current += '"'; j++; }
+                        else if (ch === '"') { inQuotes = false; }
+                        else { current += ch; }
+                      } else {
+                        if (ch === '"') { inQuotes = true; }
+                        else if (ch === ',') { cols.push(current); current = ""; }
+                        else { current += ch; }
+                      }
+                    }
+                    cols.push(current);
+                    return {
+                      id: parseInt(cols[0]) || Date.now(),
+                      title: cols[1] || "Unknown",
+                      author: cols[2] || "",
+                      image: cols[3] || "",
+                      description: "",
+                      url: cols[4] || "",
+                      categories: cols[5] ? cols[5].split(";").filter(Boolean) : [],
+                      lastEpisodeDate: 0,
+                      language: cols[6] || "",
+                    };
+                  }).filter(p => p.title && p.id);
+                  const count = importSubscriptions(podcasts);
+                  toast({ title: `✅ ${count} ${t("favorites.imported")}` });
+                } catch {
+                  toast({ title: `❌ ${t("favorites.importError")}`, variant: "destructive" });
+                }
+              };
+              reader.readAsText(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {t("favorites.import")}
+          </Button>
+        </div>
+      </CollapsibleSection>
 
       {/* User Guide */}
       <UserGuideModal onReopenWelcome={onReopenWelcome} />
