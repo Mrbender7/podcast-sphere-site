@@ -53,6 +53,9 @@ interface PlayerContextType extends PlayerState {
   skipBackward: () => void;
   setPlaybackRate: (rate: number) => void;
   toggleVoiceBoost: () => void;
+  playNext: () => void;
+  playPrevious: () => void;
+  setCurrentFeedEpisodes: (episodes: Episode[]) => void;
   progress: number;
 }
 
