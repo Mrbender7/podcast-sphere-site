@@ -2,6 +2,7 @@ import { Home, Search, Bookmark, Settings, Mail, ShieldCheck } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
+import { FlagIcon } from "@/components/FlagIcon";
 import type { TabId } from "@/components/BottomNav";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
@@ -93,20 +94,20 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
           <ShieldCheck className="w-3.5 h-3.5" />
           {t("settings.privacyPolicy")}
         </a>
-        <div className="flex items-center gap-2 px-4">
+        <div className="flex items-center gap-3 px-4">
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setLanguage(opt.value)}
               className={cn(
-                "transition-all text-lg",
+                "transition-all",
                 language === opt.value
-                  ? "scale-125 drop-shadow-[0_0_4px_hsl(var(--primary)/0.5)]"
+                  ? "scale-125 drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
                   : "opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0"
               )}
               title={opt.label}
             >
-              {opt.flag}
+              <FlagIcon lang={opt.value} className="w-7 h-5" />
             </button>
           ))}
         </div>
