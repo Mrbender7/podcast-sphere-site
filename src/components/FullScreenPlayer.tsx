@@ -137,8 +137,9 @@ export function FullScreenPlayer() {
               <Download className="w-5 h-5 text-muted-foreground" />
             )}
           </button>
-          <button onClick={handleClip} className="p-2" aria-label="Clip">
-            <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
+          <button onClick={handleClip} className="p-2 relative" aria-label="Clip" disabled>
+            <Scissors className="w-5 h-5 text-muted-foreground/30" />
+            <Crown className="w-2.5 h-2.5 text-amber-400 absolute -top-0.5 -right-0.5" />
           </button>
         </div>
         {isCasting && (
