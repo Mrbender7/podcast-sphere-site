@@ -138,6 +138,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   const playTokenRef = useRef(0);
 
   const saveCounterRef = useRef(0);
+  const feedEpisodesRef = useRef<Episode[]>([]);
+  const playRef = useRef<(episode: Episode) => void>(() => {});
 
   useEffect(() => {
     audioRef.current = audioElement;
