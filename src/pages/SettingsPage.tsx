@@ -67,24 +67,8 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps) {
   const { language, setLanguage, t } = useTranslation();
-  const { isPremium, unlockWithPassword, lockPremium, restorePurchases } = usePremium();
   const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
-  const [premiumCode, setPremiumCode] = useState("");
-  const [codeError, setCodeError] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
-  const [dlDest, setDlDest] = useState<DownloadDest>(getDownloadDest);
-
-  const handleDestChange = (v: string) => {
-    const dest = v as DownloadDest;
-    setDlDest(dest);
-    setDownloadDest(dest);
-  };
-
-  const premiumFeatures = [
-    { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
-    { icon: Scissors, title: t("premium.snippets"), desc: t("premium.snippetsDesc") },
-    { icon: AudioLines, title: t("premium.voiceEnhancer"), desc: t("premium.voiceEnhancerDesc") },
-  ];
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
