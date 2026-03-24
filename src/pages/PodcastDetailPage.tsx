@@ -45,6 +45,7 @@ function PodcastDescription({ description, t }: { description: string; t: (k: st
 export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const { t } = useTranslation();
   const { isSubscribed, toggleSubscription, markAsSeen } = useFavoritesContext();
+  const { setCurrentFeedEpisodes } = usePlayer();
   const subscribed = isSubscribed(podcast.id);
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
