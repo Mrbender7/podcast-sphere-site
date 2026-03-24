@@ -1,45 +1,147 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="msapplication-TileColor" content="#111111" />
-    <title>Podcast Sphere — Podcasts du monde entier</title>
-    <meta name="description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier. Propulsé par Podcast Index.">
-    <meta name="theme-color" content="#111111" />
-    
-    
-    <meta property="og:type" content="website" />
-    <script>
-      // Cast SDK bridge — only load on web browsers, not in Capacitor WebView
-      if (!window.Capacitor) {
-        window.__castSdkReady = false;
-        window['__onGCastApiAvailable'] = function(isAvailable) {
-          console.log('[PodcastSphere][Cast] Bridge: SDK available =', isAvailable);
-          if (isAvailable) {
-            window.__castSdkReady = true;
-            window.dispatchEvent(new Event('castSdkReady'));
-          }
-        };
-        var castScript = document.createElement('script');
-        castScript.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
-        castScript.async = true;
-        document.head.appendChild(castScript);
-      }
-    </script>
-    <meta property="og:title" content="Podcast Sphere — Podcasts">
-  <meta name="twitter:title" content="Podcast Sphere — Podcasts">
-  <meta property="og:description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier.">
-  <meta name="twitter:description" content="Podcast Sphere — Découvrez et écoutez des milliers de podcasts du monde entier.">
-  <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0695bda9-aaac-41f3-89d1-4acb415702e5/id-preview-702d6a4e--475f39da-d802-41de-8921-64f69d8ef0c5.lovable.app-1772290128630.png">
-  <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0695bda9-aaac-41f3-89d1-4acb415702e5/id-preview-702d6a4e--475f39da-d802-41de-8921-64f69d8ef0c5.lovable.app-1772290128630.png">
-  <meta name="twitter:card" content="summary_large_image">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podcast Sphere — La nouvelle dimension du Podcast</title>
+    <meta name="description" content="Découvrez Podcast Sphere : snippets sonores, boost vocal local et Android Auto. Un produit radiosphere.be">
+    <link rel="icon" type="image/png" href="PS_HD.png">
+    <style>
+        :root {
+            --bg-deep: #0a0a1a;
+            --bg-sidebar: #121225;
+            --neon-blue: #6080ff;
+            --neon-purple: #a060ff;
+            --text-main: #e0e0e0;
+            --text-dim: #999;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background-color: var(--bg-deep); 
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Look (comme ton app) */
+        aside {
+            width: 260px;
+            background: var(--bg-sidebar);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(100,100,255,0.1);
+            position: fixed;
+            height: 100vh;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 2rem; }
+        .logo-area img { width: 40px; height: 40px; border-radius: 8px; filter: drop-shadow(0 0 10px var(--neon-blue)); }
+        .logo-area h1 { font-size: 1.2rem; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .sidebar-links { flex-grow: 1; }
+        .sidebar-links a { display: block; color: var(--text-dim); text-decoration: none; padding: 0.8rem 0; font-size: 0.9rem; transition: 0.3s; }
+        .sidebar-links a:hover { color: var(--neon-blue); padding-left: 5px; }
+
+        .sidebar-footer { font-size: 0.75rem; color: #555; }
+
+        /* Main Content */
+        main {
+            margin-left: 260px;
+            padding: 4rem 3rem;
+            width: 100%;
+        }
+
+        .hero { max-width: 800px; margin-bottom: 5rem; }
+        .hero h2 { font-size: 3rem; margin-bottom: 1.5rem; line-height: 1.1; }
+        .hero p { font-size: 1.2rem; color: var(--text-dim); margin-bottom: 2.5rem; }
+
+        .btn-download {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: white;
+            text-decoration: none;
+            padding: 1rem 2.5rem;
+            border-radius: 999px;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(100,100,255,0.4);
+            transition: 0.3s;
+        }
+        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(100,100,255,0.6); }
+
+        /* Grid Features (comme tes catégories) */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: linear-gradient(145deg, #1a1a35, #121225);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: 0.3s;
+        }
+        .feature-card:hover { border-color: var(--neon-blue); transform: translateY(-5px); }
+        .feature-card h3 { color: var(--neon-blue); margin-bottom: 1rem; }
+        .feature-card p { font-size: 0.9rem; color: var(--text-dim); }
+
+        @media (max-width: 768px) {
+            aside { display: none; }
+            main { margin-left: 0; padding: 2rem 1.5rem; text-align: center; }
+            .hero h2 { font-size: 2rem; }
+        }
+    </style>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<body>
+
+    <aside>
+        <div class="logo-area">
+            <img src="PS_HD.png" alt="Logo">
+            <h1>Podcast Sphere</h1>
+        </div>
+        <div class="sidebar-links">
+            <a href="https://radiosphere.be" target="_blank">🌐 radiosphere.be</a>
+            <a href="privacy-policy-podcastsphere.html">⚖️ Confidentialité</a>
+            <a href="mailto:info@radiosphere.be">✉️ Contact</a>
+        </div>
+        <div class="sidebar-footer">
+            © 2026 Podcast Sphere<br>
+            Un produit Radio Sphere
+        </div>
+    </aside>
+
+    <main>
+        <section class="hero">
+            <h2>Écoutez. Clippez.<br>Partagez.</h2>
+            <p>Découvrez Podcast Sphere, l'application de podcast nouvelle génération. Profitez d'un son cristallin et de fonctionnalités premium exclusives, le tout en local sur votre appareil.</p>
+            <a href="podcast-sphere-latest.apk" class="btn-download">Télécharger l'APK (Gratuit)</a>
+        </section>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>✂️ Snippet Catcher</h3>
+                <p>Le "GIF animé" du podcast. Capturez les 30 dernières secondes d'une émission et partagez l'extrait instantanément avec vos amis.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🪄 Voice Enhancer</h3>
+                <p>Un boost vocal intelligent et local. Clarifiez les voix et lissez le volume pour une écoute parfaite, même en environnement bruyant.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🚗 Android Auto & Cast</h3>
+                <p>Retrouvez vos abonnements sur le tableau de bord de votre voiture ou diffusez-les sur votre téléviseur en un clic.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔒 100% Privé</h3>
+                <p>Aucun compte requis. Vos favoris, votre historique et vos snippets restent sur votre téléphone. Pas de cloud, pas de tracking.</p>
+            </div>
+        </div>
+    </main>
+
+</body>
 </html>
