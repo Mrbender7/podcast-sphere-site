@@ -416,7 +416,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
             <Headphones className="w-4 h-4 text-[hsl(220,90%,60%)]" />
             {t("home.exploreByCategory")}
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {CATEGORIES.map(cat => {
               const catImage = CATEGORY_IMAGES[cat];
               return (
