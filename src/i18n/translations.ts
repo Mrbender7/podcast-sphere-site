@@ -178,6 +178,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Stockage interne",
     "download.external": "Stockage externe (SD)",
     "download.destinationDesc": "Choisissez où enregistrer les épisodes téléchargés",
+    "auto.drivingWarning": "Attention : Ne naviguez jamais dans les menus en conduisant",
+    "auto.drivingWarningSubtitle": "Laissez cette tâche au passager",
+    "auto.subscriptions": "Abonnements",
+    "auto.inProgress": "En cours de lecture",
   },
   en: {
     "nav.home": "Home",
