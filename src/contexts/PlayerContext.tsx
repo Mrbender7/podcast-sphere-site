@@ -407,6 +407,23 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
 
+    const playNextRef_current = () => {
+      const eps = feedEpisodesRef.current;
+      const current = stateRef.current.currentEpisode;
+      if (!current || eps.length === 0) return;
+      const idx = eps.findIndex(e => e.id === current.id);
+      if (idx < 0 || idx >= eps.length - 1) return;
+      playRef.current(eps[idx + 1]);
+    };
+    const playPrevRef_current = () => {
+      const eps = feedEpisodesRef.current;
+      const current = stateRef.current.currentEpisode;
+      if (!current || eps.length === 0) return;
+      const idx = eps.findIndex(e => e.id === current.id);
+      if (idx <= 0) return;
+      playRef.current(eps[idx - 1]);
+    };
+
     navigator.mediaSession.setActionHandler("play", () => {
       void resumePlayback();
     });
@@ -427,6 +444,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
         syncMediaSessionPosition();
       }
     });
+    navigator.mediaSession.setActionHandler("nexttrack", playNextRef_current);
+    navigator.mediaSession.setActionHandler("previoustrack", playPrevRef_current);
 
     return () => {
       navigator.mediaSession.setActionHandler("play", null);
@@ -434,6 +453,8 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
       navigator.mediaSession.setActionHandler("seekbackward", null);
       navigator.mediaSession.setActionHandler("seekforward", null);
       navigator.mediaSession.setActionHandler("seekto", null);
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+      navigator.mediaSession.setActionHandler("previoustrack", null);
     };
   }, [pausePlayback, resumePlayback, syncMediaSessionPosition]);
 
