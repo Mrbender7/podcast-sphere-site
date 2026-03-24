@@ -265,17 +265,13 @@ export function FullScreenPlayer() {
                 </button>
               ))}
               <button
-                onClick={toggleVoiceBoost}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1",
-                  isVoiceBoostEnabled
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-accent text-muted-foreground hover:text-foreground"
-                )}
+                disabled
+                className="px-3 py-1.5 rounded-full text-xs font-bold bg-accent text-muted-foreground/30 flex items-center gap-1 cursor-not-allowed relative"
                 aria-label="Voice Enhancer"
               >
                 <AudioLines className="w-3.5 h-3.5" />
                 Voix
+                <Crown className="w-2.5 h-2.5 text-amber-400" />
               </button>
             </div>
           </div>

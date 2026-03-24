@@ -124,41 +124,6 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         )}
       </CollapsibleSection>
 
-      {/* Premium */}
-      <CollapsibleSection
-        icon={Crown}
-        title={t("premium.title")}
-        badge={isPremium ? <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"><CheckCircle className="w-3 h-3" /> {t("premium.active")}</span> : null}
-      >
-        <p className="text-xs text-muted-foreground mb-3">{t("premium.subtitle")}</p>
-        <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
-
-        <div className="mt-4 pt-3 border-t border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <KeyRound className="w-4 h-4 text-amber-400" />
-            <h3 className="text-xs font-semibold text-foreground">{isPremium ? t("premium.lock") : t("premium.unlock")}</h3>
-          </div>
-          {isPremium ? (
-            <Button onClick={() => lockPremium()} variant="outline" size="sm" className="w-full rounded-lg border-destructive/30 text-destructive text-xs gap-1.5">
-              <Lock className="w-3.5 h-3.5" /> {t("premium.lock")}
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Input type="password" placeholder={t("premium.passwordPlaceholder")} value={premiumCode} onChange={(e) => { setPremiumCode(e.target.value); setCodeError(false); }} onClick={(e) => e.stopPropagation()} className={cn("flex-1 h-9 text-xs bg-secondary border-border", codeError && "border-destructive")} />
-              <Button onClick={() => { const ok = unlockWithPassword(premiumCode); if (ok) { setPremiumCode(""); toast({ title: "🎉 " + t("premium.unlocked") }); } else { setCodeError(true); } }} size="sm" className="h-9 px-3 text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600">
-                <Unlock className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          )}
-          {codeError && <p className="text-[10px] text-destructive mt-1.5">{t("premium.wrongPassword")}</p>}
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-border">
-          <Button onClick={async () => { try { await restorePurchases(); toast({ title: isPremium ? "✅ " + t("premium.restoreSuccess") : t("premium.restoreNone") }); } catch { toast({ title: t("premium.restoreNone") }); } }} variant="outline" size="sm" className="w-full rounded-lg text-xs gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" /> {t("premium.restorePurchases")}
-          </Button>
-        </div>
-      </CollapsibleSection>
 
       {/* User Guide */}
       <UserGuideModal onReopenWelcome={onReopenWelcome} />

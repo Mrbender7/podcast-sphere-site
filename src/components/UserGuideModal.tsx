@@ -45,9 +45,8 @@ export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
         </DialogHeader>
 
         <div className="space-y-2 mt-2">
-          {SECTIONS.map(({ id, icon: Icon, titleKey, contentKey, ...rest }) => {
+        {SECTIONS.map(({ id, icon: Icon, titleKey, contentKey }) => {
             const isOpen = openSection === id;
-            const isPremium = 'premium' in rest && rest.premium;
             const isPermissions = id === "permissions";
             return (
               <div key={id} className="rounded-xl bg-accent overflow-hidden">
@@ -58,7 +57,6 @@ export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
                 >
                   <Icon className="w-4.5 h-4.5 text-primary shrink-0" />
                   <span className="text-sm font-semibold text-foreground flex-1">{t(titleKey)}</span>
-                  {isPremium && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                   <ChevronDown
                     className={cn(
                       "w-4 h-4 text-muted-foreground transition-transform duration-300",
