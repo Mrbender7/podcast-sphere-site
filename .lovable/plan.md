@@ -1,68 +1,63 @@
 
 
-## Audit identité du site podcast.radiosphere.be
+## SSG (pré-rendu statique) pour podcast.radiosphere.be
 
-### Problemes identifies
+### Contexte
 
-| Element | Statut | Probleme |
-|---------|--------|----------|
-| Favicon (onglet navigateur) | OK partiel | `favicon.png` + `.ico` existent, mais pas de lien vers les tailles 16/32 ni le `.ico` dans le HTML |
-| Apple Touch Icon | OK | Present dans public/ et reference dans HTML |
-| Web App Manifest | MANQUANT | Aucun `manifest.json` / `site.webmanifest` — pas d'icone si "Ajouter a l'ecran d'accueil" |
-| OG Image (partage reseaux) | PROBLEME | Pointe vers un screenshot Lovable temporaire (R2 CDN), pas une image maitrisee |
-| OG URL | MANQUANT | Pas de `og:url` — les reseaux sociaux ne canonicalisent pas correctement |
-| Canonical URL | MANQUANT | Pas de `<link rel="canonical">` — mauvais pour le SEO |
-| OG title/description | OK mais generique | "Podcast Sphere — Podcasts" — pourrait etre plus accrocheur |
-| Twitter Card | OK | `summary_large_image` present |
-| Cast SDK script | INUTILE pour le site web | Le script Chromecast est charge inutilement — a supprimer pour le site |
-| Sitemap | MANQUANT | Pas de `sitemap.xml` |
-| Robots.txt | OK | Bien configure |
-| `og:site_name` | MANQUANT | Utile pour Facebook/LinkedIn |
-| Favicon multi-tailles | PARTIEL | Les fichiers existent dans public/ mais ne sont pas references dans le HTML |
+L'app est une SPA avec une seule route `/` (navigation par onglets internes). Le pré-rendu concerne donc principalement la page d'accueil pour que le HTML contienne le contenu textuel et les meta SEO au lieu d'un `<div id="root"></div>` vide.
 
-### Plan de corrections
+### Différences avec radiosphere.be
 
-#### 1. Corriger `index.html` — meta tags complets
-- Ajouter liens favicon multi-tailles (16x16, 32x32, .ico)
-- Ajouter `<link rel="canonical" href="https://podcast.radiosphere.be/">`
-- Ajouter `<meta property="og:url" content="https://podcast.radiosphere.be/">`
-- Ajouter `<meta property="og:site_name" content="Podcast Sphere">`
-- Remplacer l'OG image par le logo ou une image de marque hebergee dans `public/` (ex: `https://podcast.radiosphere.be/og-image.png`)
-- Supprimer le script Cast SDK (inutile pour le site web)
+- Output dir reste `dist` (pas `docs`) car le déploiement se fait via GitHub Actions
+- Une seule route réelle (`/`) — le `404.html` est une copie du `index.html`
+- Base path = `/` (sous-domaine, pas un sous-dossier)
 
-#### 2. Creer `public/site.webmanifest`
-```json
-{
-  "name": "Podcast Sphere",
-  "short_name": "Podcast Sphere",
-  "icons": [
-    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
-  ],
-  "theme_color": "#111111",
-  "background_color": "#111111",
-  "display": "standalone",
-  "start_url": "/"
-}
+### Plan d'implémentation
+
+#### 1. Installer les dépendances
+- `vite-react-ssg` pour le pré-rendu React
+- `react-helmet-async` pour les meta tags par page
+
+#### 2. Adapter `src/main.tsx`
+Remplacer le `createRoot` direct par l'export `ViteReactSSG` qui gère :
+- Le rendu serveur (génération HTML statique au build)
+- L'hydratation côté client (réactivité React après chargement)
+
+#### 3. Adapter `src/App.tsx`
+- Wraper l'app dans `HelmetProvider`
+- Exporter les `routeRecords` au format attendu par vite-react-ssg (tableau `[{ path: '/', element: <Index /> }]`)
+- Ajouter un `<Helmet>` avec title + meta description unique
+
+#### 4. Mettre à jour `vite.config.ts`
+- Ajouter le plugin SSG avec la liste des routes à pré-rendre : `['/']`
+- Garder `outDir: 'dist'` et `base: '/'`
+
+#### 5. Mettre à jour `package.json`
+- Changer le script `build` : `vite build` → `vite-react-ssg build`
+
+#### 6. Mettre à jour `.github/workflows/deploy.yml`
+- Le `cp dist/index.html dist/404.html` reste identique
+- Le sitemap est déjà dans `public/` donc copié automatiquement
+
+#### 7. Ajouter `<Helmet>` dans la page Index
+```text
+<title>Podcast Sphere — Podcasts du monde entier</title>
+<meta name="description" content="Découvrez et écoutez des milliers de podcasts..." />
 ```
-Ajouter `<link rel="manifest" href="/site.webmanifest">` dans le HTML.
 
-#### 3. Creer une image OG dediee (`public/og-image.png`)
-Generer une image 1200x630 avec le logo Podcast Sphere + baseline "Podcasts du monde entier" sur fond sombre, a placer dans `public/`. Cela remplacera le screenshot Lovable temporaire.
-
-#### 4. Creer `public/sitemap.xml`
-Sitemap minimal avec l'URL unique `https://podcast.radiosphere.be/`.
-
-#### 5. Mettre a jour `robots.txt`
-Ajouter la reference au sitemap : `Sitemap: https://podcast.radiosphere.be/sitemap.xml`
-
-### Fichiers modifies
+### Fichiers modifiés
 
 | Fichier | Action |
 |---------|--------|
-| `index.html` | Ajout favicons multi-tailles, manifest, canonical, og:url, og:site_name, nouvelle OG image, suppression Cast SDK |
-| `public/site.webmanifest` | Creation |
-| `public/og-image.png` | Creation (image generee 1200x630) |
-| `public/sitemap.xml` | Creation |
-| `public/robots.txt` | Ajout ligne Sitemap |
+| `package.json` | Ajout deps, modification script build |
+| `src/main.tsx` | Adaptation pour vite-react-ssg |
+| `src/App.tsx` | HelmetProvider + routeRecords export |
+| `vite.config.ts` | Config plugin SSG |
+| `src/pages/Index.tsx` | Ajout Helmet meta tags |
+
+### Ce qui ne change PAS
+- Logique métier, composants UI, player, favoris, contexts
+- Structure de routage interne (onglets)
+- Dossier de sortie `dist` et workflow GitHub Actions
+- CNAME et configuration domaine
 
