@@ -1,9 +1,8 @@
 import { useTranslation } from "@/contexts/LanguageContext";
-import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, CheckCircle, Database, ChevronDown, TimerOff, Lock, Unlock, KeyRound, ShieldCheck, Sparkles, Trash2, RefreshCw, Heart, ExternalLink, HardDrive, Globe, Scissors, AudioLines } from "lucide-react";
+import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, ExternalLink, Globe } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -16,7 +15,6 @@ import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { getDownloadDest, setDownloadDest, DownloadDest } from "@/services/DownloadService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +26,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
 
 function CollapsibleSection({ icon: Icon, title, badge, children }: { icon: React.ElementType; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
