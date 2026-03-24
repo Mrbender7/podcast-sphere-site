@@ -538,6 +538,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Deje esta tarea al pasajero",
     "auto.subscriptions": "Suscripciones",
     "auto.inProgress": "En curso",
+    "sidebar.description": "Descubre y escucha miles de podcasts de todo el mundo.",
+    "footer.createdBy": "Un producto de radiosphere.be",
+    "footer.poweredBy": "Desarrollado por Podcast Index",
+    "player.selectEpisode": "Selecciona un episodio para empezar",
   },
   de: {
     "nav.home": "Startseite",
