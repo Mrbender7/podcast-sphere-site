@@ -504,6 +504,61 @@ export function PlayerProvider({ children, onEpisodePlay }: { children: React.Re
                   });
                 }
                 break;
+              case 'next': {
+                const eps = feedEpisodesRef.current;
+                const cur = stateRef.current.currentEpisode;
+                if (cur && eps.length > 0) {
+                  const idx = eps.findIndex(e => e.id === cur.id);
+                  if (idx >= 0 && idx < eps.length - 1) playRef.current(eps[idx + 1]);
+                }
+                break;
+              }
+              case 'previous': {
+                const eps = feedEpisodesRef.current;
+                const cur = stateRef.current.currentEpisode;
+                if (cur && eps.length > 0) {
+                  const idx = eps.findIndex(e => e.id === cur.id);
+                  if (idx > 0) playRef.current(eps[idx - 1]);
+                }
+                break;
+              }
+              case 'autoplay': {
+                // Resume last episode from history
+                if (!stateRef.current.currentEpisode) {
+                  const history = getListenHistory();
+                  const inProgress = history.find(h => !h.completed);
+                  if (inProgress) {
+                    playRef.current(inProgress.episode);
+                  }
+                } else if (!isPlayingRef.current) {
+                  await resumePlayback();
+                }
+                break;
+              }
+              case 'playMediaId': {
+                // Format: episode:<episodeId>:<feedId>
+                if (data.mediaId) {
+                  const parts = data.mediaId.split(':');
+                  if (parts.length >= 3) {
+                    const episodeId = parseInt(parts[1], 10);
+                    const feedId = parseInt(parts[2], 10);
+                    try {
+                      const result = await getEpisodesByFeedId(feedId, 50);
+                      if (result.episodes.length > 0) {
+                        feedEpisodesRef.current = result.episodes;
+                        const ep = result.episodes.find(e => e.id === episodeId);
+                        if (ep) playRef.current(ep);
+                      }
+                    } catch (e) {
+                      console.warn('[Player] playMediaId fetch failed:', e);
+                    }
+                  }
+                }
+                break;
+              }
+              case 'stop':
+                if (isPlayingRef.current) pausePlayback();
+                break;
             }
           }
         );
