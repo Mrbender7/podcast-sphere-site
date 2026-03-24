@@ -20,6 +20,7 @@ const safeNativeCall = async (method: string, data: Record<string, unknown>) => 
 };
 
 const createManagedAudio = () => {
+  if (typeof window === 'undefined') return null as unknown as HTMLAudioElement;
   const audio = new Audio();
   (audio as any).playsInline = true;
   audio.preload = "auto";

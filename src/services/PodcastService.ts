@@ -7,7 +7,7 @@ import { Podcast, Episode } from "@/types/podcast";
 
 // On native (Capacitor), requests go directly without CORS issues.
 // In browser dev/preview, we route through Vite's proxy to avoid CORS.
-const isNative = typeof (window as any)?.Capacitor !== "undefined";
+const isNative = typeof globalThis !== "undefined" && typeof (globalThis as any).window !== "undefined" && typeof (globalThis as any).window.Capacitor !== "undefined";
 const BASE_URL = isNative
   ? "https://api.podcastindex.org/api/1.0"
   : "/api/podcast";
