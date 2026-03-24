@@ -1,9 +1,12 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
+import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, ExternalLink, Globe } from "lucide-react";
+import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, Download, Upload, ExternalLink, Globe } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
+import { toast } from "@/hooks/use-toast";
+import { Podcast } from "@/types/podcast";
 import {
   Select,
   SelectContent,
@@ -14,7 +17,7 @@ import {
 import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
