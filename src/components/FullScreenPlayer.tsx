@@ -6,7 +6,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { useCast } from "@/hooks/useCast";
 import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast, Scissors, AudioLines } from "lucide-react";
 import { SnippetService } from "@/services/SnippetService";
-import { usePremium } from "@/contexts/PremiumContext";
+import { Crown } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ export function FullScreenPlayer() {
   const { t } = useTranslation();
   const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast } = useCast();
   const { isSubscribed, toggleSubscription } = useFavoritesContext();
-  const { isPremium } = usePremium();
+  const isPremium = false; // Premium locked for web
   const epTitleRef = useRef<HTMLDivElement>(null);
   const epMeasureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
@@ -137,8 +137,9 @@ export function FullScreenPlayer() {
               <Download className="w-5 h-5 text-muted-foreground" />
             )}
           </button>
-          <button onClick={handleClip} className="p-2" aria-label="Clip">
-            <Scissors className={cn("w-5 h-5", isPremium ? "text-muted-foreground" : "text-muted-foreground/40")} />
+          <button onClick={handleClip} className="p-2 relative" aria-label="Clip" disabled>
+            <Scissors className="w-5 h-5 text-muted-foreground/30" />
+            <Crown className="w-2.5 h-2.5 text-amber-400 absolute -top-0.5 -right-0.5" />
           </button>
         </div>
         {isCasting && (
@@ -264,17 +265,13 @@ export function FullScreenPlayer() {
                 </button>
               ))}
               <button
-                onClick={toggleVoiceBoost}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1",
-                  isVoiceBoostEnabled
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-accent text-muted-foreground hover:text-foreground"
-                )}
+                disabled
+                className="px-3 py-1.5 rounded-full text-xs font-bold bg-accent text-muted-foreground/30 flex items-center gap-1 cursor-not-allowed relative"
                 aria-label="Voice Enhancer"
               >
                 <AudioLines className="w-3.5 h-3.5" />
                 Voix
+                <Crown className="w-2.5 h-2.5 text-amber-400" />
               </button>
             </div>
           </div>
