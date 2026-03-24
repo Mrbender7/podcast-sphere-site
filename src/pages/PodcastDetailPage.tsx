@@ -4,6 +4,7 @@ import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
 import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
 import { ArrowLeft, Bookmark, Loader2, ArrowDownUp, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
