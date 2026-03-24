@@ -6,7 +6,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { useCast } from "@/hooks/useCast";
 import { Play, Pause, ChevronDown, Volume2, Bookmark, Loader2, Share2, RotateCcw, RotateCw, Download, CheckCircle, Cast, Scissors, AudioLines } from "lucide-react";
 import { SnippetService } from "@/services/SnippetService";
-import { usePremium } from "@/contexts/PremiumContext";
+import { Crown } from "lucide-react";
 import { EqBars } from "@/components/EqBars";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
