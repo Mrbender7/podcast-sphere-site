@@ -360,6 +360,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Leave this task to the passenger",
     "auto.subscriptions": "Subscriptions",
     "auto.inProgress": "In progress",
+    "sidebar.description": "Discover and listen to thousands of podcasts from around the world.",
+    "footer.createdBy": "A product of radiosphere.be",
+    "footer.poweredBy": "Powered by Podcast Index",
+    "player.selectEpisode": "Select an episode to start listening",
   },
   es: {
     "nav.home": "Inicio",
