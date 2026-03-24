@@ -1,4 +1,5 @@
 // Web-only stubs — no native download service on website
+import { Episode } from "@/types/podcast";
 
 export type DownloadDest = "internal" | "external";
 
@@ -9,9 +10,10 @@ export interface DownloadMeta {
   image: string;
   duration: number;
   downloadedAt: number;
+  episode: Episode;
 }
 
-export const downloadEpisode = async (_episode: any, _onProgress?: (ratio: number) => void) => {};
+export const downloadEpisode = async (_episode: any, _onProgress?: (ratio: number) => void): Promise<boolean> => false;
 export const deleteDownload = async (_episodeId: number) => {};
 export const isDownloaded = (_episodeId: number) => false;
 export const getDownloadedEpisodes = (): DownloadMeta[] => [];
