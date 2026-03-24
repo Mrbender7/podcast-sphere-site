@@ -2,6 +2,7 @@ import { Home, Search, Bookmark, Settings, Mail, ShieldCheck } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
+import { FlagIcon } from "@/components/FlagIcon";
 import type { TabId } from "@/components/BottomNav";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 
