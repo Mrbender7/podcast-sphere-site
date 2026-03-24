@@ -716,6 +716,10 @@ const translations: Record<Language, Record<string, string>> = {
     "auto.drivingWarningSubtitle": "Überlassen Sie diese Aufgabe dem Beifahrer",
     "auto.subscriptions": "Abonnements",
     "auto.inProgress": "Läuft",
+    "sidebar.description": "Entdecken und hören Sie Tausende von Podcasts aus der ganzen Welt.",
+    "footer.createdBy": "Ein Produkt von radiosphere.be",
+    "footer.poweredBy": "Unterstützt von Podcast Index",
+    "player.selectEpisode": "Wählen Sie eine Folge zum Abspielen",
   },
   ja: {
     "nav.home": "ホーム",
