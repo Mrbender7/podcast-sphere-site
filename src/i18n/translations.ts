@@ -700,6 +700,10 @@ const translations: Record<Language, Record<string, string>> = {
     "download.internal": "Interner Speicher",
     "download.external": "Externer Speicher (SD)",
     "download.destinationDesc": "Speicherort für heruntergeladene Folgen",
+    "auto.drivingWarning": "Achtung: Navigieren Sie niemals während der Fahrt in Menüs",
+    "auto.drivingWarningSubtitle": "Überlassen Sie diese Aufgabe dem Beifahrer",
+    "auto.subscriptions": "Abonnements",
+    "auto.inProgress": "Läuft",
   },
   ja: {
     "nav.home": "ホーム",
