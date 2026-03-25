@@ -28,10 +28,10 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
     <>
       {/* Collapsed: show open button */}
       {collapsed && (
-        <div className="hidden lg:flex flex-col items-center pt-4 pb-6 w-14 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0">
+        <div className="hidden lg:flex flex-col items-center pt-4 pb-4 w-16 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0">
           <button
             onClick={() => setCollapsed(false)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors mb-6"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors mb-4"
             title="Ouvrir la sidebar"
           >
             <PanelLeftOpen className="w-5 h-5" />
@@ -40,16 +40,16 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
           <img
             src={podcastSphereLogo}
             alt="Podcast Sphere"
-            className="w-9 h-9 rounded-xl mix-blend-screen mb-6"
+            className="w-10 h-10 rounded-xl mix-blend-screen mb-5"
           />
 
-          <nav className="space-y-1 w-full px-1.5">
+          <nav className="space-y-1 w-full px-2">
             {navItems.map(({ id, labelKey, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => onTabChange(id)}
                 className={cn(
-                  "w-full flex items-center justify-center py-3 rounded-xl transition-all",
+                  "w-full flex items-center justify-center py-2.5 rounded-xl transition-all",
                   activeTab === id
                     ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]"
                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
@@ -63,21 +63,19 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
 
           <div className="flex-1" />
 
-          <div className="flex flex-col items-center pb-3">
-            <a
-              href="https://radiosphere.be"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-9 h-9 rounded-lg overflow-hidden hover:scale-110 transition-transform"
-              title="RadioSphere.be"
-            >
-              <img
-                src={radiosphereIcon}
-                alt="RadioSphere.be"
-                className="w-full h-full object-cover"
-              />
-            </a>
-          </div>
+          <a
+            href="https://radiosphere.be"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative w-11 h-11 rounded-xl overflow-hidden border border-sidebar-border/50 hover:border-primary/40 hover:scale-105 transition-all shadow-sm hover:shadow-[0_0_12px_-2px_hsl(var(--primary)/0.3)]"
+            title="RadioSphere.be"
+          >
+            <img
+              src={radiosphereIcon}
+              alt="RadioSphere.be"
+              className="w-full h-full object-cover"
+            />
+          </a>
         </div>
       )}
 
