@@ -4,10 +4,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FlagIcon } from "@/components/FlagIcon";
 
 export interface FilterOption {
   value: string;
   label: string;
+  icon?: string; // language code for FlagIcon
 }
 
 interface MultiSelectFilterProps {
@@ -89,7 +91,10 @@ export function MultiSelectFilter({ icon, label, options, selected, onChange, si
                 checked={selected.includes(opt.value)}
                 onCheckedChange={() => toggle(opt.value)}
               />
-              <span className="truncate">{opt.label}</span>
+              <span className="truncate inline-flex items-center gap-1.5">
+                {opt.icon && <FlagIcon lang={opt.icon} className="w-4 h-3" />}
+                {opt.label}
+              </span>
             </label>
           ))}
           {count > 0 && (
