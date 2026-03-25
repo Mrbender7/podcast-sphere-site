@@ -1,15 +1,16 @@
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
+import { FlagIcon } from "@/components/FlagIcon";
 
 const LANGUAGES = [
-  { code: "fr", label: "🇫🇷 FR" },
-  { code: "en", label: "🇬🇧 EN" },
-  { code: "es", label: "🇪🇸 ES" },
-  { code: "de", label: "🇩🇪 DE" },
-  { code: "ja", label: "🇯🇵 JA" },
-  { code: "pt", label: "🇧🇷 PT" },
-  { code: "it", label: "🇮🇹 IT" },
-  { code: "ar", label: "🇸🇦 AR" },
+  { code: "fr", label: "FR" },
+  { code: "en", label: "EN" },
+  { code: "es", label: "ES" },
+  { code: "de", label: "DE" },
+  { code: "ja", label: "JA" },
+  { code: "pt", label: "PT" },
+  { code: "it", label: "IT" },
+  { code: "ar", label: "AR" },
 ];
 
 interface LanguageFilterProps {
@@ -26,12 +27,13 @@ export function LanguageFilter({ selected, onChange }: LanguageFilterProps) {
           key={lang.code}
           onClick={() => onChange(lang.code)}
           className={cn(
-            "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
+            "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border inline-flex items-center gap-1.5",
             selected === lang.code
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-accent/50 text-muted-foreground border-transparent hover:bg-accent"
           )}
         >
+          <FlagIcon lang={lang.code} className="w-4 h-3" />
           {lang.label}
         </button>
       ))}

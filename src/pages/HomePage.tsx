@@ -77,14 +77,14 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const resumeEntries = history.filter(h => !h.completed && h.progress > 0);
 
   const langOptions: FilterOption[] = useMemo(() => [
-    { value: "fr", label: "🇫🇷 Français" },
-    { value: "en", label: "🇬🇧 English" },
-    { value: "es", label: "🇪🇸 Español" },
-    { value: "de", label: "🇩🇪 Deutsch" },
-    { value: "ja", label: "🇯🇵 日本語" },
-    { value: "pt", label: "🇧🇷 Português" },
-    { value: "it", label: "🇮🇹 Italiano" },
-    { value: "ar", label: "🇸🇦 العربية" },
+    { value: "fr", label: "Français", icon: "fr" },
+    { value: "en", label: "English", icon: "en" },
+    { value: "es", label: "Español", icon: "es" },
+    { value: "de", label: "Deutsch", icon: "de" },
+    { value: "ja", label: "日本語", icon: "ja" },
+    { value: "pt", label: "Português", icon: "pt" },
+    { value: "it", label: "Italiano", icon: "it" },
+    { value: "ar", label: "العربية", icon: "ar" },
   ], []);
 
   const { data: trending, isLoading: trendingLoading } = useQuery({

@@ -1,11 +1,11 @@
 export type Language = "fr" | "en" | "es" | "de" | "ja";
 
-export const LANGUAGE_OPTIONS: { value: Language; flag: string; label: string }[] = [
-  { value: "fr", flag: "🇫🇷", label: "Français" },
-  { value: "en", flag: "🇬🇧", label: "English" },
-  { value: "es", flag: "🇪🇸", label: "Español" },
-  { value: "de", flag: "🇩🇪", label: "Deutsch" },
-  { value: "ja", flag: "🇯🇵", label: "日本語" },
+export const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
+  { value: "de", label: "Deutsch" },
+  { value: "ja", label: "日本語" },
 ];
 
 const translations: Record<Language, Record<string, string>> = {
@@ -32,6 +32,9 @@ const translations: Record<Language, Record<string, string>> = {
     "search.languages": "Langues",
     "search.categories": "Catégories",
     "search.recentSearches": "Recherches récentes",
+    "search.relevance": "Pertinence",
+    "search.sortAZ": "A → Z",
+    "search.sortZA": "Z → A",
     "favorites.title": "Bibliothèque",
     "favorites.empty": "Aucun abonnement",
     "favorites.emptyDesc": "Abonnez-vous à un podcast pour le retrouver ici",
@@ -218,6 +221,9 @@ const translations: Record<Language, Record<string, string>> = {
     "search.languages": "Languages",
     "search.categories": "Categories",
     "search.recentSearches": "Recent searches",
+    "search.relevance": "Relevance",
+    "search.sortAZ": "A → Z",
+    "search.sortZA": "Z → A",
     "favorites.title": "Library",
     "favorites.empty": "No subscriptions",
     "favorites.emptyDesc": "Subscribe to a podcast to see it here",
@@ -404,6 +410,9 @@ const translations: Record<Language, Record<string, string>> = {
     "search.languages": "Idiomas",
     "search.categories": "Categorías",
     "search.recentSearches": "Búsquedas recientes",
+    "search.relevance": "Relevancia",
+    "search.sortAZ": "A → Z",
+    "search.sortZA": "Z → A",
     "favorites.title": "Biblioteca",
     "favorites.empty": "Sin suscripciones",
     "favorites.emptyDesc": "Suscríbete a un podcast para verlo aquí",
@@ -590,6 +599,9 @@ const translations: Record<Language, Record<string, string>> = {
     "search.languages": "Sprachen",
     "search.categories": "Kategorien",
     "search.recentSearches": "Letzte Suchen",
+    "search.relevance": "Relevanz",
+    "search.sortAZ": "A → Z",
+    "search.sortZA": "Z → A",
     "favorites.title": "Bibliothek",
     "favorites.empty": "Keine Abonnements",
     "favorites.emptyDesc": "Abonniere einen Podcast, um ihn hier zu sehen",
@@ -776,6 +788,9 @@ const translations: Record<Language, Record<string, string>> = {
     "search.languages": "言語",
     "search.categories": "カテゴリ",
     "search.recentSearches": "最近の検索",
+    "search.relevance": "関連性",
+    "search.sortAZ": "A → Z",
+    "search.sortZA": "Z → A",
     "favorites.title": "ライブラリ",
     "favorites.empty": "登録なし",
     "favorites.emptyDesc": "ポッドキャストを登録するとここに表示されます",

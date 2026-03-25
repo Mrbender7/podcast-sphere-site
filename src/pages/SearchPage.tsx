@@ -7,19 +7,24 @@ import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { SearchResultsSkeleton } from "@/components/SkeletonLoaders";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2 } from "lucide-react";
+import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2, ArrowDownAZ, ArrowUpZA, TrendingUp, List, Grid2X2, Grid3X3, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { FlagIcon } from "@/components/FlagIcon";
+import { CachedImage } from "@/components/CachedImage";
+import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { Bookmark } from "lucide-react";
+import { toast } from "sonner";
 
 const SEARCH_LANGUAGES: FilterOption[] = [
-  { value: "fr", label: "🇫🇷 Français" },
-  { value: "en", label: "🇬🇧 English" },
-  { value: "es", label: "🇪🇸 Español" },
-  { value: "de", label: "🇩🇪 Deutsch" },
-  { value: "ja", label: "🇯🇵 日本語" },
-  { value: "pt", label: "🇧🇷 Português" },
-  { value: "it", label: "🇮🇹 Italiano" },
-  { value: "ar", label: "🇸🇦 العربية" },
+  { value: "fr", label: "Français", icon: "fr" },
+  { value: "en", label: "English", icon: "en" },
+  { value: "es", label: "Español", icon: "es" },
+  { value: "de", label: "Deutsch", icon: "de" },
+  { value: "ja", label: "日本語", icon: "ja" },
+  { value: "pt", label: "Português", icon: "pt" },
+  { value: "it", label: "Italiano", icon: "it" },
+  { value: "ar", label: "العربية", icon: "ar" },
 ];
 
 const SEARCH_CATEGORIES = [
@@ -29,6 +34,12 @@ const SEARCH_CATEGORIES = [
   "Religion", "Kids & Family", "Politics", "Nature", "Film & TV",
   "Leisure", "Self-Improvement", "Relationships",
 ];
+
+type SortMode = "default" | "az" | "za";
+type ViewMode = "list" | "small" | "medium" | "large";
+
+const VIEW_MODE_KEY = "podcastsphere_search_view";
+const SORT_MODE_KEY = "podcastsphere_search_sort";
 
 interface SearchPageProps {
   initialCategory?: string;
@@ -40,6 +51,18 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
   const { t, language } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Sort & view mode
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    try { return (localStorage.getItem(SORT_MODE_KEY) as SortMode) || "default"; } catch { return "default"; }
+  });
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || "list"; } catch { return "list"; }
+  });
+
+  // Persist preferences
+  useEffect(() => { try { localStorage.setItem(SORT_MODE_KEY, sortMode); } catch {} }, [sortMode]);
+  useEffect(() => { try { localStorage.setItem(VIEW_MODE_KEY, viewMode); } catch {} }, [viewMode]);
 
   // Search history
   const HISTORY_KEY = "podcastsphere_search_history";
@@ -62,11 +85,10 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
     try { localStorage.removeItem(HISTORY_KEY); } catch {}
   }, []);
 
-  // Multi-select filters: default lang = app language
+  // Multi-select filters
   const [selectedLangs, setSelectedLangs] = useState<string[]>([language]);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
 
-  // Build translated category options
   const categoryOptions: FilterOption[] = useMemo(
     () => SEARCH_CATEGORIES.map(cat => ({ value: cat, label: t(`category.${cat}`) })),
     [t]
@@ -94,17 +116,15 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
 
-  // Client-side filtering: OR for langs, OR for cats, intersection of both
+  // Client-side filtering + sorting
   const filteredResults = useMemo(() => {
     if (!results) return undefined;
     let filtered = results;
 
-    // Filter by languages (OR)
     if (selectedLangs.length > 0) {
       filtered = filtered.filter(p => selectedLangs.includes(p.language));
     }
 
-    // Filter by categories (OR) — match if podcast has any of the selected categories
     if (selectedCats.length > 0) {
       filtered = filtered.filter(p => {
         if (!p.categories || p.categories.length === 0) return false;
@@ -114,12 +134,30 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
       });
     }
 
+    // Sort
+    if (sortMode === "az") {
+      filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortMode === "za") {
+      filtered = [...filtered].sort((a, b) => b.title.localeCompare(a.title));
+    }
+    // "default" keeps API order (relevance)
+
     return filtered;
-  }, [results, selectedLangs, selectedCats]);
+  }, [results, selectedLangs, selectedCats, sortMode]);
 
   if (selectedPodcast) {
     return <PodcastDetailPage podcast={selectedPodcast} onBack={() => setSelectedPodcast(null)} />;
   }
+
+  const cycleSortMode = () => {
+    setSortMode(prev => prev === "default" ? "az" : prev === "az" ? "za" : "default");
+  };
+
+  const sortIcon = sortMode === "az" ? <ArrowDownAZ className="w-4 h-4" /> 
+    : sortMode === "za" ? <ArrowUpZA className="w-4 h-4" /> 
+    : <TrendingUp className="w-4 h-4" />;
+
+  const sortLabel = sortMode === "az" ? "A → Z" : sortMode === "za" ? "Z → A" : t("search.relevance");
 
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
@@ -142,7 +180,7 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
         )}
       </div>
 
-      {/* Multi-select filters */}
+      {/* Filters + Sort + View Mode */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
         <MultiSelectFilter
           icon={<Globe className="w-3.5 h-3.5" />}
@@ -158,6 +196,43 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
           selected={selectedCats}
           onChange={setSelectedCats}
         />
+
+        {/* Sort button */}
+        <button
+          onClick={cycleSortMode}
+          className={cn(
+            "h-8 px-2.5 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors",
+            sortMode !== "default"
+              ? "border-primary/50 bg-primary/10 text-primary"
+              : "border-border/50 bg-accent/30 text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {sortIcon}
+          {sortLabel}
+        </button>
+
+        {/* View mode buttons */}
+        <div className="flex items-center border border-border/50 rounded-md overflow-hidden ml-auto shrink-0">
+          {([
+            { mode: "list" as ViewMode, icon: <List className="w-3.5 h-3.5" /> },
+            { mode: "small" as ViewMode, icon: <Grid3X3 className="w-3.5 h-3.5" /> },
+            { mode: "medium" as ViewMode, icon: <Grid2X2 className="w-3.5 h-3.5" /> },
+            { mode: "large" as ViewMode, icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+          ]).map(({ mode, icon }) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={cn(
+                "h-8 w-8 flex items-center justify-center transition-colors",
+                viewMode === mode
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-accent/30 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!query && (
@@ -201,11 +276,9 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
       )}
 
       {filteredResults && filteredResults.length > 0 && (
-        <div className="space-y-1">
+        <div>
           <p className="text-xs text-muted-foreground mb-3">{filteredResults.length} {t("search.resultsCount")}</p>
-          {filteredResults.map(p => (
-            <PodcastCard key={p.id} podcast={p} compact onClick={setSelectedPodcast} />
-          ))}
+          <SearchResultsGrid results={filteredResults} viewMode={viewMode} onSelect={setSelectedPodcast} />
         </div>
       )}
 
@@ -222,6 +295,86 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
       >
         <ArrowUp className="w-5 h-5" />
       </button>
+    </div>
+  );
+}
+
+// Results grid component supporting different view modes
+function SearchResultsGrid({ results, viewMode, onSelect }: { results: Podcast[]; viewMode: ViewMode; onSelect: (p: Podcast) => void }) {
+  if (viewMode === "list") {
+    return (
+      <div className="space-y-1">
+        {results.map(p => (
+          <PodcastCard key={p.id} podcast={p} compact onClick={onSelect} />
+        ))}
+      </div>
+    );
+  }
+
+  const gridClass = viewMode === "small"
+    ? "grid grid-cols-4 gap-2"
+    : viewMode === "medium"
+    ? "grid grid-cols-3 gap-3"
+    : "grid grid-cols-2 gap-4";
+
+  const imageSize = viewMode === "small" ? "w-full aspect-square" 
+    : viewMode === "medium" ? "w-full aspect-square"
+    : "w-full aspect-square";
+
+  return (
+    <div className={gridClass}>
+      {results.map(p => (
+        <GridPodcastCard key={p.id} podcast={p} viewMode={viewMode} onClick={onSelect} />
+      ))}
+    </div>
+  );
+}
+
+function GridPodcastCard({ podcast, viewMode, onClick }: { podcast: Podcast; viewMode: ViewMode; onClick: (p: Podcast) => void }) {
+  const { isSubscribed, toggleSubscription } = useFavoritesContext();
+  const { t } = useTranslation();
+  const subscribed = isSubscribed(podcast.id);
+
+  const handleToggleSub = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleSubscription(podcast);
+    if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`);
+  };
+
+  const isSmall = viewMode === "small";
+
+  return (
+    <div
+      className="cursor-pointer group relative"
+      onClick={() => onClick(podcast)}
+    >
+      <div className="aspect-square rounded-xl overflow-hidden bg-accent mb-1.5 shadow-lg group-active:scale-95 transition-transform relative"
+        style={{ boxShadow: '0 4px 15px -3px hsla(250, 80%, 50%, 0.3)' }}
+      >
+        <CachedImage
+          src={podcast.image}
+          alt={podcast.title}
+          className="w-full h-full object-cover"
+        />
+        {!isSmall && (
+          <button
+            onClick={handleToggleSub}
+            className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${subscribed ? "fill-primary text-primary" : "text-foreground"}`} />
+          </button>
+        )}
+      </div>
+      <p className={cn(
+        "font-semibold text-foreground truncate",
+        isSmall ? "text-[10px]" : viewMode === "medium" ? "text-xs" : "text-sm"
+      )}>{podcast.title}</p>
+      {!isSmall && (
+        <p className={cn(
+          "text-muted-foreground truncate",
+          viewMode === "medium" ? "text-[10px]" : "text-xs"
+        )}>{podcast.author}</p>
+      )}
     </div>
   );
 }
