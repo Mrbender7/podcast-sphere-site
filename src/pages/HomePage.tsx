@@ -173,7 +173,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
           <div className="flex items-center gap-3 min-w-0">
             <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
             <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">
-              Podcast Sphere
+              {t("nav.home")}
             </h1>
           </div>
           <button
