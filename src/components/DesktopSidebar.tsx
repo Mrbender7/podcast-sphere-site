@@ -63,22 +63,20 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
 
           <div className="flex-1" />
 
-          <div className="flex flex-col items-center gap-2 pb-2">
-            {LANGUAGE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setLanguage(opt.value)}
-                className={cn(
-                  "transition-all",
-                  language === opt.value
-                    ? "scale-110 drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
-                    : "opacity-50 hover:opacity-100 hover:scale-105 grayscale hover:grayscale-0"
-                )}
-                title={opt.label}
-              >
-                <FlagIcon lang={opt.value} className="w-6 h-4" />
-              </button>
-            ))}
+          <div className="flex flex-col items-center pb-3">
+            <a
+              href="https://radiosphere.be"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-9 h-9 rounded-lg overflow-hidden hover:scale-110 transition-transform"
+              title="RadioSphere.be"
+            >
+              <img
+                src={radiosphereIcon}
+                alt="RadioSphere.be"
+                className="w-full h-full object-cover"
+              />
+            </a>
           </div>
         </div>
       )}
