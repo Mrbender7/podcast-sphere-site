@@ -3,7 +3,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, Download, Upload, ExternalLink, Globe } from "lucide-react";
+import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, Download, Upload, ExternalLink, Globe, Settings } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import { FlagIcon } from "@/components/FlagIcon";
 import { toast } from "@/hooks/use-toast";
@@ -79,8 +79,8 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center gap-3 mt-6 mb-6">
-        <img src={podcastSphereLogo} alt="Podcast Sphere" className="w-10 h-10 rounded-xl mix-blend-screen animate-logo-glow" />
-        <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">Podcast Sphere</h1>
+        <Settings className="w-6 h-6 text-[hsl(280,80%,60%)]" />
+        <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("nav.settings")}</h1>
       </div>
 
       <h2 className="text-xl font-heading font-bold mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("settings.title")}</h2>

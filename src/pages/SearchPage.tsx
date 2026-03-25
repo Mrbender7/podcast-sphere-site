@@ -7,7 +7,7 @@ import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { MultiSelectFilter, FilterOption } from "@/components/MultiSelectFilter";
 import { SearchResultsSkeleton } from "@/components/SkeletonLoaders";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2, ArrowDownAZ, ArrowUpZA, TrendingUp, List, Grid2X2, Grid3X3, LayoutGrid } from "lucide-react";
+import { Search, Loader2, X, ArrowUp, Globe, FolderOpen, Clock, Trash2, ArrowDownAZ, ArrowUpZA, TrendingUp, List, Grid2X2, Grid3X3, LayoutGrid, SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -161,7 +161,8 @@ export function SearchPage({ initialCategory }: SearchPageProps) {
 
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
-      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
+      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+        <Search className="w-6 h-6 text-[hsl(280,80%,60%)]" />
         {t("search.title")}
       </h1>
 
