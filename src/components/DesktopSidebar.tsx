@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
