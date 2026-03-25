@@ -6,7 +6,7 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors } from "lucide-react";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library } from "lucide-react";
 import { ClipsPage } from "@/components/ClipsPage";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useDownloads } from "@/contexts/DownloadContext";
@@ -182,8 +182,9 @@ export function LibraryPage() {
 
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
-      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
-        {t("favorites.title")}
+      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+        <Bookmark className="w-6 h-6 text-[hsl(280,80%,60%)]" />
+        {t("nav.library")}
       </h1>
 
       {/* ── Abonnements ── */}
