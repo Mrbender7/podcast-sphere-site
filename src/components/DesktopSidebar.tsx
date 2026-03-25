@@ -88,25 +88,27 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
         <aside
           role="navigation"
           aria-label="Navigation"
-          className="hidden lg:flex flex-col w-72 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0 transition-all duration-300"
+          className="hidden lg:flex flex-col w-72 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0 relative"
         >
-          {/* Header: Logo + collapse button */}
+          {/* Collapse button — centered on right edge */}
+          <button
+            onClick={() => setCollapsed(true)}
+            className="absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 w-7 h-7 rounded-full bg-sidebar border border-sidebar-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors shadow-sm"
+            title="Replier la sidebar"
+          >
+            <PanelLeftClose className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Logo */}
           <div className="flex items-center gap-3 px-6 pt-8 pb-6">
             <img
               src={podcastSphereLogo}
               alt="Podcast Sphere"
               className="w-11 h-11 rounded-xl mix-blend-screen"
             />
-            <h1 className="text-xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex-1">
+            <h1 className="text-xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
               Podcast Sphere
             </h1>
-            <button
-              onClick={() => setCollapsed(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
-              title="Replier la sidebar"
-            >
-              <PanelLeftClose className="w-4.5 h-4.5" />
-            </button>
           </div>
 
           {/* Description */}
