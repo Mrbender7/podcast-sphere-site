@@ -90,14 +90,7 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
           aria-label="Navigation"
           className="hidden lg:flex flex-col w-72 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0 relative"
         >
-          {/* Collapse button — centered on right edge */}
-          <button
-            onClick={() => setCollapsed(true)}
-            className="absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 w-7 h-7 rounded-full bg-sidebar border border-sidebar-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors shadow-sm"
-            title="Replier la sidebar"
-          >
-            <PanelLeftClose className="w-3.5 h-3.5" />
-          </button>
+          {toggleButton}
 
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 pt-8 pb-6">
