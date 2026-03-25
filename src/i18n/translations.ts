@@ -1,11 +1,11 @@
 export type Language = "fr" | "en" | "es" | "de" | "ja";
 
-export const LANGUAGE_OPTIONS: { value: Language; flag: string; label: string }[] = [
-  { value: "fr", flag: "🇫🇷", label: "Français" },
-  { value: "en", flag: "🇬🇧", label: "English" },
-  { value: "es", flag: "🇪🇸", label: "Español" },
-  { value: "de", flag: "🇩🇪", label: "Deutsch" },
-  { value: "ja", flag: "🇯🇵", label: "日本語" },
+export const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
+  { value: "de", label: "Deutsch" },
+  { value: "ja", label: "日本語" },
 ];
 
 const translations: Record<Language, Record<string, string>> = {

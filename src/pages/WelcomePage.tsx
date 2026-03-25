@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FlagIcon } from "@/components/FlagIcon";
 
 interface WelcomePageProps {
   onComplete: (lang: Language) => void;
@@ -91,7 +92,10 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
           <SelectContent>
             {LANGUAGE_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.flag} {opt.label}
+                <span className="inline-flex items-center gap-2">
+                  <FlagIcon lang={opt.value} className="w-5 h-3.5" />
+                  {opt.label}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
