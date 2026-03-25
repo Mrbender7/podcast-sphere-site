@@ -1,6 +1,8 @@
 import type { Language } from "@/i18n/translations";
 
-const FLAGS: Record<Language, JSX.Element> = {
+type FlagLang = Language | "pt" | "it" | "ar";
+
+const FLAGS: Record<string, JSX.Element> = {
   fr: (
     <svg viewBox="0 0 640 480" className="w-full h-full">
       <rect width="213.3" height="480" fill="#002395" />
@@ -36,17 +38,42 @@ const FLAGS: Record<Language, JSX.Element> = {
       <circle cx="320" cy="240" r="120" fill="#bc002d" />
     </svg>
   ),
+  pt: (
+    <svg viewBox="0 0 640 480" className="w-full h-full">
+      <rect width="640" height="480" fill="#009b3a" />
+      <polygon points="320,40 600,240 320,440 40,240" fill="#fedf00" />
+      <circle cx="320" cy="240" r="80" fill="#002776" />
+      <path d="M244 240a76 76 0 0 1 152 0" fill="none" stroke="#fff" strokeWidth="4" />
+    </svg>
+  ),
+  it: (
+    <svg viewBox="0 0 640 480" className="w-full h-full">
+      <rect width="213.3" height="480" fill="#009246" />
+      <rect x="213.3" width="213.4" height="480" fill="#fff" />
+      <rect x="426.7" width="213.3" height="480" fill="#ce2b37" />
+    </svg>
+  ),
+  ar: (
+    <svg viewBox="0 0 640 480" className="w-full h-full">
+      <rect width="640" height="160" fill="#006c35" />
+      <rect y="160" width="640" height="160" fill="#fff" />
+      <rect y="320" width="640" height="160" fill="#000" />
+      <text x="320" y="260" textAnchor="middle" fill="#006c35" fontSize="80" fontFamily="serif">لا إله إلا الله</text>
+    </svg>
+  ),
 };
 
 interface FlagIconProps {
-  lang: Language;
+  lang: string;
   className?: string;
 }
 
 export function FlagIcon({ lang, className = "w-6 h-4" }: FlagIconProps) {
+  const flag = FLAGS[lang];
+  if (!flag) return null;
   return (
     <span className={`inline-block rounded-sm overflow-hidden shadow-sm ${className}`}>
-      {FLAGS[lang]}
+      {flag}
     </span>
   );
 }
