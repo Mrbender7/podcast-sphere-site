@@ -24,23 +24,27 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
   const { t, language, setLanguage } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
+  const toggleButton = (
+    <button
+      onClick={() => setCollapsed(!collapsed)}
+      className="absolute top-1/2 -translate-y-1/2 -right-3.5 z-20 w-7 h-7 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary hover:bg-primary/30 hover:scale-110 transition-all shadow-[0_0_12px_-2px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_18px_-2px_hsl(var(--primary)/0.6)]"
+      title={collapsed ? "Ouvrir la sidebar" : "Replier la sidebar"}
+    >
+      {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+    </button>
+  );
+
   return (
     <>
-      {/* Collapsed: show open button */}
+      {/* Collapsed sidebar */}
       {collapsed && (
-        <div className="hidden lg:flex flex-col items-center pt-4 pb-4 w-16 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0">
-          <button
-            onClick={() => setCollapsed(false)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors mb-4"
-            title="Ouvrir la sidebar"
-          >
-            <PanelLeftOpen className="w-5 h-5" />
-          </button>
+        <div className="hidden lg:flex flex-col items-center pt-4 pb-4 w-16 h-full bg-sidebar border-r border-sidebar-border flex-shrink-0 relative">
+          {toggleButton}
 
           <img
             src={podcastSphereLogo}
             alt="Podcast Sphere"
-            className="w-10 h-10 rounded-xl mix-blend-screen mb-5"
+            className="w-10 h-10 rounded-xl mix-blend-screen mb-5 mt-2"
           />
 
           <nav className="space-y-1 w-full px-2">
