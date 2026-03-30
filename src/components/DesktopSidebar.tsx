@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, Globe } from "lucide-react";
+import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -12,6 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const navItems = [
   { id: "home" as TabId, labelKey: "nav.home", icon: Home },
