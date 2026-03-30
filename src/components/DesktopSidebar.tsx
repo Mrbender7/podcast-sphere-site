@@ -25,28 +25,43 @@ interface DesktopSidebarProps {
   onTabChange: (tab: TabId) => void;
 }
 
-function LanguageFlagGrid({ compact = false }: { compact?: boolean }) {
+function LanguageDropdown() {
   const { language, setLanguage } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const currentOpt = LANGUAGE_OPTIONS.find(o => o.value === language);
+
   return (
-    <div className={cn(
-      "flex flex-wrap gap-2",
-      compact ? "justify-center px-1" : "px-4"
-    )}>
-      {LANGUAGE_OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => setLanguage(opt.value)}
-          className={cn(
-            "transition-all",
-            language === opt.value
-              ? "scale-125 drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
-              : "opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0"
-          )}
-          title={opt.label}
-        >
-          <FlagIcon lang={opt.value} className={compact ? "w-5 h-3.5" : "w-7 h-5"} />
-        </button>
-      ))}
+    <div className="px-4">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 hover:bg-sidebar-accent transition-colors"
+      >
+        <FlagIcon lang={language} className="w-5 h-3.5 shrink-0" />
+        <span className="text-sm text-foreground font-medium flex-1 text-left">{currentOpt?.label}</span>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+      </button>
+      <div className={cn(
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        open ? "max-h-[500px] opacity-100 mt-1" : "max-h-0 opacity-0"
+      )}>
+        <div className="rounded-lg bg-popover border border-border py-1 shadow-lg">
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { setLanguage(opt.value); setOpen(false); }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                language === opt.value
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:bg-accent"
+              )}
+            >
+              <FlagIcon lang={opt.value} className="w-5 h-3.5 shrink-0" />
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -122,25 +137,22 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
                 <FlagIcon lang={language} className="w-6 h-4" />
               </button>
             </PopoverTrigger>
-            <PopoverContent side="right" align="end" className="w-auto p-3">
-              <div className="grid grid-cols-4 gap-2">
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setLanguage(opt.value)}
-                    className={cn(
-                      "flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all",
-                      language === opt.value
-                        ? "bg-primary/15 scale-110"
-                        : "opacity-60 hover:opacity-100 hover:bg-sidebar-accent"
-                    )}
-                    title={opt.label}
-                  >
-                    <FlagIcon lang={opt.value} className="w-7 h-5" />
-                    <span className="text-[9px] text-foreground leading-none">{opt.value.toUpperCase()}</span>
-                  </button>
-                ))}
-              </div>
+            <PopoverContent side="right" align="end" className="w-44 p-1">
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLanguage(opt.value)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                    language === opt.value
+                      ? "text-primary font-semibold"
+                      : "text-foreground hover:bg-accent"
+                  )}
+                >
+                  <FlagIcon lang={opt.value} className="w-5 h-3.5 shrink-0" />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
             </PopoverContent>
           </Popover>
         </div>
@@ -233,7 +245,7 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
               <ShieldCheck className="w-3.5 h-3.5" />
               {t("settings.privacyPolicy")}
             </a>
-            <LanguageFlagGrid />
+            <LanguageDropdown />
             <p className="px-4 text-[10px] text-muted-foreground leading-relaxed">
               © {new Date().getFullYear()} Podcast Sphere — {t("footer.createdBy")}
             </p>
