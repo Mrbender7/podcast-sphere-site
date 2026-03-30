@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -7,6 +7,11 @@ import { FlagIcon } from "@/components/FlagIcon";
 import type { TabId } from "@/components/BottomNav";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import radiosphereIcon from "@/assets/radiosphere-icon.png";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const navItems = [
   { id: "home" as TabId, labelKey: "nav.home", icon: Home },
@@ -18,6 +23,32 @@ const navItems = [
 interface DesktopSidebarProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+}
+
+function LanguageFlagGrid({ compact = false }: { compact?: boolean }) {
+  const { language, setLanguage } = useTranslation();
+  return (
+    <div className={cn(
+      "flex flex-wrap gap-2",
+      compact ? "justify-center px-1" : "px-4"
+    )}>
+      {LANGUAGE_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => setLanguage(opt.value)}
+          className={cn(
+            "transition-all",
+            language === opt.value
+              ? "scale-125 drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
+              : "opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0"
+          )}
+          title={opt.label}
+        >
+          <FlagIcon lang={opt.value} className={compact ? "w-5 h-3.5" : "w-7 h-5"} />
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) {
@@ -71,7 +102,7 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
             href="https://radiosphere.be"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative w-11 h-11 rounded-xl overflow-hidden border border-sidebar-border/50 hover:border-primary/40 hover:scale-105 transition-all shadow-sm hover:shadow-[0_0_12px_-2px_hsl(var(--primary)/0.3)]"
+            className="group relative w-11 h-11 rounded-xl overflow-hidden border border-sidebar-border/50 hover:border-primary/40 hover:scale-105 transition-all shadow-sm hover:shadow-[0_0_12px_-2px_hsl(var(--primary)/0.3)] mb-3"
             title="RadioSphere.be"
           >
             <img
@@ -80,6 +111,38 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
               className="w-full h-full object-cover"
             />
           </a>
+
+          {/* Language selector in collapsed mode */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="w-11 h-8 rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 flex items-center justify-center hover:bg-sidebar-accent transition-colors"
+                title={t("settings.language")}
+              >
+                <FlagIcon lang={language} className="w-6 h-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" align="end" className="w-auto p-3">
+              <div className="grid grid-cols-4 gap-2">
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setLanguage(opt.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all",
+                      language === opt.value
+                        ? "bg-primary/15 scale-110"
+                        : "opacity-60 hover:opacity-100 hover:bg-sidebar-accent"
+                    )}
+                    title={opt.label}
+                  >
+                    <FlagIcon lang={opt.value} className="w-7 h-5" />
+                    <span className="text-[9px] text-foreground leading-none">{opt.value.toUpperCase()}</span>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -170,23 +233,7 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
               <ShieldCheck className="w-3.5 h-3.5" />
               {t("settings.privacyPolicy")}
             </a>
-            <div className="flex items-center gap-3 px-4">
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setLanguage(opt.value)}
-                  className={cn(
-                    "transition-all",
-                    language === opt.value
-                      ? "scale-125 drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
-                      : "opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0"
-                  )}
-                  title={opt.label}
-                >
-                  <FlagIcon lang={opt.value} className="w-7 h-5" />
-                </button>
-              ))}
-            </div>
+            <LanguageFlagGrid />
             <p className="px-4 text-[10px] text-muted-foreground leading-relaxed">
               © {new Date().getFullYear()} Podcast Sphere — {t("footer.createdBy")}
             </p>
