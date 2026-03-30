@@ -39,10 +39,7 @@ function LanguageDropdown() {
     <div className="px-4">
       <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
         <SelectTrigger className="w-full rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 hover:bg-sidebar-accent text-foreground">
-          <span className="inline-flex items-center gap-2">
-            <FlagIcon lang={language} className="w-5 h-3.5 shrink-0" />
-            <SelectValue />
-          </span>
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {LANGUAGE_OPTIONS.map((opt) => (
