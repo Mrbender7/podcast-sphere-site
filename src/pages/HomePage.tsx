@@ -422,7 +422,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
               return (
                 <div
                   key={cat}
-                  className={`relative rounded-xl p-4 h-24 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 overflow-hidden`}
+                  className={`relative rounded-xl p-4 h-24 flex items-end bg-gradient-to-br ${CATEGORY_COLORS[cat] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all duration-300 ease-out shadow-lg border-t border-white/10 overflow-hidden group hover:scale-105 hover:shadow-[0_8px_30px_-4px_hsl(var(--primary)/0.45)]`}
                   onClick={() => onCategoryClick(cat)}
                 >
                   {catImage && (
@@ -431,7 +431,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                       <img
                         src={catImage}
                         alt={cat}
-                        className="w-full h-full object-contain opacity-85 drop-shadow-lg relative z-10"
+                        className="w-full h-full object-contain opacity-85 drop-shadow-lg relative z-10 transition-transform duration-500 ease-out group-hover:scale-125"
                         loading="lazy"
                       />
                     </div>
