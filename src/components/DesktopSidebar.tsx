@@ -41,7 +41,8 @@ function LanguageDropdown() {
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="absolute bottom-full left-4 right-4 mb-1 rounded-lg bg-popover border border-border py-1 shadow-lg z-50 max-h-[320px] overflow-y-auto">
+        <div className="absolute bottom-full left-4 right-4 mb-1 rounded-lg bg-popover border border-border shadow-lg z-50 max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain py-1
+          [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
