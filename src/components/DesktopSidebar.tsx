@@ -31,7 +31,7 @@ function LanguageDropdown() {
   const currentOpt = LANGUAGE_OPTIONS.find(o => o.value === language);
 
   return (
-    <div className="px-4">
+    <div className="px-4 relative">
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 hover:bg-sidebar-accent transition-colors"
@@ -40,11 +40,8 @@ function LanguageDropdown() {
         <span className="text-sm text-foreground font-medium flex-1 text-left">{currentOpt?.label}</span>
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
       </button>
-      <div className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        open ? "max-h-[500px] opacity-100 mt-1" : "max-h-0 opacity-0"
-      )}>
-        <div className="rounded-lg bg-popover border border-border py-1 shadow-lg">
+      {open && (
+        <div className="absolute bottom-full left-4 right-4 mb-1 rounded-lg bg-popover border border-border py-1 shadow-lg z-50 max-h-[320px] overflow-y-auto">
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -61,7 +58,7 @@ function LanguageDropdown() {
             </button>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
