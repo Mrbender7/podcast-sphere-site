@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, Globe } from "lucide-react";
+import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -12,6 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const navItems = [
   { id: "home" as TabId, labelKey: "nav.home", icon: Home },
@@ -27,39 +34,27 @@ interface DesktopSidebarProps {
 
 function LanguageDropdown() {
   const { language, setLanguage } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const currentOpt = LANGUAGE_OPTIONS.find(o => o.value === language);
 
   return (
-    <div className="px-4 relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 hover:bg-sidebar-accent transition-colors"
-      >
-        <FlagIcon lang={language} className="w-5 h-3.5 shrink-0" />
-        <span className="text-sm text-foreground font-medium flex-1 text-left">{currentOpt?.label}</span>
-        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="absolute bottom-full left-4 right-4 mb-1 rounded-lg bg-popover border border-border shadow-lg z-50 max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain py-1
-          [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+    <div className="px-4">
+      <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+        <SelectTrigger className="w-full rounded-lg bg-sidebar-accent/60 border border-sidebar-border/50 hover:bg-sidebar-accent text-foreground">
+          <span className="inline-flex items-center gap-2">
+            <FlagIcon lang={language} className="w-5 h-3.5 shrink-0" />
+            <SelectValue />
+          </span>
+        </SelectTrigger>
+        <SelectContent>
           {LANGUAGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { setLanguage(opt.value); setOpen(false); }}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                language === opt.value
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:bg-accent"
-              )}
-            >
-              <FlagIcon lang={opt.value} className="w-5 h-3.5 shrink-0" />
-              <span>{opt.label}</span>
-            </button>
+            <SelectItem key={opt.value} value={opt.value}>
+              <span className="inline-flex items-center gap-2">
+                <FlagIcon lang={opt.value} className="w-5 h-3.5 shrink-0" />
+                {opt.label}
+              </span>
+            </SelectItem>
           ))}
-        </div>
-      )}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
