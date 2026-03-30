@@ -54,16 +54,16 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
 
   return (
     <div
-      className="flex-shrink-0 w-[105px] cursor-pointer group"
+      className="flex-shrink-0 w-[105px] cursor-pointer group transition-transform duration-300 ease-out hover:scale-105"
       onClick={() => onClick?.(podcast)}
     >
-      <div className="aspect-square rounded-xl overflow-hidden bg-accent mb-2 shadow-lg group-active:scale-95 transition-transform"
+      <div className="aspect-square rounded-xl overflow-hidden bg-accent mb-2 shadow-lg group-active:scale-95 transition-all duration-300 ease-out group-hover:shadow-[0_8px_30px_-4px_hsl(var(--primary)/0.45)]"
         style={{ boxShadow: '0 4px 15px -3px hsla(250, 80%, 50%, 0.3)' }}
       >
         <CachedImage
           src={podcast.image}
           alt={podcast.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
         />
       </div>
       <p className="text-sm font-semibold text-foreground truncate">{podcast.title}</p>
