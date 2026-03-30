@@ -63,7 +63,7 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
         <CachedImage
           src={podcast.image}
           alt={podcast.title}
-          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+          className="w-full h-full object-cover"
         />
       </div>
       <p className="text-sm font-semibold text-foreground truncate">{podcast.title}</p>
