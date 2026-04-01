@@ -21,7 +21,10 @@ export function Footer() {
           info@radiosphere.be
         </a>
       </div>
-      <span>radiosphere.be</span>
+      <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+          <ExternalLink className="w-3 h-3" />
+          radiosphere.be
+        </a>
     </footer>
   );
 }
