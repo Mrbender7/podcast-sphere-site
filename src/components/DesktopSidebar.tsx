@@ -228,9 +228,6 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
             </a>
             <LanguageDropdown />
             <p className="px-4 text-[10px] text-muted-foreground leading-relaxed">
-              © {new Date().getFullYear()} Podcast Sphere — {t("footer.createdBy")}
-            </p>
-            <p className="px-4 text-[10px] text-muted-foreground leading-relaxed">
               {t("footer.poweredBy")}
             </p>
           </div>
