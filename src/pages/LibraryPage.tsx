@@ -520,6 +520,17 @@ export function LibraryPage() {
       >
         <ArrowUp className="w-5 h-5" />
       </button>
+
+      {/* FAB — mobile only — add private RSS */}
+      <button
+        onClick={() => setAddPrivateOpen(true)}
+        className="md:hidden fixed bottom-32 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        aria-label={t("privateFeed.add")}
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      <AddPrivateFeedDialog open={addPrivateOpen} onOpenChange={setAddPrivateOpen} />
     </div>
   );
 }
