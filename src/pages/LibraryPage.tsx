@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Podcast, Episode } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -6,7 +7,7 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library } from "lucide-react";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library, Plus, Lock } from "lucide-react";
 import { ClipsPage } from "@/components/ClipsPage";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useDownloads } from "@/contexts/DownloadContext";
@@ -15,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { CachedImage } from "@/components/CachedImage";
 import { preCacheImages } from "@/services/ImageCacheService";
 import { MarqueeText } from "@/components/MarqueeText";
+import { AddPrivateFeedDialog } from "@/components/AddPrivateFeedDialog";
+import { refreshAllPrivateFeeds, isPrivateFeedId } from "@/services/PrivateFeedService";
 
 const INITIAL_VISIBLE = 3;
 
