@@ -200,17 +200,43 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
               {podcast.title}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">{podcast.author}</p>
-            <button
-              onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
-              className={`mt-3 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
-                subscribed
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent text-foreground hover:bg-primary/20"
-              }`}
-            >
-              <Bookmark className={`w-4 h-4 ${subscribed ? "fill-current" : ""}`} />
-              {subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
-            </button>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <button
+                onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
+                className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
+                  subscribed
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-accent text-foreground hover:bg-primary/20"
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${subscribed ? "fill-current" : ""}`} />
+                {subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
+              </button>
+              {podcast.link && (
+                <a
+                  href={podcast.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-accent text-foreground hover:bg-primary/20 transition-all"
+                  aria-label={t("podcast.website")}
+                  title={t("podcast.website")}
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("podcast.website")}</span>
+                </a>
+              )}
+              {isPrivate && (
+                <button
+                  onClick={handleRefreshPrivate}
+                  disabled={refreshing}
+                  className="px-3 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-accent text-foreground hover:bg-primary/20 transition-all disabled:opacity-50"
+                  aria-label={t("privateFeed.refresh")}
+                  title={t("privateFeed.refresh")}
+                >
+                  <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
