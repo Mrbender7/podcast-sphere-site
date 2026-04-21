@@ -65,6 +65,7 @@ function normalizePodcast(raw: any): Podcast {
     categories: categories as string[],
     lastEpisodeDate: raw.newestItemPublishTime || raw.newestItemPubdate || raw.lastUpdateTime || 0,
     language: (raw.language || "").split("-")[0].toLowerCase(),
+    link: raw.link || "",
   };
 }
 
