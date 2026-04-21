@@ -55,13 +55,50 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const isPrivate = isPrivateFeedId(podcast.id);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
+
+  // Load private feed episodes (with optional refresh)
+  const loadPrivateFeed = useCallback(async (forceRefresh: boolean) => {
+    const feedUrl = podcast.feedUrl || podcast.url;
+    if (!feedUrl) return;
+
+    // Show cached immediately
+    const cached = getCachedPrivateEpisodes(podcast.id);
+    if (cached.length > 0 && !forceRefresh) {
+      setEpisodes(cached);
+      setCurrentFeedEpisodes(cached);
+      setIsLoading(false);
+    }
+
+    // On desktop or when forced: re-fetch
+    const isNative = Capacitor.isNativePlatform();
+    const shouldFetch = forceRefresh || !isNative || cached.length === 0;
+    if (!shouldFetch) return;
+
+    if (cached.length === 0) setIsLoading(true);
+    try {
+      const parsed = await fetchPrivateFeed(feedUrl);
+      setEpisodes(parsed.episodes);
+      setCurrentFeedEpisodes(parsed.episodes);
+      const urls = parsed.episodes.map((e) => e.image || e.feedImage).filter(Boolean);
+      if (urls.length) preCacheImages(urls.slice(0, 20), 1);
+    } catch (err) {
+      if (cached.length === 0) {
+        toast.error(t("privateFeed.fetchError"));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [podcast.id, podcast.feedUrl, podcast.url, setCurrentFeedEpisodes, t]);
 
   // Initial fetch
   useEffect(() => {
@@ -69,6 +106,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
     setIsLoading(true);
     setEpisodes([]);
     setHasMore(false);
+
+    if (isPrivate) {
+      loadPrivateFeed(false);
+      return;
+    }
 
     getEpisodesByFeedId(podcast.id, 1000)
       .then((page) => {
@@ -86,7 +128,14 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       });
 
     return () => { cancelled = true; };
-  }, [podcast.id]);
+  }, [podcast.id, isPrivate, loadPrivateFeed]);
+
+  const handleRefreshPrivate = useCallback(async () => {
+    setRefreshing(true);
+    await loadPrivateFeed(true);
+    setRefreshing(false);
+    toast.success(t("privateFeed.refreshed"));
+  }, [loadPrivateFeed, t]);
 
   // Load more (pagination via "before" param — oldest episode timestamp)
   const loadMore = useCallback(async () => {
