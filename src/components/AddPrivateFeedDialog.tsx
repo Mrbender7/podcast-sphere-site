@@ -100,7 +100,7 @@ export function AddPrivateFeedDialog({ open, onOpenChange }: AddPrivateFeedDialo
           </div>
 
           {isWeb && (
-            <p className="text-[11px] text-amber-500 leading-relaxed">
+            <p className="text-[11px] text-destructive leading-relaxed">
               ⚠️ {t("privateFeed.webWarning")}
             </p>
           )}
