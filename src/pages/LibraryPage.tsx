@@ -130,6 +130,7 @@ export function LibraryPage() {
   const [showAllNewEpisodes, setShowAllNewEpisodes] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [showAllDownloads, setShowAllDownloads] = useState(false);
+  const [addPrivateOpen, setAddPrivateOpen] = useState(false);
 
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
 
@@ -146,6 +147,15 @@ export function LibraryPage() {
     });
     return () => { cancelled = true; };
   }, [subscriptions]);
+
+  // Auto-refresh private feeds on mobile, once at mount
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const privateIds = subscriptions.filter(p => isPrivateFeedId(p.id)).map(p => p.id);
+    if (privateIds.length === 0) return;
+    refreshAllPrivateFeeds(privateIds).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pre-cache artworks for subscriptions
   useEffect(() => {
