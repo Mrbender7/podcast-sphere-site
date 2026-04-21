@@ -71,7 +71,7 @@ export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
                     isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
                   )}
                 >
-                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2">
+                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2 whitespace-pre-line">
                     {t(contentKey)}
                   </p>
                   {isPermissions && isOpen && (
