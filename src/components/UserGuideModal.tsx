@@ -67,8 +67,8 @@ export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
                 </button>
                 <div
                   className={cn(
-                    "overflow-hidden transition-all duration-300 ease-in-out",
-                    isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                    "transition-all duration-300 ease-in-out",
+                    isOpen ? "max-h-[600px] opacity-100 overflow-y-auto" : "max-h-0 opacity-0 overflow-hidden"
                   )}
                 >
                   <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2 whitespace-pre-line">
