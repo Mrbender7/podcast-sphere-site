@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { BookOpen, Home, Search, Bookmark, Settings, ChevronDown, ShieldAlert, RefreshCw } from "lucide-react";
+import { BookOpen, Home, Search, Bookmark, Settings, ChevronDown, ShieldAlert, RefreshCw, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestAllPermissions } from "@/utils/permissions";
 
@@ -9,6 +9,7 @@ const SECTIONS = [
   { id: "home", icon: Home, titleKey: "guide.home", contentKey: "guide.homeContent" },
   { id: "search", icon: Search, titleKey: "guide.search", contentKey: "guide.searchContent" },
   { id: "favorites", icon: Bookmark, titleKey: "guide.favorites", contentKey: "guide.favoritesContent" },
+  { id: "premium", icon: Lock, titleKey: "guide.premium", contentKey: "guide.premiumContent" },
   { id: "settings", icon: Settings, titleKey: "guide.settings", contentKey: "guide.settingsContent" },
   { id: "permissions", icon: ShieldAlert, titleKey: "guide.permissions", contentKey: "guide.permissionsContent" },
 ] as const;
@@ -66,11 +67,11 @@ export function UserGuideModal({ onReopenWelcome }: UserGuideModalProps) {
                 </button>
                 <div
                   className={cn(
-                    "overflow-hidden transition-all duration-300 ease-in-out",
-                    isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                    "transition-all duration-300 ease-in-out",
+                    isOpen ? "max-h-[600px] opacity-100 overflow-y-auto" : "max-h-0 opacity-0 overflow-hidden"
                   )}
                 >
-                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2">
+                  <p className="text-xs text-muted-foreground leading-relaxed px-3.5 pb-2 whitespace-pre-line">
                     {t(contentKey)}
                   </p>
                   {isPermissions && isOpen && (

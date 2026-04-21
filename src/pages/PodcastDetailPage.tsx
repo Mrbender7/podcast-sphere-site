@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ChevronDown as ChevronDownDesc } from "lucide-react";
 import { Podcast, Episode } from "@/types/podcast";
 import { getEpisodesByFeedId } from "@/services/PodcastService";
+import { fetchPrivateFeed, getCachedPrivateEpisodes, isPrivateFeedId } from "@/services/PrivateFeedService";
+import { Capacitor } from "@capacitor/core";
 import { EpisodeRowSkeleton } from "@/components/SkeletonLoaders";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { EpisodeRow } from "@/components/EpisodeRow";
-import { ArrowLeft, Bookmark, Loader2, ArrowDownUp, ArrowUp } from "lucide-react";
+import { ArrowLeft, Bookmark, Loader2, ArrowDownUp, ArrowUp, Globe, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -53,13 +55,50 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const isPrivate = isPrivateFeedId(podcast.id);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (el) setShowScrollTop(el.scrollTop > 300);
   }, []);
+
+  // Load private feed episodes (with optional refresh)
+  const loadPrivateFeed = useCallback(async (forceRefresh: boolean) => {
+    const feedUrl = podcast.feedUrl || podcast.url;
+    if (!feedUrl) return;
+
+    // Show cached immediately
+    const cached = getCachedPrivateEpisodes(podcast.id);
+    if (cached.length > 0 && !forceRefresh) {
+      setEpisodes(cached);
+      setCurrentFeedEpisodes(cached);
+      setIsLoading(false);
+    }
+
+    // On desktop or when forced: re-fetch
+    const isNative = Capacitor.isNativePlatform();
+    const shouldFetch = forceRefresh || !isNative || cached.length === 0;
+    if (!shouldFetch) return;
+
+    if (cached.length === 0) setIsLoading(true);
+    try {
+      const parsed = await fetchPrivateFeed(feedUrl);
+      setEpisodes(parsed.episodes);
+      setCurrentFeedEpisodes(parsed.episodes);
+      const urls = parsed.episodes.map((e) => e.image || e.feedImage).filter(Boolean);
+      if (urls.length) preCacheImages(urls.slice(0, 20), 1);
+    } catch (err) {
+      if (cached.length === 0) {
+        toast.error(t("privateFeed.fetchError"));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [podcast.id, podcast.feedUrl, podcast.url, setCurrentFeedEpisodes, t]);
 
   // Initial fetch
   useEffect(() => {
@@ -67,6 +106,11 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
     setIsLoading(true);
     setEpisodes([]);
     setHasMore(false);
+
+    if (isPrivate) {
+      loadPrivateFeed(false);
+      return;
+    }
 
     getEpisodesByFeedId(podcast.id, 1000)
       .then((page) => {
@@ -84,7 +128,14 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
       });
 
     return () => { cancelled = true; };
-  }, [podcast.id]);
+  }, [podcast.id, isPrivate, loadPrivateFeed]);
+
+  const handleRefreshPrivate = useCallback(async () => {
+    setRefreshing(true);
+    await loadPrivateFeed(true);
+    setRefreshing(false);
+    toast.success(t("privateFeed.refreshed"));
+  }, [loadPrivateFeed, t]);
 
   // Load more (pagination via "before" param — oldest episode timestamp)
   const loadMore = useCallback(async () => {
@@ -149,17 +200,43 @@ export function PodcastDetailPage({ podcast, onBack }: PodcastDetailPageProps) {
               {podcast.title}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">{podcast.author}</p>
-            <button
-              onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
-              className={`mt-3 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
-                subscribed
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent text-foreground hover:bg-primary/20"
-              }`}
-            >
-              <Bookmark className={`w-4 h-4 ${subscribed ? "fill-current" : ""}`} />
-              {subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
-            </button>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <button
+                onClick={() => { toggleSubscription(podcast); if (!subscribed) toast.success(`${t("podcast.subscribed")} — ${podcast.title}`); }}
+                className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 w-fit transition-all ${
+                  subscribed
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-accent text-foreground hover:bg-primary/20"
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${subscribed ? "fill-current" : ""}`} />
+                {subscribed ? t("podcast.subscribed") : t("podcast.subscribe")}
+              </button>
+              {podcast.link && (
+                <a
+                  href={podcast.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-accent text-foreground hover:bg-primary/20 transition-all"
+                  aria-label={t("podcast.website")}
+                  title={t("podcast.website")}
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("podcast.website")}</span>
+                </a>
+              )}
+              {isPrivate && (
+                <button
+                  onClick={handleRefreshPrivate}
+                  disabled={refreshing}
+                  className="px-3 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-accent text-foreground hover:bg-primary/20 transition-all disabled:opacity-50"
+                  aria-label={t("privateFeed.refresh")}
+                  title={t("privateFeed.refresh")}
+                >
+                  <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -8,6 +8,9 @@ export interface Podcast {
   categories: string[];
   lastEpisodeDate: number;
   language: string;
+  link?: string;
+  isPrivate?: boolean;
+  feedUrl?: string;
 }
 
 export interface Episode {

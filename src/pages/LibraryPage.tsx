@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Podcast, Episode } from "@/types/podcast";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -6,7 +7,7 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library } from "lucide-react";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library, Plus, Lock } from "lucide-react";
 import { ClipsPage } from "@/components/ClipsPage";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useDownloads } from "@/contexts/DownloadContext";
@@ -15,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { CachedImage } from "@/components/CachedImage";
 import { preCacheImages } from "@/services/ImageCacheService";
 import { MarqueeText } from "@/components/MarqueeText";
+import { AddPrivateFeedDialog } from "@/components/AddPrivateFeedDialog";
+import { refreshAllPrivateFeeds, isPrivateFeedId } from "@/services/PrivateFeedService";
 
 const INITIAL_VISIBLE = 3;
 
@@ -127,6 +130,7 @@ export function LibraryPage() {
   const [showAllNewEpisodes, setShowAllNewEpisodes] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [showAllDownloads, setShowAllDownloads] = useState(false);
+  const [addPrivateOpen, setAddPrivateOpen] = useState(false);
 
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
 
@@ -143,6 +147,15 @@ export function LibraryPage() {
     });
     return () => { cancelled = true; };
   }, [subscriptions]);
+
+  // Auto-refresh private feeds on mobile, once at mount
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const privateIds = subscriptions.filter(p => isPrivateFeedId(p.id)).map(p => p.id);
+    if (privateIds.length === 0) return;
+    refreshAllPrivateFeeds(privateIds).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pre-cache artworks for subscriptions
   useEffect(() => {
@@ -189,15 +202,27 @@ export function LibraryPage() {
 
       {/* ── Abonnements ── */}
       <section className="mb-6">
-        <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-          <Bookmark className="w-4 h-4 text-[hsl(280,80%,60%)]" />
-          {t("podcast.subscribed")}
-          {subscriptions.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">
-              {subscriptions.length}
-            </span>
-          )}
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-heading font-semibold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+            <Bookmark className="w-4 h-4 text-[hsl(280,80%,60%)]" />
+            {t("podcast.subscribed")}
+            {subscriptions.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">
+                {subscriptions.length}
+              </span>
+            )}
+          </h2>
+          {/* Desktop "+" icon — adds private RSS feed */}
+          <button
+            onClick={() => setAddPrivateOpen(true)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent text-foreground hover:bg-primary/20 transition-colors"
+            aria-label={t("privateFeed.add")}
+            title={t("privateFeed.title")}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t("privateFeed.addShort")}
+          </button>
+        </div>
         {subscriptions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Bookmark className="w-10 h-10 text-muted-foreground/30 mb-2" />
@@ -211,6 +236,14 @@ export function LibraryPage() {
                   <PodcastCard podcast={p} compact onClick={setSelectedPodcast} />
                   {hasNewEpisodes(p) && (
                     <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                  )}
+                  {isPrivateFeedId(p.id) && (
+                    <div
+                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow"
+                      title={t("privateFeed.privateBadge")}
+                    >
+                      <Lock className="w-3 h-3" />
+                    </div>
                   )}
                 </div>
               ))}
@@ -487,6 +520,17 @@ export function LibraryPage() {
       >
         <ArrowUp className="w-5 h-5" />
       </button>
+
+      {/* FAB — mobile only — add private RSS */}
+      <button
+        onClick={() => setAddPrivateOpen(true)}
+        className="md:hidden fixed bottom-32 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        aria-label={t("privateFeed.add")}
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      <AddPrivateFeedDialog open={addPrivateOpen} onOpenChange={setAddPrivateOpen} />
     </div>
   );
 }
