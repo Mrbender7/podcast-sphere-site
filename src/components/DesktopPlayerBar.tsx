@@ -72,11 +72,8 @@ export function DesktopPlayerBar() {
         </button>
       </div>
 
-      {/* Right: Volume + expand */}
+      {/* Right: Volume */}
       <div className="flex items-center gap-3 w-64 flex-shrink-0 justify-end">
-        <button onClick={openFullScreen} className="p-2 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-          <Maximize2 className="w-4 h-4" />
-        </button>
         <div className="flex items-center gap-2 w-36">
           <button onClick={() => setVolume(volume > 0 ? 0 : 0.7)} className="p-1 text-muted-foreground hover:text-foreground transition-colors">
             {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
