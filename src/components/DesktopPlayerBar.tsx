@@ -54,7 +54,7 @@ export function DesktopPlayerBar() {
             className="text-xs text-muted-foreground"
           />
         </div>
-      </div>
+      </button>
 
       {/* Center: Controls */}
       <div className="flex-1 flex items-center justify-center gap-3">
