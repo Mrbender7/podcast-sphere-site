@@ -7,8 +7,7 @@ import { PodcastCard } from "@/components/PodcastCard";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { getListenHistory, clearHistory, removeFromHistory, HistoryEntry } from "@/services/PlaybackHistoryService";
 import { NewEpisodesService } from "@/services/NewEpisodesService";
-import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Scissors, Library, Plus, Lock } from "lucide-react";
-import { ClipsPage } from "@/components/ClipsPage";
+import { Bookmark, ArrowUp, Clock, CheckCircle2, Play, Pause, Trash2, ChevronDown, X, Download, Sparkles, Loader2, Library, Plus, Lock } from "lucide-react";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useDownloads } from "@/contexts/DownloadContext";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -500,17 +499,6 @@ export function LibraryPage() {
           </>
         )}
       </section>
-
-      {/* ── Mes Clips (Premium) ── */}
-      <section className="mb-6">
-        <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-          <Scissors className="w-4 h-4 text-[hsl(280,80%,60%)]" />
-          Mes Clips
-          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">Premium</span>
-        </h2>
-        <ClipsPage />
-      </section>
-
       <button
         onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
         className={cn(
