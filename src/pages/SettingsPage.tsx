@@ -84,7 +84,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("nav.settings")}</h1>
       </div>
 
-      <h2 className="text-xl font-heading font-bold mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("settings.title")}</h2>
+      
 
       {/* Language */}
       <div className="rounded-xl bg-accent p-4 mb-4">
