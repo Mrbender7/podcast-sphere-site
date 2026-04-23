@@ -344,6 +344,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground mb-6">Podcast Sphere v1.0</p>
+      </div>
     </div>
   );
 }
