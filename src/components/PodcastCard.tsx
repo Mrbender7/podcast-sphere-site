@@ -4,6 +4,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { CachedImage } from "@/components/CachedImage";
+import { MarqueeText } from "@/components/MarqueeText";
 
 interface PodcastCardProps {
   podcast: Podcast;
@@ -38,8 +39,8 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
           />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{podcast.title}</p>
-          <p className="text-xs text-muted-foreground truncate">{podcast.author}</p>
+          <MarqueeText text={podcast.title} className="text-sm font-semibold text-foreground" />
+          <MarqueeText text={podcast.author} className="text-xs text-muted-foreground" />
         </div>
         <button
           onClick={handleToggleSub}
@@ -66,8 +67,8 @@ export function PodcastCard({ podcast, compact, onClick }: PodcastCardProps) {
           className="w-full h-full object-cover"
         />
       </div>
-      <p className="text-sm font-semibold text-foreground truncate">{podcast.title}</p>
-      <p className="text-xs text-muted-foreground truncate">{podcast.author}</p>
+      <MarqueeText text={podcast.title} className="text-sm font-semibold text-foreground" />
+      <MarqueeText text={podcast.author} className="text-xs text-muted-foreground" />
     </div>
   );
 }

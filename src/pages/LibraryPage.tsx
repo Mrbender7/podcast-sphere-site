@@ -72,10 +72,12 @@ function HistoryRow({
             active={isCurrentPlaying}
             className={`text-sm font-semibold ${entry.completed ? "text-muted-foreground" : "text-foreground"}`}
           />
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground truncate">{entry.episode.feedTitle}</span>
-            <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-muted-foreground">{formatTimeAgo(entry.lastPlayedAt)}</span>
+          <div className="flex items-center gap-2 mt-0.5 min-w-0">
+            <div className="flex-1 min-w-0">
+              <MarqueeText text={entry.episode.feedTitle || ""} className="text-xs text-muted-foreground" />
+            </div>
+            <span className="text-xs text-muted-foreground shrink-0">•</span>
+            <span className="text-xs text-muted-foreground shrink-0">{formatTimeAgo(entry.lastPlayedAt)}</span>
           </div>
           {!entry.completed && entry.progress > 0 && (
             <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
@@ -287,7 +289,7 @@ export function LibraryPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <MarqueeText text={dl.episode.title} active={isThisPlaying} className="text-sm font-semibold text-foreground" />
-                    <span className="text-xs text-muted-foreground truncate block">{dl.episode.feedTitle}</span>
+                    <MarqueeText text={dl.episode.feedTitle || ""} className="text-xs text-muted-foreground" />
                   </div>
                   <div className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", isThisPlaying ? "bg-primary" : "bg-accent")}>
                     {isThisBuffering ? (
@@ -394,7 +396,7 @@ export function LibraryPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <MarqueeText text={ep.title} active={isThisPlaying} className="text-sm font-semibold text-foreground" />
-                    <span className="text-xs text-muted-foreground truncate block">{ep.feedTitle}</span>
+                    <MarqueeText text={ep.feedTitle || ""} className="text-xs text-muted-foreground" />
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
