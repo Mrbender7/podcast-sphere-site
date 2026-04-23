@@ -63,10 +63,11 @@ export function ClipsPage() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">
-              {snippet.customTitle || snippet.podcastTitle}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">{snippet.episodeTitle}</p>
+            <MarqueeText
+              text={snippet.customTitle || snippet.podcastTitle}
+              className="text-sm font-semibold text-foreground"
+            />
+            <MarqueeText text={snippet.episodeTitle} className="text-xs text-muted-foreground" />
             <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
               {SnippetService.formatTime(snippet.startTime)} → {SnippetService.formatTime(snippet.endTime)} ({snippet.duration}s)
             </p>
