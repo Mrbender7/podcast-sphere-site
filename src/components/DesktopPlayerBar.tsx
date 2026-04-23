@@ -26,10 +26,14 @@ export function DesktopPlayerBar() {
   return (
     <div className="hidden lg:flex items-center h-20 bg-secondary/60 backdrop-blur-lg border-t border-border px-6 gap-6">
       {/* Left: Episode info */}
-      <div className="flex items-center gap-4 w-80 flex-shrink-0">
+      <button
+        type="button"
+        onClick={openFullScreen}
+        aria-label={t("player.openFullScreen") || "Open full player"}
+        className="flex items-center gap-4 w-80 flex-shrink-0 text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+      >
         <div
-          className="w-14 h-14 rounded-lg bg-accent overflow-hidden flex-shrink-0 cursor-pointer hover:shadow-lg hover:shadow-primary/20 transition-shadow"
-          onClick={openFullScreen}
+          className="w-14 h-14 rounded-lg bg-accent overflow-hidden flex-shrink-0 group-hover:shadow-lg group-hover:shadow-primary/20 transition-shadow"
           style={{ boxShadow: '0 4px 20px -4px hsla(250, 80%, 50%, 0.4)' }}
         >
           <CachedImage
