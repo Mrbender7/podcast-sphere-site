@@ -297,11 +297,6 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </div>
       </CollapsibleSection>
 
-      {/* Privacy Policy */}
-      <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
-        <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
-      </a>
-
       {onReopenWelcome && (
         <button onClick={onReopenWelcome} className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3 w-full">
           <Sparkles className="w-3.5 h-3.5" /> {t("settings.reopenWelcome")}
@@ -343,7 +338,12 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </a>
       </div>
 
-      <p className="text-center text-[10px] text-muted-foreground mb-6">Podcast Sphere v1.0</p>
+      <p className="text-center text-[10px] text-muted-foreground mb-4">{t("settings.copyright")}</p>
+
+      {/* Privacy Policy (en bas) */}
+      <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-6">
+        <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
+      </a>
       </div>
     </div>
   );
