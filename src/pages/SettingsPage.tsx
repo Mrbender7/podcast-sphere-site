@@ -3,7 +3,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, Download, Upload, ExternalLink, Globe, Settings } from "lucide-react";
+import { Wifi, Moon, Database, ChevronDown, TimerOff, ShieldCheck, Sparkles, Trash2, Heart, Download, Upload, ExternalLink, Globe, Settings, Info } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import { FlagIcon } from "@/components/FlagIcon";
 import { toast } from "@/hooks/use-toast";
@@ -78,6 +78,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="max-w-2xl mx-auto w-full">
       <div className="flex items-center gap-3 mt-6 mb-6">
         <Settings className="w-6 h-6 text-[hsl(280,80%,60%)]" />
         <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("nav.settings")}</h1>
@@ -236,54 +237,65 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       {/* User Guide */}
       <UserGuideModal onReopenWelcome={onReopenWelcome} />
 
-      {/* Disclaimers */}
-      {[
-        { icon: Wifi, iconSize: "w-5 h-5", title: t("settings.dataWarning"), desc: t("settings.dataWarningDesc"), key: "data" },
-        { icon: Database, iconSize: "w-4 h-4", title: t("settings.dataDisclaimer"), desc: t("settings.dataDisclaimerDesc"), key: "local" },
-      ].map(({ icon: Icon, iconSize, title, desc, key }) => (
-        <CollapsibleDisclaimer key={key} icon={Icon} iconSize={iconSize} title={title} desc={desc} />
-      ))}
+      {/* About — groups data usage, local data, podcast index credits, radiosphere */}
+      <CollapsibleSection icon={Info} title="À propos">
+        <div className="space-y-4">
+          {/* Utilisation des données */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Wifi className="w-4 h-4 text-muted-foreground shrink-0" />
+              <h4 className="text-xs font-semibold text-foreground">{t("settings.dataWarning")}</h4>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed pl-6">{t("settings.dataWarningDesc")}</p>
+          </div>
 
-      {/* Podcast Index Credits */}
-      <div className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Heart className="w-5 h-5 text-pink-500" />
-          <h3 className="text-sm font-semibold text-foreground">{t("settings.podcastIndexTitle")}</h3>
-        </div>
-        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{t("settings.podcastIndexDesc")}</p>
-        <div className="flex flex-col gap-2">
-          <a href="https://podcastindex.org/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-            <ExternalLink className="w-3 h-3" /> podcastindex.org
-          </a>
-          <a href="https://podcastindex-org.github.io/docs-api/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-            <ExternalLink className="w-3 h-3" /> API Documentation
-          </a>
-          <a href="https://github.com/Podcastindex-org" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-            <ExternalLink className="w-3 h-3" /> GitHub
-          </a>
-          <a href="https://podcastindex.social/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-            <ExternalLink className="w-3 h-3" /> Mastodon / Social
-          </a>
-        </div>
-      </div>
+          {/* Données locales */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Database className="w-4 h-4 text-muted-foreground shrink-0" />
+              <h4 className="text-xs font-semibold text-foreground">{t("settings.dataDisclaimer")}</h4>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed pl-6">{t("settings.dataDisclaimerDesc")}</p>
+          </div>
 
-      {/* About / radiosphere.be */}
-      <div className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Globe className="w-5 h-5 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">À propos</h3>
+          {/* Propulsé par Podcast Index */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Heart className="w-4 h-4 text-pink-500 shrink-0" />
+              <h4 className="text-xs font-semibold text-foreground">{t("settings.podcastIndexTitle")}</h4>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed pl-6 mb-2">{t("settings.podcastIndexDesc")}</p>
+            <div className="flex flex-col gap-1.5 pl-6">
+              <a href="https://podcastindex.org/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <ExternalLink className="w-3 h-3" /> podcastindex.org
+              </a>
+              <a href="https://podcastindex-org.github.io/docs-api/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <ExternalLink className="w-3 h-3" /> API Documentation
+              </a>
+              <a href="https://github.com/Podcastindex-org" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <ExternalLink className="w-3 h-3" /> GitHub
+              </a>
+              <a href="https://podcastindex.social/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <ExternalLink className="w-3 h-3" /> Mastodon / Social
+              </a>
+            </div>
+          </div>
+
+          {/* radiosphere.be */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Globe className="w-4 h-4 text-primary shrink-0" />
+              <h4 className="text-xs font-semibold text-foreground">radiosphere.be</h4>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed pl-6 mb-2">
+              Podcast Sphere fait partie de la famille radiosphere.be.
+            </p>
+            <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline pl-6">
+              <ExternalLink className="w-3 h-3" /> radiosphere.be
+            </a>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-          Podcast Sphere fait partie de la famille{" "}
-          <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-            radiosphere.be
-          </a>
-          .
-        </p>
-        <a href="https://radiosphere.be" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-          <ExternalLink className="w-3 h-3" /> radiosphere.be
-        </a>
-      </div>
+      </CollapsibleSection>
 
       {/* Privacy Policy */}
       <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3">
@@ -332,6 +344,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground mb-6">Podcast Sphere v1.0</p>
+      </div>
     </div>
   );
 }
