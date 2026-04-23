@@ -3,6 +3,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, Loader2, Volume2, VolumeX, Headphones, Maximize2, SkipBack, SkipForward } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { CachedImage } from "@/components/CachedImage";
+import { MarqueeText } from "@/components/MarqueeText";
 
 export function DesktopPlayerBar() {
   const {
@@ -38,12 +39,16 @@ export function DesktopPlayerBar() {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-heading font-bold bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(280,80%,60%)] bg-clip-text text-transparent truncate">
-            {currentEpisode.title}
-          </p>
-          <p className="text-xs text-muted-foreground truncate">
-            {currentEpisode.feedTitle || ""}
-          </p>
+          <MarqueeText
+            text={currentEpisode.title}
+            active={isPlaying}
+            className="text-sm font-heading font-bold bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(280,80%,60%)] bg-clip-text text-transparent"
+          />
+          <MarqueeText
+            text={currentEpisode.feedTitle || ""}
+            active={isPlaying}
+            className="text-xs text-muted-foreground"
+          />
         </div>
       </div>
 
