@@ -1,6 +1,6 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, Loader2, Volume2, VolumeX, Headphones, Maximize2, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Loader2, Volume2, VolumeX, Headphones, SkipBack, SkipForward } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { CachedImage } from "@/components/CachedImage";
 import { MarqueeText } from "@/components/MarqueeText";
