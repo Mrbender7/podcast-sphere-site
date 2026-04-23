@@ -301,7 +301,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       <div className="flex-1" />
 
       {onReopenWelcome && (
-        <button onClick={onReopenWelcome} className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3 w-full">
+        <button onClick={onReopenWelcome} className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-1.5 w-full">
           <Sparkles className="w-3.5 h-3.5" /> {t("settings.reopenWelcome")}
         </button>
       )}
@@ -309,7 +309,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       {onResetApp && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <button className="flex items-center justify-center gap-1.5 text-xs text-destructive hover:underline mb-4 w-full">
+            <button className="flex items-center justify-center gap-1.5 text-xs text-destructive hover:underline mb-2 w-full">
               <Trash2 className="w-3.5 h-3.5" /> {t("settings.resetApp")}
             </button>
           </AlertDialogTrigger>
@@ -329,7 +329,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       )}
 
       {/* Social Links */}
-      <div className="flex items-center justify-center gap-4 mb-4">
+      <div className="flex items-center justify-center gap-4 mb-2">
         <a href="https://www.facebook.com/profile.php?id=61575475057830" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
         </a>
@@ -341,10 +341,10 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </a>
       </div>
 
-      <p className="text-center text-[10px] text-muted-foreground mb-4">{t("settings.copyright")}</p>
+      <p className="text-center text-[10px] leading-tight text-muted-foreground mb-1.5">{t("settings.copyright")}</p>
 
       {/* Privacy Policy (en bas) */}
-      <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-6">
+      <a href="https://radiosphere.be/privacy-policy-podcastsphere.html" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline">
         <ShieldCheck className="w-3.5 h-3.5" /> {t("settings.privacyPolicy")}
       </a>
       </div>
