@@ -3,6 +3,7 @@ import { SnippetService, AudioSnippet } from "@/services/SnippetService";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { CachedImage } from "@/components/CachedImage";
+import { MarqueeText } from "@/components/MarqueeText";
 import { Play, Trash2, Share2, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
