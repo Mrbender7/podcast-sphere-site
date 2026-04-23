@@ -374,8 +374,8 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
                         )}
                       </div>
                     </div>
-                    <p className="text-xs font-semibold text-foreground truncate">{ep.title}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{ep.feedTitle}</p>
+                    <MarqueeText text={ep.title} className="text-xs font-semibold text-foreground" />
+                    <MarqueeText text={ep.feedTitle || ""} className="text-[10px] text-muted-foreground" />
                   </div>
                 );
               })}
