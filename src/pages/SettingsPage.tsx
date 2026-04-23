@@ -77,8 +77,8 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   const [customMinutes, setCustomMinutes] = useState("");
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-4">
-      <div className="max-w-2xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
       <div className="flex items-center gap-3 mt-6 mb-6">
         <Settings className="w-6 h-6 text-[hsl(280,80%,60%)]" />
         <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("nav.settings")}</h1>
@@ -296,6 +296,9 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
           </div>
         </div>
       </CollapsibleSection>
+
+      {/* Spacer to push the block below to the bottom */}
+      <div className="flex-1" />
 
       {onReopenWelcome && (
         <button onClick={onReopenWelcome} className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3 w-full">
