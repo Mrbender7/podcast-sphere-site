@@ -1,4 +1,4 @@
-import { useState, useCallback, Suspense, lazy } from "react";
+import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { PodcastDetailPage } from "@/pages/PodcastDetailPage";
 import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
@@ -28,9 +28,9 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage").then(m => ({ defa
 const ONBOARDING_KEY = "podcastsphere_onboarded";
 
 function hasCompletedOnboarding(): boolean {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return false;
+  if (typeof window === "undefined") return false;
   try {
-    return globalThis.localStorage.getItem(ONBOARDING_KEY) === "true";
+    return window.localStorage.getItem(ONBOARDING_KEY) === "true";
   } catch {
     return false;
   }
@@ -48,11 +48,15 @@ function AppContentInner() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(!hasCompletedOnboarding());
+  const [showWelcome, setShowWelcome] = useState(true);
   const [detailPodcast, setDetailPodcast] = useState<Podcast | null>(null);
   const { subscriptions } = useFavoritesContext();
   const { isFullScreen, closeFullScreen, currentEpisode } = usePlayer();
   const { setLanguage, t } = useTranslation();
+
+  useEffect(() => {
+    setShowWelcome(!hasCompletedOnboarding());
+  }, []);
 
   const handleCategoryClick = useCallback((category: string) => {
     const translated = t(`category.${category}`);
