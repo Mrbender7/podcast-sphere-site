@@ -20,9 +20,9 @@ export interface HistoryEntry {
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return fallback;
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = globalThis.localStorage.getItem(key);
+    const raw = window.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -30,9 +30,9 @@ function loadJSON<T>(key: string, fallback: T): T {
 }
 
 function saveJSON(key: string, data: unknown) {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
+  if (typeof window === "undefined") return;
   try {
-    globalThis.localStorage.setItem(key, JSON.stringify(data));
+    window.localStorage.setItem(key, JSON.stringify(data));
   } catch {}
 }
 
