@@ -81,8 +81,8 @@ export default {
           "100%": { transform: "translateX(-50%)" },
         },
         "logo-glow": {
-          "0%, 100%": { filter: "drop-shadow(0 0 6px hsla(250,80%,60%,0.3))" },
-          "50%": { filter: "drop-shadow(0 0 14px hsla(250,80%,60%,0.7))" },
+          "0%, 100%": { filter: "drop-shadow(0 0 14px hsla(250,80%,60%,0.55)) drop-shadow(0 0 28px hsla(225,90%,58%,0.35))" },
+          "50%": { filter: "drop-shadow(0 0 28px hsla(250,80%,60%,0.95)) drop-shadow(0 0 56px hsla(225,90%,58%,0.6))" },
         },
         "play-breathe": {
           "0%, 100%": { boxShadow: "0 0 14px hsla(225,90%,58%,0.5), 0 0 28px hsla(250,80%,60%,0.3), 0 4px 16px hsla(250,80%,60%,0.25)" },
