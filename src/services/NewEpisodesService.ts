@@ -5,14 +5,14 @@ const NEW_EPISODES_KEY = "ps_new_episodes";
 const LAST_SYNC_KEY = "ps_last_sync_time";
 const SYNC_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
-// SSR-safe localStorage helpers (vite-react-ssg renders on the server where window is undefined)
+// SSR-safe localStorage helpers (vite-react-ssg renders on the server where browser globals are undefined)
 const safeGetItem = (key: string): string | null => {
-  if (typeof window === "undefined") return null;
-  try { return window.localStorage.getItem(key); } catch { return null; }
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return null;
+  try { return globalThis.localStorage.getItem(key); } catch { return null; }
 };
 const safeSetItem = (key: string, value: string): void => {
-  if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(key, value); } catch { /* ignore */ }
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
+  try { globalThis.localStorage.setItem(key, value); } catch { /* ignore */ }
 };
 
 export const NewEpisodesService = {
