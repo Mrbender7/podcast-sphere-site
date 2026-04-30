@@ -7,9 +7,9 @@ const RECENT_KEY = "podcastsphere_recent_episodes";
 const LAST_SEEN_KEY = "podcastsphere_last_seen";
 
 function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return fallback;
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = globalThis.localStorage.getItem(key);
+    const raw = window.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -17,9 +17,9 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 function saveToStorage(key: string, value: unknown): void {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
+  if (typeof window === "undefined") return;
   try {
-    globalThis.localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 }
 
