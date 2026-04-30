@@ -136,6 +136,7 @@ function AppContentInner() {
       <SleepTimerProvider>
         <DownloadProvider>
           <SleepTimerIndicator />
+          <InAppBrowserBanner />
           <div className="flex h-full bg-background">
             {/* Desktop sidebar */}
             <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
