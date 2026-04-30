@@ -76,7 +76,7 @@ function AppContentInner() {
 
   const handleWelcomeComplete = useCallback((lang: Language) => {
     setLanguage(lang);
-    try { globalThis.localStorage?.setItem(ONBOARDING_KEY, "true"); } catch {}
+    try { window.localStorage.setItem(ONBOARDING_KEY, "true"); } catch {}
     setShowWelcome(false);
   }, [setLanguage]);
 
@@ -86,16 +86,16 @@ function AppContentInner() {
 
   const handleResetApp = useCallback(async () => {
     try {
-      globalThis.localStorage?.clear();
-      globalThis.sessionStorage?.clear();
+      window.localStorage.clear();
+      window.sessionStorage.clear();
     } catch {}
     try {
-      const dbs = await globalThis.indexedDB?.databases?.() ?? [];
+      const dbs = await window.indexedDB?.databases?.() ?? [];
       for (const db of dbs) {
-        if (db.name) globalThis.indexedDB?.deleteDatabase(db.name);
+        if (db.name) window.indexedDB?.deleteDatabase(db.name);
       }
     } catch {}
-    globalThis.location?.reload();
+    window.location.reload();
   }, []);
 
   useBackButton({
