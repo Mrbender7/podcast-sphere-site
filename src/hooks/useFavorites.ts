@@ -24,20 +24,25 @@ function saveToStorage(key: string, value: unknown): void {
 }
 
 export function useSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState<Podcast[]>(() =>
-    loadFromStorage<Podcast[]>(SUBSCRIPTIONS_KEY, []).sort((a, b) => a.title.localeCompare(b.title))
-  );
-  const [lastSeen, setLastSeen] = useState<Record<number, number>>(() =>
-    loadFromStorage<Record<number, number>>(LAST_SEEN_KEY, {})
-  );
+  const [subscriptions, setSubscriptions] = useState<Podcast[]>([]);
+  const [lastSeen, setLastSeen] = useState<Record<number, number>>({});
+  const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
+    setSubscriptions(loadFromStorage<Podcast[]>(SUBSCRIPTIONS_KEY, []).sort((a, b) => a.title.localeCompare(b.title)));
+    setLastSeen(loadFromStorage<Record<number, number>>(LAST_SEEN_KEY, {}));
+    setStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
     saveToStorage(SUBSCRIPTIONS_KEY, subscriptions);
-  }, [subscriptions]);
+  }, [storageReady, subscriptions]);
 
   useEffect(() => {
+    if (!storageReady) return;
     saveToStorage(LAST_SEEN_KEY, lastSeen);
-  }, [lastSeen]);
+  }, [lastSeen, storageReady]);
 
   const toggleSubscription = useCallback((podcast: Podcast) => {
     setSubscriptions(prev => {
@@ -79,11 +84,18 @@ export function useSubscriptions() {
 }
 
 export function useRecentEpisodes() {
-  const [recent, setRecent] = useState<Episode[]>(() => loadFromStorage(RECENT_KEY, []));
+  const [recent, setRecent] = useState<Episode[]>([]);
+  const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
+    setRecent(loadFromStorage<Episode[]>(RECENT_KEY, []));
+    setStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
     saveToStorage(RECENT_KEY, recent);
-  }, [recent]);
+  }, [recent, storageReady]);
 
   const addRecent = useCallback((episode: Episode) => {
     setRecent(prev => {
