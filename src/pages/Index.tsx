@@ -14,6 +14,7 @@ import { DesktopPlayerBar } from "@/components/DesktopPlayerBar";
 import { Footer } from "@/components/Footer";
 import { HomePage } from "@/pages/HomePage";
 import { WelcomeModal } from "@/components/WelcomeModal";
+import { InAppBrowserBanner } from "@/components/InAppBrowserBanner";
 import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
 import { SleepTimerIndicator } from "@/components/SleepTimerIndicator";
 import { useBackButton } from "@/hooks/useBackButton";
@@ -135,6 +136,7 @@ function AppContentInner() {
       <SleepTimerProvider>
         <DownloadProvider>
           <SleepTimerIndicator />
+          <InAppBrowserBanner />
           <div className="flex h-full bg-background">
             {/* Desktop sidebar */}
             <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
