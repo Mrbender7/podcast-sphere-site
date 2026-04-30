@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import podcastSphereLogo from "@/assets/podcast-sphere-logo-new.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import { requestAllPermissions } from "@/utils/permissions";
