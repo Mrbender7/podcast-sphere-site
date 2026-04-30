@@ -87,8 +87,8 @@ export const NewEpisodesService = {
     );
     const final = unique.slice(0, 50);
 
-    localStorage.setItem(NEW_EPISODES_KEY, JSON.stringify(final));
-    localStorage.setItem(LAST_SYNC_KEY, now.toString());
+    safeSetItem(NEW_EPISODES_KEY, JSON.stringify(final));
+    safeSetItem(LAST_SYNC_KEY, now.toString());
 
     return final;
   },
