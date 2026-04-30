@@ -73,8 +73,12 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const touchStartY = useRef(0);
   const isPulling = useRef(false);
 
-  const history = getListenHistory();
+  const [history, setHistory] = useState<ReturnType<typeof getListenHistory>>([]);
   const resumeEntries = history.filter(h => !h.completed && h.progress > 0);
+
+  useEffect(() => {
+    setHistory(getListenHistory());
+  }, []);
 
   const langOptions: FilterOption[] = useMemo(() => [
     { value: "fr", label: "Français", icon: "fr" },
