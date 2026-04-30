@@ -13,7 +13,7 @@ import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { DesktopPlayerBar } from "@/components/DesktopPlayerBar";
 import { Footer } from "@/components/Footer";
 import { HomePage } from "@/pages/HomePage";
-import { WelcomePage } from "@/pages/WelcomePage";
+import { WelcomeModal } from "@/components/WelcomeModal";
 import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
 import { SleepTimerIndicator } from "@/components/SleepTimerIndicator";
 import { useBackButton } from "@/hooks/useBackButton";
@@ -106,10 +106,6 @@ function AppContentInner() {
     isFullScreen,
   });
 
-  if (showWelcome) {
-    return <WelcomePage onComplete={handleWelcomeComplete} />;
-  }
-
   const renderContent = () => {
     if (detailPodcast) {
       return <PodcastDetailPage podcast={detailPodcast} onBack={() => setDetailPodcast(null)} />;
@@ -167,6 +163,7 @@ function AppContentInner() {
 
           <FullScreenPlayer />
           <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
+          <WelcomeModal open={showWelcome} onComplete={handleWelcomeComplete} />
         </DownloadProvider>
       </SleepTimerProvider>
     </PremiumProvider>
