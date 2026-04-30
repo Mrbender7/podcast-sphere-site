@@ -64,7 +64,7 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
   const { isEpisodeDownloaded, downloading, startDownload } = useDownloads();
 
   // New episodes state
-  const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
+  const [newEpisodes, setNewEpisodes] = useState<Episode[]>([]);
   const [syncingNew, setSyncingNew] = useState(false);
 
   // Pull-to-refresh state
@@ -93,7 +93,11 @@ export function HomePage({ subscriptions, onPodcastClick, onCategoryClick }: Hom
     staleTime: 10 * 60 * 1000,
   });
 
-  // Sync new episodes on mount
+  // Load cached episodes on the client only, then sync new episodes on mount.
+  useEffect(() => {
+    setNewEpisodes(NewEpisodesService.getNewEpisodesFromCache());
+  }, []);
+
   useEffect(() => {
     if (subscriptions.length === 0) return;
     let cancelled = false;

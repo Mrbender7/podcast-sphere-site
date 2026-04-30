@@ -14,9 +14,9 @@ const VALID_LANGS: Language[] = ["fr", "en", "es", "de", "ja", "it", "nl", "pt",
 
 function detectInitialLanguage(): Language {
   try {
-    const stored = localStorage.getItem("podcastsphere_language");
+    const stored = globalThis.localStorage?.getItem("podcastsphere_language");
     if (stored && VALID_LANGS.includes(stored as Language)) return stored as Language;
-    const nav = navigator.language?.toLowerCase();
+    const nav = globalThis.navigator?.language?.toLowerCase();
     if (nav?.startsWith("fr")) return "fr";
     if (nav?.startsWith("es")) return "es";
     if (nav?.startsWith("de")) return "de";
@@ -47,7 +47,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    try { localStorage.setItem("podcastsphere_language", lang); } catch {}
+    try { globalThis.localStorage?.setItem("podcastsphere_language", lang); } catch {}
   }, []);
 
   // Sync language to native for Android Auto localized labels
@@ -57,9 +57,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Update <html lang> and <title> dynamically
   useEffect(() => {
-    document.documentElement.lang = HTML_LANG_MAP[language] || language;
+    globalThis.document.documentElement.lang = HTML_LANG_MAP[language] || language;
     const t = translations[language];
-    document.title = `Podcast Sphere — ${t["welcome.subtitle"] || "Podcasts"}`;
+    globalThis.document.title = `Podcast Sphere — ${t["welcome.subtitle"] || "Podcasts"}`;
   }, [language]);
 
   const t = useCallback((key: string): string => {

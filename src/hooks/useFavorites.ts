@@ -7,12 +7,20 @@ const RECENT_KEY = "podcastsphere_recent_episodes";
 const LAST_SEEN_KEY = "podcastsphere_last_seen";
 
 function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return fallback;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = globalThis.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
   }
+}
+
+function saveToStorage(key: string, value: unknown): void {
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
+  try {
+    globalThis.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
 }
 
 export function useSubscriptions() {
@@ -24,11 +32,11 @@ export function useSubscriptions() {
   );
 
   useEffect(() => {
-    localStorage.setItem(SUBSCRIPTIONS_KEY, JSON.stringify(subscriptions));
+    saveToStorage(SUBSCRIPTIONS_KEY, subscriptions);
   }, [subscriptions]);
 
   useEffect(() => {
-    localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(lastSeen));
+    saveToStorage(LAST_SEEN_KEY, lastSeen);
   }, [lastSeen]);
 
   const toggleSubscription = useCallback((podcast: Podcast) => {
@@ -74,7 +82,7 @@ export function useRecentEpisodes() {
   const [recent, setRecent] = useState<Episode[]>(() => loadFromStorage(RECENT_KEY, []));
 
   useEffect(() => {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    saveToStorage(RECENT_KEY, recent);
   }, [recent]);
 
   const addRecent = useCallback((episode: Episode) => {

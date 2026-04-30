@@ -133,13 +133,17 @@ export function LibraryPage() {
   const [showAllDownloads, setShowAllDownloads] = useState(false);
   const [addPrivateOpen, setAddPrivateOpen] = useState(false);
 
-  const [newEpisodes, setNewEpisodes] = useState<Episode[]>(() => NewEpisodesService.getNewEpisodesFromCache());
+  const [newEpisodes, setNewEpisodes] = useState<Episode[]>([]);
 
   const history = getListenHistory();
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
 
-  // Sync new episodes
+  // Load cached episodes on the client only, then sync new episodes.
+  useEffect(() => {
+    setNewEpisodes(NewEpisodesService.getNewEpisodesFromCache());
+  }, []);
+
   useEffect(() => {
     if (subscriptions.length === 0) return;
     let cancelled = false;

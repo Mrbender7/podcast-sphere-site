@@ -28,8 +28,9 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage").then(m => ({ defa
 const ONBOARDING_KEY = "podcastsphere_onboarded";
 
 function hasCompletedOnboarding(): boolean {
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return false;
   try {
-    return localStorage.getItem(ONBOARDING_KEY) === "true";
+    return globalThis.localStorage.getItem(ONBOARDING_KEY) === "true";
   } catch {
     return false;
   }
@@ -71,7 +72,7 @@ function AppContentInner() {
 
   const handleWelcomeComplete = useCallback((lang: Language) => {
     setLanguage(lang);
-    try { localStorage.setItem(ONBOARDING_KEY, "true"); } catch {}
+    try { globalThis.localStorage?.setItem(ONBOARDING_KEY, "true"); } catch {}
     setShowWelcome(false);
   }, [setLanguage]);
 
@@ -81,16 +82,16 @@ function AppContentInner() {
 
   const handleResetApp = useCallback(async () => {
     try {
-      localStorage.clear();
-      sessionStorage.clear();
+      globalThis.localStorage?.clear();
+      globalThis.sessionStorage?.clear();
     } catch {}
     try {
-      const dbs = await window.indexedDB.databases();
+      const dbs = await globalThis.indexedDB?.databases?.() ?? [];
       for (const db of dbs) {
-        if (db.name) window.indexedDB.deleteDatabase(db.name);
+        if (db.name) globalThis.indexedDB?.deleteDatabase(db.name);
       }
     } catch {}
-    window.location.reload();
+    globalThis.location?.reload();
   }, []);
 
   useBackButton({
