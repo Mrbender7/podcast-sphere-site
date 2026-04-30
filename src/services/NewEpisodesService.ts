@@ -33,7 +33,7 @@ export const NewEpisodesService = {
   ): Promise<Episode[]> {
     if (!subscribedFeeds || subscribedFeeds.length === 0) return [];
 
-    const lastSyncStr = localStorage.getItem(LAST_SYNC_KEY);
+    const lastSyncStr = safeGetItem(LAST_SYNC_KEY);
     const lastSyncTime = lastSyncStr ? parseInt(lastSyncStr, 10) : 0;
     const now = Date.now();
 
