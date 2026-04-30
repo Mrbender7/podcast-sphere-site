@@ -106,10 +106,6 @@ function AppContentInner() {
     isFullScreen,
   });
 
-  if (showWelcome) {
-    return <WelcomePage onComplete={handleWelcomeComplete} />;
-  }
-
   const renderContent = () => {
     if (detailPodcast) {
       return <PodcastDetailPage podcast={detailPodcast} onBack={() => setDetailPodcast(null)} />;
@@ -167,6 +163,7 @@ function AppContentInner() {
 
           <FullScreenPlayer />
           <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
+          <WelcomeModal open={showWelcome} onComplete={handleWelcomeComplete} />
         </DownloadProvider>
       </SleepTimerProvider>
     </PremiumProvider>
