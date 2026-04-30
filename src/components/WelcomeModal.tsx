@@ -40,10 +40,8 @@ export function WelcomeModal({ open, onComplete }: WelcomeModalProps) {
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <VisuallyHidden>
-          <DialogTitle>Podcast Sphere</DialogTitle>
-          <DialogDescription>{t("welcome.subtitle")}</DialogDescription>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">Podcast Sphere</DialogTitle>
+        <DialogDescription className="sr-only">{t("welcome.subtitle")}</DialogDescription>
 
         <div className="flex flex-col items-center px-6 py-8 text-center max-h-[90vh] overflow-y-auto">
           {/* Logo */}
