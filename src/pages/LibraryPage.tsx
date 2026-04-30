@@ -135,9 +135,13 @@ export function LibraryPage() {
 
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>([]);
 
-  const history = getListenHistory();
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const inProgress = history.filter((h) => !h.completed && h.progress > 0);
   const completed = history;
+
+  useEffect(() => {
+    setHistory(getListenHistory());
+  }, [historyVersion]);
 
   // Load cached episodes on the client only, then sync new episodes.
   useEffect(() => {

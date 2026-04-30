@@ -13,10 +13,11 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const VALID_LANGS: Language[] = ["fr", "en", "es", "de", "ja", "it", "nl", "pt", "pl", "zh", "tr", "ru", "id"];
 
 function detectInitialLanguage(): Language {
+  if (typeof window === "undefined") return "en";
   try {
-    const stored = globalThis.localStorage?.getItem("podcastsphere_language");
+    const stored = window.localStorage.getItem("podcastsphere_language");
     if (stored && VALID_LANGS.includes(stored as Language)) return stored as Language;
-    const nav = globalThis.navigator?.language?.toLowerCase();
+    const nav = window.navigator.language?.toLowerCase();
     if (nav?.startsWith("fr")) return "fr";
     if (nav?.startsWith("es")) return "es";
     if (nav?.startsWith("de")) return "de";
@@ -43,11 +44,15 @@ const HTML_LANG_MAP: Record<Language, string> = {
 };
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(detectInitialLanguage);
+  const [language, setLanguageState] = useState<Language>("en");
+
+  useEffect(() => {
+    setLanguageState(detectInitialLanguage());
+  }, []);
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    try { globalThis.localStorage?.setItem("podcastsphere_language", lang); } catch {}
+    try { window.localStorage.setItem("podcastsphere_language", lang); } catch {}
   }, []);
 
   // Sync language to native for Android Auto localized labels
@@ -57,9 +62,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Update <html lang> and <title> dynamically
   useEffect(() => {
-    globalThis.document.documentElement.lang = HTML_LANG_MAP[language] || language;
+    document.documentElement.lang = HTML_LANG_MAP[language] || language;
     const t = translations[language];
-    globalThis.document.title = `Podcast Sphere — ${t["welcome.subtitle"] || "Podcasts"}`;
+    document.title = `Podcast Sphere — ${t["welcome.subtitle"] || "Podcasts"}`;
   }, [language]);
 
   const t = useCallback((key: string): string => {

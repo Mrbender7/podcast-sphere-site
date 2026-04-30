@@ -6,13 +6,17 @@ const LAST_SYNC_KEY = "ps_last_sync_time";
 const SYNC_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 // SSR-safe localStorage helpers (vite-react-ssg renders on the server where browser globals are undefined)
-const safeGetItem = (key: string): string | null => {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return null;
-  try { return globalThis.localStorage.getItem(key); } catch { return null; }
+const getStorage = (): Storage | null => {
+  if (typeof window === "undefined") return null;
+  try { return window.localStorage; } catch { return null; }
 };
+
+const safeGetItem = (key: string): string | null => {
+  try { return getStorage()?.getItem(key) ?? null; } catch { return null; }
+};
+
 const safeSetItem = (key: string, value: string): void => {
-  if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
-  try { globalThis.localStorage.setItem(key, value); } catch { /* ignore */ }
+  try { getStorage()?.setItem(key, value); } catch { /* ignore */ }
 };
 
 export const NewEpisodesService = {
