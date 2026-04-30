@@ -5,16 +5,26 @@ const NEW_EPISODES_KEY = "ps_new_episodes";
 const LAST_SYNC_KEY = "ps_last_sync_time";
 const SYNC_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
+// SSR-safe localStorage helpers (vite-react-ssg renders on the server where window is undefined)
+const safeGetItem = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try { return window.localStorage.getItem(key); } catch { return null; }
+};
+const safeSetItem = (key: string, value: string): void => {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(key, value); } catch { /* ignore */ }
+};
+
 export const NewEpisodesService = {
   getNewEpisodesFromCache(): Episode[] {
-    const data = localStorage.getItem(NEW_EPISODES_KEY);
+    const data = safeGetItem(NEW_EPISODES_KEY);
     return data ? JSON.parse(data) : [];
   },
 
   markAsSeen(episodeId: number): void {
     const current = this.getNewEpisodesFromCache();
     const updated = current.filter((ep) => ep.id !== episodeId);
-    localStorage.setItem(NEW_EPISODES_KEY, JSON.stringify(updated));
+    safeSetItem(NEW_EPISODES_KEY, JSON.stringify(updated));
   },
 
   async syncNewEpisodes(
@@ -23,7 +33,7 @@ export const NewEpisodesService = {
   ): Promise<Episode[]> {
     if (!subscribedFeeds || subscribedFeeds.length === 0) return [];
 
-    const lastSyncStr = localStorage.getItem(LAST_SYNC_KEY);
+    const lastSyncStr = safeGetItem(LAST_SYNC_KEY);
     const lastSyncTime = lastSyncStr ? parseInt(lastSyncStr, 10) : 0;
     const now = Date.now();
 
@@ -77,8 +87,8 @@ export const NewEpisodesService = {
     );
     const final = unique.slice(0, 50);
 
-    localStorage.setItem(NEW_EPISODES_KEY, JSON.stringify(final));
-    localStorage.setItem(LAST_SYNC_KEY, now.toString());
+    safeSetItem(NEW_EPISODES_KEY, JSON.stringify(final));
+    safeSetItem(LAST_SYNC_KEY, now.toString());
 
     return final;
   },
