@@ -169,6 +169,24 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
             </h1>
           </div>
 
+          {/* Google Play badge */}
+          <div className="px-5 pb-4">
+            <a
+              href="https://play.google.com/store/apps/details?id=be.radiosphere.podcastsphere"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Get it on Google Play"
+              className="inline-block transition-transform hover:scale-105"
+            >
+              <img
+                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                alt="Get it on Google Play"
+                className="h-14 w-auto"
+                loading="lazy"
+              />
+            </a>
+          </div>
+
           {/* Description */}
           <div className="px-5 pb-4">
             <p className="text-[11px] text-muted-foreground leading-relaxed">
