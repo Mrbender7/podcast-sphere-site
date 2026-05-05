@@ -53,10 +53,26 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
         href="https://radiosphere.be"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-muted-foreground hover:text-primary transition-colors mb-8 inline-block"
+        className="text-xs text-muted-foreground hover:text-primary transition-colors mb-6 inline-block"
       >
         Un produit de{" "}
         <span className="underline underline-offset-2">radiosphere.be</span>
+      </a>
+
+      {/* Google Play badge */}
+      <a
+        href="https://play.google.com/store/apps/details?id=be.radiosphere.podcastsphere"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Get it on Google Play"
+        className="mb-8 inline-block transition-transform hover:scale-105"
+      >
+        <img
+          src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+          alt="Get it on Google Play"
+          className="h-14 w-auto"
+          loading="lazy"
+        />
       </a>
 
       {/* Features grid */}
