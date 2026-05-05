@@ -107,7 +107,7 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
             href="https://play.google.com/store/apps/details?id=be.radiosphere.podcastsphere"
             target="_blank"
             rel="noopener noreferrer"
-            className="group w-11 h-11 rounded-xl flex items-center justify-center border border-sidebar-border/50 hover:border-primary/40 hover:scale-105 transition-all shadow-sm hover:shadow-[0_0_12px_-2px_hsl(var(--primary)/0.3)] mb-3 bg-white"
+            className="group w-11 h-11 rounded-xl flex items-center justify-center border border-sidebar-border/50 hover:border-primary/40 hover:scale-105 transition-all shadow-sm hover:shadow-[0_0_12px_-2px_hsl(var(--primary)/0.3)] mb-3 bg-black"
             title="Get it on Google Play"
           >
             <svg viewBox="0 0 512 512" className="w-7 h-7" aria-hidden="true">
