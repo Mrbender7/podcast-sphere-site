@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, Globe } from "lucide-react";
+import { Home, Search, Bookmark, Settings, Mail, ShieldCheck, ChevronLeft, ChevronRight, Globe, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
@@ -259,6 +259,18 @@ export function DesktopSidebar({ activeTab, onTabChange }: DesktopSidebarProps) 
               <Mail className="w-4 h-4" />
               info@radiosphere.be
             </a>
+            <div className="flex justify-center mb-3">
+              <a
+                href="https://fr.tipeee.com/radiosphere/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[hsl(348,83%,52%)] to-[hsl(8,90%,58%)] shadow-lg shadow-[hsl(348,83%,52%)]/30 hover:shadow-xl hover:shadow-[hsl(348,83%,52%)]/40 transition-shadow"
+                aria-label="Support us on Tipeee"
+              >
+                <Heart className="w-3.5 h-3.5 fill-current" />
+                {t("sidebar.tipeee")}
+              </a>
+            </div>
             <LanguageDropdown />
             <p className="px-4 text-[10px] text-muted-foreground leading-relaxed">
               {t("footer.poweredBy")}

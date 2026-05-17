@@ -328,6 +328,20 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         </AlertDialog>
       )}
 
+      {/* Tipeee */}
+      <div className="flex justify-center mb-3">
+        <a
+          href="https://fr.tipeee.com/radiosphere/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[hsl(348,83%,52%)] to-[hsl(8,90%,58%)] shadow-lg shadow-[hsl(348,83%,52%)]/30 hover:shadow-xl hover:shadow-[hsl(348,83%,52%)]/40 transition-shadow"
+          aria-label="Support us on Tipeee"
+        >
+          <Heart className="w-3.5 h-3.5 fill-current" />
+          {t("sidebar.tipeee")}
+        </a>
+      </div>
+
       {/* Social Links */}
       <div className="flex items-center justify-center gap-4 mb-2">
         <a href="https://www.facebook.com/profile.php?id=61575475057830" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
